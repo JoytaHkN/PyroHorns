@@ -33,6 +33,7 @@
      `MockProvider`. `android.yml` instala NDK 27.1.12297006 y CMake 3.31.6.
    - **Antes del paso 3**: instalar ese APK y comprobar que el chat genera con LFM3 (abrir un chat con un
      modo General, mandar un mensaje). Si falla, el fallo real aparece en el chat; copiar el mensaje.
+   - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -41,6 +42,9 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
+- **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
+  bueno y las cinco decisiones abiertas (variante sin mmap, barrido de hilos, modelos a probar, salida de
+  resultados, tok/s del chat). No se ha escrito código.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -81,3 +85,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-23** · F1.5 paso 2 corregido (`5ce99a6`, `f5503ca`): `.gitignore` anclado, módulo Android y
   `fastlane/` añadidos a git, Kotlin con `Coroutine`. CI Android en verde y APK con `libpyrohorns_llama.so`
   (copiado a `APK IA/apk/`). No probado todavía en el móvil. Siguiente: probarlo y seguir con pasos 3 y 4.
+- **2026-11-23** · F1.5: propuesta P13 (pantalla de benchmark) redactada en `PLAN.md` §7; sin código, pendiente de visto bueno.

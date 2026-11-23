@@ -207,6 +207,16 @@ Interacción:
 - P10. Botón enviar de 48 dp y descripciones para el lector de pantalla.
 - P11. Indicador "Local / Nube" en cada conversación (F6).
 
+Rendimiento (F1.5, pasos 3 y 4):
+- P13. **Pantalla de prueba de rendimiento** (Ajustes → Diagnóstico). Estado: **propuesta, pendiente de visto bueno**.
+  - **Nativo (JNI):** `bench(handle, nPrompt, nGen)` estilo llama-bench: procesa `nPrompt` tokens sintéticos por lotes y genera `nGen`; devuelve por separado prompt tok/s (pp), generación tok/s (tg) y TTFT. Hoy `usage.tokPerSec` divide entre el tiempo total e incluye el prefill, así que subestima la generación. `memoryInfo()` lee `VmRSS`/`VmHWM` de `/proc/self/status` y `MemAvailable` de `/proc/meminfo` (sin permisos). `loadModel` ganaría el parámetro `useMmap` y usaría `threads`, que hoy ignora.
+  - **Paso 3 (ruta del GGUF):** A) `/sdcard` con mmap · B) `/sdcard` sin mmap (una lectura secuencial) · C) copia en el almacenamiento de la app con mmap. Se mide tiempo de copia (una vez), de carga y tok/s. La caché de archivos de Android falsea las cargas repetidas: la primera es la fría y se anota el orden.
+  - **Paso 4 (medidas):** LFM3 con contexto 8K; prompts de 1K y de ~7,5K tokens; 128 tokens generados; 3 repeticiones (mediana); pico de RAM por prueba. Hilos: 4 por defecto, con barrido opcional 4/6/8. Se contrastan los objetivos de §5 (TTFT < 1,5 s con 1K, ≥ 10 tok/s, sin cierres a 8K).
+  - **Robustez:** se guarda una marca «prueba en curso» antes de cada ejecución; si Android cierra la app por memoria, al reabrir la pantalla indica qué prueba la mató. Pausa entre pruebas por temperatura.
+  - **Resultados:** tabla en pantalla y botón «Copiar resultados» (JSON/Markdown). Requiere decidir cómo: `expo-clipboard` (dependencia nueva) o escribir un archivo en el almacenamiento de la app. Sin conversaciones ni claves (S9).
+  - **Pruebas:** la lógica pura (matriz de pruebas, medianas, formato, lectura de `/proc`) con pruebas de Node; el JNI se valida por compilación en CI y la medición, en el móvil.
+  - **Decisiones abiertas:** (a) ¿incluir la variante B sin mmap?; (b) ¿barrido de hilos?; (c) ¿probar también Qwen3-1.7B o solo LFM3?; (d) cómo sacar los resultados (portapapeles o archivo); (e) ¿corregir también el `tok/s` del chat para que cuente solo la generación?
+
 Arquitectura:
 - P12. Sustituir la "variante Compose completa" por piezas nativas solo donde React Native no llega (ventana flotante, terminal).
 
@@ -237,5 +247,5 @@ conversación, así que el contexto vive en el repo:
 - Los cambios solo de documentación no recompilan el APK.
 
 ## 10. Preguntas abiertas
-1. Propuestas P1–P12 (sección 7).
+1. Propuestas P1–P13 (sección 7).
 2. Revisión visual de F1 cuando tengas el primer APK.
