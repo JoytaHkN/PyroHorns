@@ -17,6 +17,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Uniwind } from 'uniwind';
 import { RestoreScreen } from '@/components/restore-screen';
 import { useBoot } from '@/store/boot';
+import { registerNativeLlama } from '@/lib/native';
 import { flushWrites } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { palette } from '@/theme/tokens';
@@ -41,6 +42,11 @@ export default function RootLayout() {
   // Abre la base (cifrada en Android) y carga las conversaciones.
   useEffect(() => {
     void useBoot.getState().start();
+  }, []);
+
+  // Registra el motor nativo (F1.5); si no está, el chat sigue con MockProvider.
+  useEffect(() => {
+    void registerNativeLlama();
   }, []);
 
   // Al pasar a segundo plano se escribe lo pendiente del streaming.

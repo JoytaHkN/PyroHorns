@@ -16,15 +16,17 @@
 - **Permisos (D9):** se mantienen todos los que declara el APK, aunque algunos aún no se usen. No quitarlos.
 - **Versión de prueba firmada `v0.1.0-alpha.1`** (firma de prelanzamiento) publicada en GitHub Releases como pre-release. Pasar del APK con firma de depuración a esta exige desinstalar una vez; las siguientes versiones firmadas se instalan encima.
 - Secretos de firma de prelanzamiento cargados en el repo. Dependabot ajustado (#7 y #9 cerrados).
-- **Dato para F1.5:** el llama.cpp que fija LMPlayground (commit `dc33e61`, 2026-11-14) ya soporta
+- **Dato para F1.5:** el llama.cpp que fija LMPlayground (commit `dc33e61`, 2026-10-13) ya soporta
   `LLM_ARCH_LFM3`.
 
 ## Siguiente paso
 1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
    - Paso 1 ✅: `LlamaProvider` en TypeScript (`src/providers/llama.ts`) con fallback a
      `MockProvider` cuando el módulo nativo no esté disponible; integración en `src/lib/engine.ts`.
-   - Paso 2 (pendiente): módulo nativo propio (Expo Modules + JNI) basado en LMPlayground
-     (`dc33e61`, vendizado en el repo, compilado con CMake/NDK en CI).
+   - Paso 2 ✅ (implementado; pendiente de compilar en CI y probar en el móvil): módulo nativo propio
+     `modules/pyrohorns-llama` (Expo Modules + JNI + CMake), con llama.cpp `dc33e61` vendimizado por
+     `scripts/vendor-llama.sh` (SHA-256). Se registra solo en Android; en web y pruebas sigue
+     `MockProvider`. `android.yml` instala NDK 27.1.12297006 y CMake 3.31.6.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -53,3 +55,8 @@ envía esto primero:
 - **2026-11-23** · F1.5 paso 1: `LlamaProvider` en TypeScript con fallback a `MockProvider`; integración en
   `engine.ts`; typecheck y 83 pruebas en verde. Siguiente: módulo nativo (Expo Modules + JNI) basado en
   LMPlayground `dc33e61`.
+- **2026-11-23** · F1.5 paso 2: módulo `modules/pyrohorns-llama` (Expo Modules + JNI + CMake),
+  llama.cpp `dc33e61` vendimizado con SHA-256, registro automático desde `_layout.tsx`, NDK y CMake en
+  `android.yml`, avisos de terceros actualizados. Typecheck, 83 pruebas y bundle Android en verde;
+  autolinking resuelve el módulo. Falta validar la compilación nativa en GitHub Actions y probar el APK
+  en el móvil. Siguiente: paso 3 (ruta del GGUF).

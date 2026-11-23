@@ -5,8 +5,13 @@ siguientes componentes de terceros, cada uno con su propia licencia.
 
 ## Código copiado de otros proyectos
 
-Ninguno por ahora. and-code (MIT) y LMPlayground (MIT) se usan como referencia; cuando se copie
-código de ellos, se añadirá aquí con su aviso de copyright. De Agora (GPL-3.0) no se copia nada.
+| Proyecto | Licencia | Uso |
+|---|---|---|
+| llama.cpp, fork `andriydruk/llama.cpp-android` fijado en `dc33e6131e3f93ed388bc1132780d5728f3ad857` | MIT | Código fuente vendimizado en `modules/pyrohorns-llama/cpp/llama.cpp`, con su `LICENSE` y `AUTHORS`. Se compila en el APK para la inferencia local. |
+| LMPlayground (`andriydruk/LMPlayground`, MIT) | MIT | Referencia para el diseño del binding JNI y la configuración CMake/NDK; no se copia código de ella. |
+| and-code (MIT) | MIT | Referencia de producto y entorno; no se copia código. |
+
+De Agora (GPL-3.0) no se copia nada.
 
 ## Componentes incluidos en la app
 

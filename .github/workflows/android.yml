@@ -24,6 +24,9 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+      - name: Instalar NDK y CMake para el motor llama.cpp
+        run: sdkmanager "ndk;27.1.12297006" "cmake;3.31.6"
       - run: npm ci --no-audit --no-fund
       - name: Generar el proyecto Android
         run: npx expo prebuild --platform android --no-install

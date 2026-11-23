@@ -9,10 +9,13 @@ import { errorSummary, log } from './log';
 
 /** F1.5/F2: usa el módulo nativo si está disponible, si no el mock. */
 export { setNativeLlamaModule };
-let provider: ChatProvider = isNativeLlamaAvailable() ? LlamaProvider : MockProvider;
+let provider: ChatProvider = MockProvider;
 export const setProvider = (p: ChatProvider) => {
   provider = p;
 };
+export function activateNativeLlama() {
+  if (isNativeLlamaAvailable()) provider = LlamaProvider;
+}
 
 const controllers = new Map<string, AbortController>();
 

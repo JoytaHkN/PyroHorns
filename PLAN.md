@@ -127,7 +127,7 @@ Implementada (commit `c8234c0`): Expo SDK 58 + heroui-native, tokens Plasma, com
 
 ### F1.5 — Prueba de inferencia en el móvil
 Objetivo: comprobar lo más arriesgado antes de construir F2.
-- Módulo nativo propio (Expo Modules + JNI) basado en LMPlayground, con llama.cpp fijado en una versión que soporte las arquitecturas `lfm3` y `qwen3`. **Comprobado (2026-11-23):** el commit que fija LMPlayground (`dc33e61`, 2026-11-14) ya incluye `LLM_ARCH_LFM3`.
+- Módulo nativo propio (Expo Modules + JNI) basado en LMPlayground, con llama.cpp fijado en una versión que soporte las arquitecturas `lfm3` y `qwen3`. **Comprobado (2026-11-23):** el commit que fija LMPlayground (`dc33e61`, 2026-10-13) ya incluye `LLM_ARCH_LFM3`. **Implementado (2026-11-23):** `modules/pyrohorns-llama` con llama.cpp vendimizado por `scripts/vendor-llama.sh`; pendiente de compilar en CI y probar en el móvil.
 - Cargar LFM3 y mostrar sus tokens en el chat real.
 - Comparar abrir el GGUF desde `/sdcard` con copiarlo al almacenamiento de la app.
 - Medir en tu móvil el tiempo hasta el primer token, los tok/s y el pico de RAM, con 1K y 8K de contexto.
@@ -214,7 +214,7 @@ Arquitectura:
 
 | Riesgo | Fase | Respuesta |
 |---|---|---|
-| ~~La versión de llama.cpp elegida no soporta `lfm3`~~ | F1.5 | Resuelto: el commit de LMPlayground (`dc33e61`, 2026-11-14) ya incluye `LLM_ARCH_LFM3` |
+| ~~La versión de llama.cpp elegida no soporta `lfm3`~~ | F1.5 | Resuelto: el commit de LMPlayground (`dc33e61`, 2026-10-13) ya incluye `LLM_ARCH_LFM3` |
 | RAM libre real ≈ 4 GB en tu móvil | F2 | Regla de memoria y contexto adaptable |
 | Calidad de CyberSecQwen en español y con herramientas | F3 | Pruebas en F3; plantilla sustituta |
 | Algunas órdenes de Termux dependen de su app (`termux-open`, `am`…) | F5 | Reimplementarlas en PyroHorns o documentar que no están |

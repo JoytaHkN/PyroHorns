@@ -15,6 +15,12 @@ for item in src tests scripts assets app.json app.config.js babel.config.js metr
   if [ -e "$SRC/$item" ]; then cp -r "$SRC/$item" "$DST/$item"; fi
 done
 
+rm -rf "${DST:?}/modules"
+if [ -d "$SRC/modules" ]; then
+  cp -r "$SRC/modules" "$DST/modules"
+  rm -rf "$DST/modules/pyrohorns-llama/cpp/llama.cpp"
+fi
+
 if ! cmp -s "$SRC/package-lock.json" "$DST/.installed-lock.json"; then
   echo "→ package-lock.json cambió: npm ci en la caché"
   (cd "$DST" && npm ci --no-audit --no-fund --loglevel=error)
