@@ -223,6 +223,18 @@ Arquitectura:
 | Versiones muy nuevas de Expo/RN frente a heroui-native | Todas | Versiones fijadas y CI |
 | Git en `/sdcard` (sin enlaces ni bit de ejecución) | Todas | `core.createObject = rename`; dependencias en la caché de `/workspace` |
 
-## 9. Preguntas abiertas
+## 9. Continuidad entre entornos (2026-11-23)
+
+El usuario cambia de agente cuando se le acaban los créditos (Claude Code ↔ Codex, OpenCode o
+Antigravity dentro de and-code). El handoff de and-code solo pasa los últimos ~6000 caracteres de la
+conversación, así que el contexto vive en el repo:
+- `AGENTS.md`: reglas del usuario y del entorno para cualquier agente (`CLAUDE.md` y `GEMINI.md` lo
+  importan). Hay accesos equivalentes en la raíz de `APK IA`.
+- `docs/ESTADO.md`: estado, siguiente paso, decisiones pendientes y prompt para retomar.
+- Al cerrar cada bloque de trabajo se actualiza `docs/ESTADO.md` y se hace commit y push, así que
+  GitHub siempre tiene el último estado.
+- Los cambios solo de documentación no recompilan el APK.
+
+## 10. Preguntas abiertas
 1. Propuestas P1–P12 (sección 7).
 2. Revisión visual de F1 cuando tengas el primer APK.

@@ -3,6 +3,8 @@ name: Android
 on:
   push:
     branches: [main]
+    # Los cambios solo de documentación (estado, plan, metadatos) no recompilan el APK.
+    paths-ignore: ['**.md', 'docs/**', 'fastlane/**', '.github/dependabot.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:

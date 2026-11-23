@@ -3,6 +3,7 @@ name: PWA (visor online)
 on:
   push:
     branches: [main]
+    paths-ignore: ['**.md', 'docs/**', 'fastlane/**', '.github/dependabot.yml', 'LICENSE']
   workflow_dispatch:
 
 permissions:

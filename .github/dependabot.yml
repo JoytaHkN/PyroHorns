@@ -7,9 +7,36 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # React y React Native deben coincidir exactamente con las versiones de Expo SDK 58
+      # (React Native 0.88 trae el renderizador de react 19.3.0). Se actualizan al cambiar de SDK.
+      - dependency-name: react
+      - dependency-name: react-dom
+      - dependency-name: react-native
+      - dependency-name: '@types/react'
+      # Módulos fijados por Expo SDK 58 (rango ~): se aceptan parches; las versiones menores y
+      # mayores llegan con el SDK siguiente (`npx expo install --fix`).
+      - dependency-name: expo
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'expo-*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@expo/*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react-native-*'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@react-native-async-storage/async-storage'
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
+      # Exigidas por heroui-native (peerDependencies): solo dentro de la misma versión mayor.
+      - dependency-name: tailwind-variants
+        update-types: ['version-update:semver-major']
+      - dependency-name: tailwind-merge
+        update-types: ['version-update:semver-major']
+      - dependency-name: heroui-native
+        update-types: ['version-update:semver-major']
     groups:
-      expo:
+      expo-parches:
         patterns: ['expo', 'expo-*', '@expo/*']
+        update-types: ['patch']
   - package-ecosystem: github-actions
     directory: /
     schedule:
