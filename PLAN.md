@@ -1,7 +1,7 @@
 # PLAN — PyroHorns
 
 > **Versión 2.2** · 2026-11-23
-> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S17 y las dos dudas de seguridad). **F1.1 implementada, verificada en el móvil** (tipos, 83 pruebas, bundles web y Android) **y con commit**. Pendiente: subirla a `github.com/JoytaHkN/PyroHorns` para que Actions compile el primer APK, probarlo en el móvil y las propuestas de diseño (sección 7).
+> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S17 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Siguiente: **F1.5**, pendiente de su visto bueno. Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
 ## 1. Decisiones tomadas
@@ -16,6 +16,7 @@
 | D6 | Licencia: **GPL-3.0** |
 | D7 | GitHub: usuario **JoytaHkN**, repo **PyroHorns** → identificador de app `io.github.joytahkn.pyrohorns` |
 | D8 | Todo el desarrollo vive en el proyecto **APK IA** |
+| D9 | Los permisos que declara el APK se mantienen todos, aunque algunos aún no se usen |
 
 ## 2. Contexto rector
 
@@ -103,7 +104,7 @@ Solo se aplican estas medidas. Ninguna otra.
 
 ### F1 — Fundaciones: diseño y chat simulado ✅
 Implementada (commit `c8234c0`): Expo SDK 58 + heroui-native, tokens Plasma, componentes (orbe, burbujas, composer, menú lateral, iconos, mascota), pantallas (hero, chat, proyectos, modelos, ajustes, terminal y Termux de muestra), Zustand + AsyncStorage, proveedor simulado con streaming y cancelación, 13 pruebas de lógica, bundles web y Android sin errores.
-Pendiente: tu revisión visual (CA2, CA5, CA6), que podrás hacer con el primer APK de F1.1.
+✅ Revisión visual (CA2, CA5, CA6) hecha por el usuario con el primer APK (2026-11-23): todo OK.
 
 ### F1.1 — Cierre de F1
 - Renombrar a PyroHorns: nombre visible, `slug` y `scheme` `pyrohorns`, identificador `io.github.joytahkn.pyrohorns`, README (unas 15 menciones en 10 archivos).
@@ -122,11 +123,11 @@ Pendiente: tu revisión visual (CA2, CA5, CA6), que podrás hacer con el primer 
 - Hecho: renombrado a PyroHorns, `LICENSE` (GPL-3.0) y `THIRD_PARTY_NOTICES.md`, "modo → modelo" + Profundo, SQLite cifrado con búsqueda FTS5 y escritura agrupada, contraseña de copia y pantalla de restauración, registros S9, Markdown S10, contrato ampliado, 4 workflows + Dependabot, metadatos de F-Droid, `scripts/sync-build.sh`.
 - Verificado en el móvil: 0 errores de tipos · 83 pruebas (las consultas SQL se ejecutan de verdad con `node:sqlite`) · bundle web (5,9 MB) y bundle Android (3,8 MB): Android lleva el almacenamiento cifrado y la web el del navegador.
 - Interpretación de S10 que conviene que confirmes: los enlaces `javascript:` y `data:` se muestran como texto, no como enlaces (forma parte de "el HTML se muestra como texto").
-- Sin verificar todavía (necesita el APK): SQLCipher en el dispositivo, restaurar una copia con la contraseña de copia, la primera ejecución de los workflows y la revisión visual.
+- APK compilado por GitHub Actions (`APK IA/apk/PyroHorns-0.1.0-F1.1-prueba.apk`). Comprobado por dentro: arm64-v8a y SQLCipher con FTS5. **Probado por el usuario en el móvil: todo OK.**
 
 ### F1.5 — Prueba de inferencia en el móvil
 Objetivo: comprobar lo más arriesgado antes de construir F2.
-- Módulo nativo propio (Expo Modules + JNI) basado en LMPlayground, con llama.cpp fijado en una versión que soporte las arquitecturas `lfm3` y `qwen3`.
+- Módulo nativo propio (Expo Modules + JNI) basado en LMPlayground, con llama.cpp fijado en una versión que soporte las arquitecturas `lfm3` y `qwen3`. **Comprobado (2026-11-23):** el commit que fija LMPlayground (`dc33e61`, 2026-11-14) ya incluye `LLM_ARCH_LFM3`.
 - Cargar LFM3 y mostrar sus tokens en el chat real.
 - Comparar abrir el GGUF desde `/sdcard` con copiarlo al almacenamiento de la app.
 - Medir en tu móvil el tiempo hasta el primer token, los tok/s y el pico de RAM, con 1K y 8K de contexto.
@@ -213,7 +214,7 @@ Arquitectura:
 
 | Riesgo | Fase | Respuesta |
 |---|---|---|
-| La versión de llama.cpp elegida no soporta `lfm3` | F1.5 | Fijar una versión reciente; plan B llama.rn |
+| ~~La versión de llama.cpp elegida no soporta `lfm3`~~ | F1.5 | Resuelto: el commit de LMPlayground (`dc33e61`, 2026-11-14) ya incluye `LLM_ARCH_LFM3` |
 | RAM libre real ≈ 4 GB en tu móvil | F2 | Regla de memoria y contexto adaptable |
 | Calidad de CyberSecQwen en español y con herramientas | F3 | Pruebas en F3; plantilla sustituta |
 | Algunas órdenes de Termux dependen de su app (`termux-open`, `am`…) | F5 | Reimplementarlas en PyroHorns o documentar que no están |
