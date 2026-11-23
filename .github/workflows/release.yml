@@ -20,7 +20,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck && npm test
       - name: Generar el proyecto Android
