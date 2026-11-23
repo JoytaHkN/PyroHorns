@@ -46,8 +46,9 @@
      cortaba un carácter UTF-8 se enviaba a medias. Añadido **Ajustes → Diagnóstico del motor**: el JNI escribe un rastro
      por etapas (carga, plantilla, tokenizar, prompt, tokens) en un archivo que sobrevive al cierre, registra la señal
      fatal (SIGSEGV/SIGABRT/SIGILL/SIGBUS) y la pantalla muestra además los motivos de cierre de Android
-     (`ApplicationExitInfo`: falta de memoria, fallo nativo + traza). **Siguiente:** instalar el APK nuevo, repetir la prueba
-     del chat, abrir Ajustes → Diagnóstico del motor, seleccionar el informe y pegarlo al agente.
+     (`ApplicationExitInfo`: falta de memoria, fallo nativo + traza). CI Android en verde (`1497dda`). APK:
+     `APK IA/apk/PyroHorns-0.1.0-F1.5-diagnostico-prueba.apk` (+ `.sha256`). **Siguiente:** instalar el APK nuevo, repetir la
+     prueba del chat, abrir Ajustes → Diagnóstico del motor, seleccionar el informe y pegarlo al agente.
      Nota para P13: `GGML_NATIVE=OFF` compila ggml-cpu en armv8-a básico (sin dotprod/i8mm): funciona, pero más lento.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
@@ -111,4 +112,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-23** · Prueba del APK P14-C: los GGUF se importan, pero el chat cierra la app. Se corrigen la fuga del
   modelo, las excepciones C++ y el corte de UTF-8, y se añade la pantalla «Diagnóstico del motor» (rastros en disco,
   señal fatal y `ApplicationExitInfo`) para localizar la causa. 13 pruebas nuevas (`tests/diagnostics.test.ts`).
-  Pendiente: CI y nueva prueba en el móvil.
+  CI Android en verde (`1497dda`); APK copiado a `APK IA/apk/`. Pendiente: nueva prueba en el móvil.
