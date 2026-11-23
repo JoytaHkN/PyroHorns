@@ -15,7 +15,7 @@ export default function Hero() {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 18 }}>
         <Mascot size={220} style={{ borderRadius: 52 }} />
         <T weight="bold" size={40} style={{ lineHeight: 48 }}>
-          Agora Fire
+          PyroHorns
         </T>
         <T size={17} tone="muted" style={{ textAlign: 'center' }}>
           Inteligente. Viva. Tuya.{'\n'}IA local en tu dispositivo.
@@ -23,7 +23,7 @@ export default function Hero() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Orb size={10} active />
           <T size={13} tone="muted">
-            Modo demostración · respuestas simuladas (F1)
+            Modo demostración · respuestas simuladas hasta F1.5
           </T>
         </View>
         <Pressable

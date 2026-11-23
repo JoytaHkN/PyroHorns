@@ -4,3 +4,11 @@ dist/
 *.log
 android/
 ios/
+
+# Claves de firma: nunca en el repositorio
+*.p12
+*.jks
+*.keystore
+*.pem
+firma-*/
+secretos*.txt

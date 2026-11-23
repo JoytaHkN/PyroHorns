@@ -1,23 +1,28 @@
 {
   "expo": {
-    "name": "Agora Fire",
-    "slug": "agora-fire",
-    "scheme": "agorafire",
+    "name": "PyroHorns",
+    "slug": "pyrohorns",
+    "scheme": "pyrohorns",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/brand/ibex-dark.jpg",
     "backgroundColor": "#121212",
     "android": {
-      "package": "com.agorafire.app",
-      "adaptiveIcon": { "foregroundImage": "./assets/brand/ibex-dark.jpg", "backgroundColor": "#1A1A1A" },
-      "edgeToEdgeEnabled": true
+      "package": "io.github.joytahkn.pyrohorns",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/ibex-dark.jpg",
+        "backgroundColor": "#1A1A1A"
+      },
+      "edgeToEdgeEnabled": true,
+      "versionCode": 1,
+      "allowBackup": true
     },
     "web": {
       "bundler": "metro",
       "output": "single",
-      "name": "Agora Fire",
-      "shortName": "Agora Fire",
+      "name": "PyroHorns",
+      "shortName": "PyroHorns",
       "themeColor": "#1A1A1A",
       "backgroundColor": "#121212",
       "favicon": "./assets/brand/ibex-dark.jpg"
@@ -25,13 +30,34 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      ["expo-splash-screen", {
-        "image": "./assets/brand/ibex-light.jpg",
-        "backgroundColor": "#F1EFEC",
-        "dark": { "image": "./assets/brand/ibex-dark.jpg", "backgroundColor": "#121212" },
-        "imageWidth": 160
-      }]
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/ibex-light.jpg",
+          "backgroundColor": "#F1EFEC",
+          "dark": {
+            "image": "./assets/brand/ibex-dark.jpg",
+            "backgroundColor": "#121212"
+          },
+          "imageWidth": 160
+        }
+      ],
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true,
+          "enableFTS": true
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ]
     ],
-    "experiments": { "typedRoutes": false }
+    "experiments": {
+      "typedRoutes": false
+    }
   }
 }

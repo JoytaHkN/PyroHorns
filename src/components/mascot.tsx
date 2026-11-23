@@ -11,7 +11,7 @@ export function Mascot({ size = 40, style }: { size?: number; style?: StyleProp<
     <Image
       source={scheme === 'dark' ? DARK : LIGHT}
       style={[{ width: size, height: size, borderRadius: size * 0.24 }, style]}
-      accessibilityLabel="Agora Fire"
+      accessibilityLabel="PyroHorns"
     />
   );
 }

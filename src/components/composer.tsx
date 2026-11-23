@@ -1,7 +1,7 @@
 import { useToast } from 'heroui-native';
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
-import { levelById, modeById } from '@/data/agents';
+import { modeById } from '@/data/agents';
 import { modelById } from '@/data/models';
 import { activeModelId, useSettings } from '@/store/settings';
 import { fonts } from '@/theme/tokens';
@@ -24,7 +24,7 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
   const settings = useSettings();
   const model = modelById(activeModelId(settings));
   const mode = modeById(settings.mode);
-  const level = levelById(settings.level);
+  const deep = settings.deep;
   const canSend = text.trim().length > 0 && !busy;
 
   const submit = () => {
@@ -77,7 +77,7 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
         <Pressable
           onPress={onOpenAgent}
           accessibilityRole="button"
-          accessibilityLabel="Elegir agente, nivel y modelo"
+          accessibilityLabel="Elegir modo y modelo"
           style={({ pressed }) => ({
             flexShrink: 1,
             flexDirection: 'row',
@@ -92,8 +92,31 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
         >
           <Icon name={mode.icon} size={16} plasma />
           <T size={13} weight="medium" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {mode.label} · {level.label} · {model.name}
+            {mode.label} · {model.name}
           </T>
+        </Pressable>
+        <Pressable
+          onPress={settings.toggleDeep}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: deep }}
+          accessibilityLabel="Profundo: razonamiento y más contexto"
+          style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        >
+          {deep ? (
+            <PlasmaGradient style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 }}>
+              <Icon name="spark" size={14} color="#1A0B05" />
+              <T size={13} weight="semibold" tone="onPlasma">
+                Profundo
+              </T>
+            </PlasmaGradient>
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: pal.surface2 }}>
+              <Icon name="spark" size={14} color={pal.muted} />
+              <T size={13} weight="medium" tone="muted">
+                Profundo
+              </T>
+            </View>
+          )}
         </Pressable>
         <View style={{ flex: 1 }} />
         <Pressable

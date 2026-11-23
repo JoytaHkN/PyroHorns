@@ -1,0 +1,16 @@
+# S17-B: Dependabot propone actualizaciones; se revisan antes de aceptarlas.
+# Gradle no se incluye: la carpeta android/ se genera en cada compilación (expo prebuild).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      expo:
+        patterns: ['expo', 'expo-*', '@expo/*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ModeId } from '@/data/agents';
-import { modelForLevel, type LevelId } from '@/data/models';
+import { modelForMode, type ModeId } from '@/data/agents';
 import { persistStorage } from './storage';
 
 export type SchemePref = 'dark' | 'light';
@@ -9,33 +8,38 @@ export type SchemePref = 'dark' | 'light';
 interface SettingsState {
   scheme: SchemePref;
   mode: ModeId;
-  level: LevelId;
-  /** Modelo elegido a mano; null = el que corresponde al nivel. */
+  /** Interruptor Profundo: razonamiento (si el modelo lo admite) y más contexto. */
+  deep: boolean;
+  /** Modelo elegido a mano en "Avanzado"; null = el que corresponde al modo (D1). */
   modelOverride: string | null;
   setScheme: (s: SchemePref) => void;
   toggleScheme: () => void;
+  /** Cambiar de modo vuelve al modelo automático. */
   setMode: (m: ModeId) => void;
-  setLevel: (l: LevelId) => void;
+  setDeep: (v: boolean) => void;
+  toggleDeep: () => void;
   setModelOverride: (id: string | null) => void;
 }
 
+/** Solo ajustes de interfaz (nada sensible): se guardan sin cifrar, también en el visor web. */
 export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
       scheme: 'dark',
       mode: 'general',
-      level: 'pro',
+      deep: false,
       modelOverride: null,
       setScheme: (scheme) => set({ scheme }),
       toggleScheme: () => set((s) => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
-      setMode: (mode) => set({ mode }),
-      setLevel: (level) => set({ level, modelOverride: null }),
+      setMode: (mode) => set({ mode, modelOverride: null }),
+      setDeep: (deep) => set({ deep }),
+      toggleDeep: () => set((s) => ({ deep: !s.deep })),
       setModelOverride: (modelOverride) => set({ modelOverride }),
     }),
-    { name: 'af-settings', storage: persistStorage, version: 1 },
+    { name: 'pyrohorns-settings', storage: persistStorage, version: 1 },
   ),
 );
 
-export function activeModelId(s: Pick<SettingsState, 'level' | 'modelOverride'>): string {
-  return s.modelOverride ?? modelForLevel(s.level).id;
+export function activeModelId(s: Pick<SettingsState, 'mode' | 'modelOverride'>): string {
+  return s.modelOverride ?? modelForMode(s.mode).id;
 }

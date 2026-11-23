@@ -1,5 +1,5 @@
 import type { IconName } from '@/components/icons';
-import type { LevelId } from './models';
+import { modelById, type LocalModel } from './models';
 
 export type ModeId =
   | 'general'
@@ -18,37 +18,28 @@ export interface Mode {
   label: string;
   icon: IconName;
   hint: string;
+  /** Modelo que usa el modo por defecto (PLAN, sección 3). */
+  modelId: string;
 }
 
 export const MODES: Mode[] = [
-  { id: 'general', label: 'General', icon: 'chat', hint: 'Conversación libre' },
-  { id: 'plan', label: 'Planificación', icon: 'tasks', hint: 'Divide objetivos en pasos' },
-  { id: 'build', label: 'Construcción', icon: 'box', hint: 'Arma proyectos completos' },
-  { id: 'code', label: 'Programación', icon: 'term', hint: 'Escribe y explica código' },
-  { id: 'debug', label: 'Depuración', icon: 'search', hint: 'Encuentra y corrige errores' },
-  { id: 'research', label: 'Investigación', icon: 'folder', hint: 'Analiza fuentes y resume' },
-  { id: 'fun', label: 'Diversión', icon: 'spark', hint: 'Juegos, historias, ideas' },
-  { id: 'automation', label: 'Automatización', icon: 'sliders', hint: 'Tareas y scripts repetibles' },
-  { id: 'red', label: 'Red Cyber', icon: 'chip', hint: 'Ofensiva autorizada (pentest, CTF)' },
-  { id: 'blue', label: 'Blue Cyber', icon: 'gear', hint: 'Defensa, hardening, detección' },
-];
-
-export interface Level {
-  id: LevelId;
-  label: string;
-  hint: string;
-}
-
-export const LEVELS: Level[] = [
-  { id: 'lite', label: 'Fire Lite', hint: 'Rápido y ligero' },
-  { id: 'pro', label: 'Fire Pro', hint: 'Equilibrado, con herramientas' },
-  { id: 'max', label: 'Fire Max', hint: 'Máxima capacidad' },
+  { id: 'general', label: 'General', icon: 'chat', hint: 'Conversación libre', modelId: 'lfm3-1.7b' },
+  { id: 'plan', label: 'Planificación', icon: 'tasks', hint: 'Divide objetivos en pasos', modelId: 'lfm3-1.7b' },
+  { id: 'build', label: 'Construcción', icon: 'box', hint: 'Arma proyectos completos', modelId: 'qwen3-1.7b' },
+  { id: 'code', label: 'Programación', icon: 'term', hint: 'Escribe y explica código', modelId: 'qwen3-1.7b' },
+  { id: 'debug', label: 'Depuración', icon: 'search', hint: 'Encuentra y corrige errores', modelId: 'qwen3-1.7b' },
+  { id: 'research', label: 'Investigación', icon: 'folder', hint: 'Analiza fuentes y resume', modelId: 'lfm3-1.7b' },
+  { id: 'fun', label: 'Diversión', icon: 'spark', hint: 'Juegos, historias, ideas', modelId: 'lfm3-1.7b' },
+  { id: 'automation', label: 'Automatización', icon: 'sliders', hint: 'Tareas y scripts repetibles', modelId: 'lfm3-1.7b' },
+  { id: 'red', label: 'Red Cyber', icon: 'chip', hint: 'Ofensiva autorizada (pentest, CTF)', modelId: 'cybersecqwen-4b' },
+  { id: 'blue', label: 'Blue Cyber', icon: 'gear', hint: 'Defensa, hardening, detección', modelId: 'cybersecqwen-4b' },
 ];
 
 export function modeById(id: ModeId): Mode {
   return MODES.find((m) => m.id === id) ?? MODES[0]!;
 }
 
-export function levelById(id: LevelId): Level {
-  return LEVELS.find((l) => l.id === id) ?? LEVELS[0]!;
+/** El modo elige el modelo (D1). */
+export function modelForMode(id: ModeId): LocalModel {
+  return modelById(modeById(id).modelId);
 }

@@ -8,12 +8,12 @@ import { usePalette } from '@/theme/use-palette';
 type Line = { t: string; k?: 'prompt' | 'dim' | 'accent' };
 
 const ALPINE: Line[] = [
-  { t: 'agora:~# ', k: 'accent' }, { t: 'cat /etc/alpine-release\n3.22.1\n' },
-  { t: 'agora:~# ', k: 'accent' }, { t: 'apk add python3\n' },
+  { t: 'pyrohorns:~# ', k: 'accent' }, { t: 'cat /etc/alpine-release\n3.22.1\n' },
+  { t: 'pyrohorns:~# ', k: 'accent' }, { t: 'apk add python3\n' },
   { t: '(1/9) Installing libffi\n(2/9) Installing gdbm\n…\n(9/9) Installing python3\n', k: 'dim' },
   { t: 'OK: 78 MiB in 44 packages\n' },
-  { t: 'agora:~# ', k: 'accent' }, { t: 'python3 -c "print(2**10)"\n1024\n' },
-  { t: 'agora:~# ', k: 'accent' },
+  { t: 'pyrohorns:~# ', k: 'accent' }, { t: 'python3 -c "print(2**10)"\n1024\n' },
+  { t: 'pyrohorns:~# ', k: 'accent' },
 ];
 
 const TERMUX: Line[] = [

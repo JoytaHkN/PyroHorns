@@ -6,8 +6,8 @@ import { IconTile, Icon } from '@/components/icons';
 import { Card } from '@/components/list';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
+import { currentAgent } from '@/lib/engine';
 import { useChat } from '@/store/chat';
-import { activeModelId, useSettings } from '@/store/settings';
 
 export default function Projects() {
   const projects = useChat((s) => s.projects);
@@ -26,8 +26,7 @@ export default function Projects() {
   };
 
   const openProject = (id: string) => {
-    const s = useSettings.getState();
-    newConversation({ mode: s.mode, level: s.level, modelId: activeModelId(s) }, id);
+    newConversation(currentAgent(), id);
     router.navigate('/chat');
   };
 

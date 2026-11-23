@@ -11,9 +11,13 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { HeroUINativeProvider } from 'heroui-native';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Uniwind } from 'uniwind';
+import { RestoreScreen } from '@/components/restore-screen';
+import { useBoot } from '@/store/boot';
+import { flushWrites } from '@/store/chat';
 import { useSettings } from '@/store/settings';
 import { palette } from '@/theme/tokens';
 
@@ -28,28 +32,47 @@ export default function RootLayout() {
     JetBrainsMono_400Regular,
   });
   const scheme = useSettings((s) => s.scheme);
+  const boot = useBoot((s) => s.state);
 
   useEffect(() => {
     Uniwind.setTheme(scheme);
   }, [scheme]);
 
+  // Abre la base (cifrada en Android) y carga las conversaciones.
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    void useBoot.getState().start();
+  }, []);
 
-  if (!fontsLoaded) return null;
+  // Al pasar a segundo plano se escribe lo pendiente del streaming.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s !== 'active') void flushWrites();
+    });
+    return () => sub.remove();
+  }, []);
+
+  const ready = fontsLoaded && boot !== 'loading';
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+
+  if (!ready) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: palette[scheme].page }}>
       <KeyboardProvider>
       <HeroUINativeProvider config={{ devInfo: { stylingPrinciples: false } }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'fade',
-            contentStyle: { backgroundColor: palette[scheme].bg },
-          }}
-        />
+        {boot === 'ready' ? (
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'fade',
+              contentStyle: { backgroundColor: palette[scheme].bg },
+            }}
+          />
+        ) : (
+          <RestoreScreen />
+        )}
       </HeroUINativeProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>

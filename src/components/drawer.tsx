@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, TextInput, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useChat } from '@/store/chat';
+import { searchConversations, useChat } from '@/store/chat';
 import { fonts } from '@/theme/tokens';
 import { usePalette } from '@/theme/use-palette';
 import { Icon, type IconName } from './icons';
@@ -53,6 +53,7 @@ export function Drawer({ open, onClose, onNew, onAskDelete }: Props) {
   const x = useSharedValue(-w);
   const [mounted, setMounted] = useState(open);
   const [q, setQ] = useState('');
+  const [hits, setHits] = useState<Set<string> | null>(null);
   const conversations = useChat((s) => s.conversations);
   const activeId = useChat((s) => s.activeId);
   const select = useChat((s) => s.select);
@@ -69,12 +70,29 @@ export function Drawer({ open, onClose, onNew, onAskDelete }: Props) {
   const panel = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   const scrim = useAnimatedStyle(() => ({ opacity: 1 + x.value / w }));
 
-  const recent = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return [...conversations]
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .filter((c) => !term || c.title.toLowerCase().includes(term) || c.messages.some((m) => m.content.toLowerCase().includes(term)));
-  }, [conversations, q]);
+  // Búsqueda en títulos y mensajes (FTS5 en Android), con 200 ms de espera mientras escribes.
+  useEffect(() => {
+    const term = q.trim();
+    if (!term) {
+      setHits(null);
+      return;
+    }
+    let alive = true;
+    const t = setTimeout(() => {
+      searchConversations(term)
+        .then((ids) => alive && setHits(new Set(ids)))
+        .catch(() => alive && setHits(new Set()));
+    }, 200);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [q]);
+
+  const recent = useMemo(
+    () => [...conversations].sort((a, b) => b.updatedAt - a.updatedAt).filter((c) => !hits || hits.has(c.id)),
+    [conversations, hits],
+  );
 
   if (!mounted) return null;
   const go = (path: '/projects' | '/models' | '/settings' | '/terminal/alpine' | '/terminal/termux') => {
@@ -109,7 +127,7 @@ export function Drawer({ open, onClose, onNew, onAskDelete }: Props) {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8 }}>
             <Mascot size={36} />
             <T weight="bold" size={20}>
-              Agora Fire
+              PyroHorns
             </T>
           </View>
           <View
@@ -128,6 +146,7 @@ export function Drawer({ open, onClose, onNew, onAskDelete }: Props) {
               value={q}
               onChangeText={setQ}
               placeholder="Buscar conversaciones"
+              accessibilityLabel="Buscar conversaciones"
               placeholderTextColor={pal.muted}
               style={{ flex: 1, color: pal.text, fontFamily: fonts.ui, fontSize: 15, paddingVertical: 10, outlineStyle: 'none' } as object}
             />

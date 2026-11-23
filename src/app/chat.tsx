@@ -12,7 +12,8 @@ import { Orb } from '@/components/orb';
 import { RoundButton, Screen } from '@/components/screen';
 import { T } from '@/components/text';
 import { modeById } from '@/data/agents';
-import { modelById } from '@/data/models';
+import { contextTokens, modelById } from '@/data/models';
+import { conversationTokens, formatTokens } from '@/lib/context';
 import { send, stop } from '@/lib/engine';
 import { useActiveConversation, useChat } from '@/store/chat';
 import { activeModelId, useSettings } from '@/store/settings';
@@ -23,9 +24,6 @@ const SUGGESTIONS = [
   'Escribe un script para ordenar fotos por fecha',
   'Planifica una app de recetas en 5 pasos',
 ];
-
-/** ~4 caracteres por token; aproximación hasta tener el tokenizer real (F2). */
-const approxTokens = (n: number) => (n < 1000 ? `${n}` : `${(n / 1000).toFixed(1)}K`);
 
 export default function ChatScreen() {
   const pal = usePalette();
@@ -42,7 +40,8 @@ export default function ChatScreen() {
   const messages = conv?.messages ?? [];
   const last = messages[messages.length - 1];
   const busy = !!last && last.role === 'assistant' && (last.status === 'thinking' || last.status === 'streaming');
-  const chars = messages.reduce((n, m) => n + m.content.length, 0);
+  const used = conversationTokens(messages);
+  const ctx = contextTokens(model, settings.deep);
 
   useEffect(() => {
     if (messages.length) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
@@ -75,10 +74,11 @@ export default function ChatScreen() {
             </Pressable>
             <View style={{ flex: 1 }}>
               <T weight="semibold" numberOfLines={1}>
-                {conv?.title ?? 'Agora Fire'}
+                {conv?.title ?? 'PyroHorns'}
               </T>
               <T size={11} tone="muted" style={{ lineHeight: 14 }}>
-                ~{approxTokens(Math.round(chars / 4))} tokens · {modeById(settings.mode).label}
+                ~{formatTokens(used)} / {formatTokens(ctx)} tokens · {modeById(settings.mode).label}
+                {settings.deep ? ' · Profundo' : ''}
               </T>
             </View>
           </View>
@@ -126,7 +126,7 @@ export default function ChatScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                 <Orb size={10} active={busy} />
                 <T size={12} tone="muted">
-                  {busy ? `${model.name} generando…` : `${model.name} · simulado (F1)`}
+                  {busy ? `${model.name} generando…` : `${model.name} · respuestas simuladas hasta F1.5`}
                 </T>
               </View>
             }
