@@ -50,6 +50,10 @@ jobs:
           rm -f "$RUNNER_TEMP/release.jks"
       - uses: softprops/action-gh-release@v2
         with:
+          name: PyroHorns ${{ github.ref_name }}
+          # Las etiquetas con guion (v0.1.0-alpha.1, -beta…) se publican como versión de prueba.
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
           files: |
             PyroHorns-*.apk
             PyroHorns-*.apk.sha256

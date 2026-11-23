@@ -1,7 +1,7 @@
 # PLAN — PyroHorns
 
 > **Versión 2.2** · 2026-11-23
-> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S17 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Siguiente: **F1.5**, pendiente de su visto bueno. Siguen pendientes las propuestas de diseño (sección 7).
+> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S17 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
 ## 1. Decisiones tomadas
@@ -82,7 +82,7 @@ Solo se aplican estas medidas. Ninguna otra.
 | S7 | **B** | Conversaciones en una base de datos cifrada (SQLCipher), con la clave en el almacén seguro | F1.1 |
 | S8 | **A** + contraseña de copia | Las copias de seguridad de Android incluyen todo. Para que se puedan restaurar, la clave de la base de datos viaja protegida con tu contraseña de copia (ver abajo) | F1.1 |
 | S9 | **B** | Registros técnicos sin conversaciones ni claves; sin telemetría | F1.1 |
-| S10 | **B** | Imágenes remotas solo al tocarlas; enlaces directos; el HTML se muestra como texto | F1.1 |
+| S10 | **B** | Imágenes remotas solo al tocarlas; enlaces directos; el HTML se muestra como texto. Los enlaces `javascript:` y `data:` también se muestran como texto (confirmado el 2026-11-23) | F1.1 |
 | S11 | **B** | Lo que llega desde otras apps o por enlaces `pyrohorns://` aparece en el cuadro de texto y tú pulsas enviar | F3 |
 | S12 | **B** modelos · **C** Linux y CLIs | Modelos: se comprueba su huella y, si no coincide, se cargan con la etiqueta "no verificado". Linux, Termux y CLIs: huellas fijadas en un archivo de bloqueo; lo que no coincida no se instala | F2 / F5 |
 | S13 | **B** | Aceptación de uso responsable la primera vez que se abre un modo Red Cyber | F3 |
@@ -122,7 +122,7 @@ Implementada (commit `c8234c0`): Expo SDK 58 + heroui-native, tokens Plasma, com
 **Estado F1.1 (2026-11-23): implementada y con commit.**
 - Hecho: renombrado a PyroHorns, `LICENSE` (GPL-3.0) y `THIRD_PARTY_NOTICES.md`, "modo → modelo" + Profundo, SQLite cifrado con búsqueda FTS5 y escritura agrupada, contraseña de copia y pantalla de restauración, registros S9, Markdown S10, contrato ampliado, 4 workflows + Dependabot, metadatos de F-Droid, `scripts/sync-build.sh`.
 - Verificado en el móvil: 0 errores de tipos · 83 pruebas (las consultas SQL se ejecutan de verdad con `node:sqlite`) · bundle web (5,9 MB) y bundle Android (3,8 MB): Android lleva el almacenamiento cifrado y la web el del navegador.
-- Interpretación de S10 que conviene que confirmes: los enlaces `javascript:` y `data:` se muestran como texto, no como enlaces (forma parte de "el HTML se muestra como texto").
+- S10: los enlaces `javascript:` y `data:` se muestran como texto, no como enlaces (confirmado por el usuario el 2026-11-23).
 - APK compilado por GitHub Actions (`APK IA/apk/PyroHorns-0.1.0-F1.1-prueba.apk`). Comprobado por dentro: arm64-v8a y SQLCipher con FTS5. **Probado por el usuario en el móvil: todo OK.**
 
 ### F1.5 — Prueba de inferencia en el móvil

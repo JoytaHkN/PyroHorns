@@ -14,12 +14,13 @@
   firma de depuración de la plantilla de Expo. Los APK siguientes de `android.yml` llevan la misma firma
   y se instalan encima.
 - **Permisos (D9):** se mantienen todos los que declara el APK, aunque algunos aún no se usen. No quitarlos.
+- **Versión de prueba firmada `v0.1.0-alpha.1`** (firma de prelanzamiento) publicada en GitHub Releases como pre-release. Pasar del APK con firma de depuración a esta exige desinstalar una vez; las siguientes versiones firmadas se instalan encima.
 - Secretos de firma de prelanzamiento cargados en el repo. Dependabot ajustado (#7 y #9 cerrados).
 - **Dato para F1.5:** el llama.cpp que fija LMPlayground (commit `dc33e61`, 2026-11-14) ya soporta
   `LLM_ARCH_LFM3`.
 
 ## Siguiente paso
-1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), cuando el usuario dé el visto bueno:
+1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
    - módulo nativo propio (Expo Modules + JNI) basado en LMPlayground;
    - LFM3 respondiendo en el chat real;
    - comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
@@ -29,11 +30,7 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
-- Visto bueno para empezar F1.5.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
-- Confirmar la interpretación de S10: los enlaces `javascript:` y `data:` se muestran como texto.
-- Propuesta: publicar una versión de prueba firmada (tag `v0.1.0-alpha.1` → `release.yml`). Pasar de la
-  firma de depuración a la de prelanzamiento exige desinstalar una vez.
 
 ## Prompt para retomar en otro agente
 Si cambias de agente (and-code → menú del chat → *Continuar en otro runtime*) o abres un chat nuevo,
@@ -49,3 +46,4 @@ envía esto primero:
 - **2026-11-23** · Primer APK (F1.1) compilado y verificado; copiado a `APK IA/apk/`.
 - **2026-11-23** · El usuario probó el APK: todo OK. Los permisos declarados se mantienen (D9).
   Comprobado que llama.cpp `dc33e61` soporta LFM3.
+- **2026-11-23** · S10 confirmado (javascript:/data: como texto). Publicada `v0.1.0-alpha.1` firmada. Empieza F1.5.
