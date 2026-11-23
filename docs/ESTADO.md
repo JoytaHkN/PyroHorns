@@ -32,7 +32,7 @@
      `scripts/vendor-llama.sh` (SHA-256). Se registra solo en Android; en web y pruebas sigue
      `MockProvider`. `android.yml` instala NDK 27.1.12297006 y CMake 3.31.6.
    - **Probado en el móvil (2026-11-23): falla** con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
-     almacenamiento de la app». Causa: sin acceso a `/sdcard` (ver P13). Bloqueado hasta que el usuario elija A/B/C.
+     almacenamiento de la app». Causa: sin acceso a `/sdcard` (ver P14). Bloqueado hasta que el usuario elija A/B/C.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
@@ -45,10 +45,9 @@
 - **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
   bueno y las cinco decisiones abiertas (variante sin mmap, barrido de hilos, modelos a probar, salida de
   resultados, tok/s del chat). No se ha escrito código.
-- **P13 (bloquea F1.5):** cómo lee la app los GGUF. El APK probado no encuentra el modelo porque no tiene acceso a
-  `/sdcard/IA/…` (sin `MANAGE_EXTERNAL_STORAGE`). Opciones A/B/C en `PLAN.md` §7. Hasta decidir, el chat no puede
-  cargar LFM3.
-- **P14:** plan de la pantalla de benchmark (F1.5 pasos 3 y 4), en `PLAN.md` §7.
+- **P14 (bloquea F1.5 y P13):** cómo lee la app los GGUF. El APK probado no encuentra el modelo porque no tiene
+  acceso a `/sdcard/IA/…` (sin `MANAGE_EXTERNAL_STORAGE`). Opciones A/B/C en `PLAN.md` §7 (recomendación: C, A y B
+  seleccionables, por defecto B). Hasta decidir, el chat no puede cargar LFM3.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -91,4 +90,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   (copiado a `APK IA/apk/`). No probado todavía en el móvil. Siguiente: probarlo y seguir con pasos 3 y 4.
 - **2026-11-23** · F1.5: propuesta P13 (pantalla de benchmark) redactada en `PLAN.md` §7; sin código, pendiente de visto bueno.
 - **2026-11-23** · Prueba del APK F1.5 paso 2 en el móvil: el motor nativo se carga, pero no encuentra el GGUF por falta de
-  acceso a `/sdcard`. Se registran P13 (acceso a modelos) y P14 (benchmark) en `PLAN.md` §7, pendientes de decisión.
+  acceso a `/sdcard`. Se registra P14 (acceso a modelos) en `PLAN.md` §7, pendiente de decisión; P13 (benchmark) queda tras ella.
