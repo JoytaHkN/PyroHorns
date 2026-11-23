@@ -32,12 +32,13 @@
      `scripts/vendor-llama.sh` (SHA-256). Se registra solo en Android; en web y pruebas sigue
      `MockProvider`. `android.yml` instala NDK 27.1.12297006 y CMake 3.31.6.
    - **Probado en el móvil (2026-11-23): falló** con «No se encontró LFM3-1.7B-Q4_K_M.gguf…»: la app no tenía acceso
-     a `/sdcard`. El usuario eligió **P14-C** (A y B seleccionables, por defecto B) y está **implementado, pendiente de CI
-     y de probar en el móvil**: Modelos → «Acceso a los modelos» (carpeta de la app / todo el almacenamiento), botón para
+     a `/sdcard`. El usuario eligió **P14-C** (A y B seleccionables, por defecto B) y está **implementado (`955dbed`), CI en verde,
+     pendiente de probar en el móvil**: Modelos → «Acceso a los modelos» (carpeta de la app / todo el almacenamiento), botón para
      conceder `MANAGE_EXTERNAL_STORAGE`, «Importar archivo .gguf» con el selector del sistema (copia a `models/` de la app,
      por nombre o por tamaño exacto) y estado «Disponible/Falta» por modelo. `app.json` declara `MANAGE_EXTERNAL_STORAGE`
      (se conservan los demás permisos, D9). Nativo nuevo: `fileSize`, `hasAllFilesAccess`, `requestAllFilesAccess`.
-     **Cómo probar:** instalar el APK nuevo → Modelos → importar LFM3 (vía B) → abrir un chat en modo General y escribir.
+     APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-P14C-prueba.apk` (+ `.sha256`; lleva `libpyrohorns_llama.so` y
+     `MANAGE_EXTERNAL_STORAGE`). **Cómo probar:** instalar el APK nuevo → Modelos → importar LFM3 (vía B) → abrir un chat en modo General y escribir.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
@@ -96,4 +97,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-23** · P14 decidida por el usuario: opción C. Implementada: ajuste `modelAccess`, permiso
   `MANAGE_EXTERNAL_STORAGE`, importación con selector, disponibilidad por modelo, mensajes de error accionables;
   21 pruebas nuevas (`tests/model-files.test.ts`). Typecheck, pruebas y bundle Android en verde; prebuild conserva los
-  permisos previos. Falta CI y probar en el móvil.
+  permisos previos. CI Android en verde (`955dbed`); falta probar en el móvil.
