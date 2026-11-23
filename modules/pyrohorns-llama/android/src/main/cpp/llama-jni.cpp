@@ -1,8 +1,14 @@
+#include <android/log.h>
+#include <fcntl.h>
 #include <jni.h>
+#include <signal.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <chrono>
+#include <cstring>
 #include <cstdint>
+#include <exception>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -18,12 +24,90 @@ struct ModelState {
   llama_context * ctx = nullptr;
   llama_sampler * sampler = nullptr;
   std::atomic<bool> cancelled{false};
+
+  // Libera el modelo, el contexto y el sampler: antes no se liberaba nada y cada mensaje dejaba el modelo en RAM.
+  ~ModelState() {
+    if (sampler != nullptr) llama_sampler_free(sampler);
+    if (ctx != nullptr) llama_free(ctx);
+    if (model != nullptr) llama_model_free(model);
+  }
 };
 
 std::mutex g_mutex;
-std::unordered_map<jlong, std::unique_ptr<ModelState>> g_models;
+std::unordered_map<jlong, std::shared_ptr<ModelState>> g_models;
 std::atomic<jlong> g_nextHandle{1};
 std::once_flag g_backendFlag;
+
+// --- Rastro de diagnóstico (sobrevive a un cierre inesperado) ---------------------------------
+// Cada paso se escribe con write() en un archivo de la app; si el proceso muere, la última línea dice dónde.
+// No contiene prompts ni respuestas (S9): solo etapas, tamaños y tiempos.
+int g_crumbFd = -1;
+const auto g_processStart = std::chrono::steady_clock::now();
+
+void crumb(const std::string & msg) {
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - g_processStart).count();
+  __android_log_print(ANDROID_LOG_INFO, "PyroHornsLlama", "%s", msg.c_str());
+  if (g_crumbFd < 0) return;
+  const std::string line = std::to_string(ms) + "ms " + msg + "\n";
+  const ssize_t ignored = write(g_crumbFd, line.c_str(), line.size());
+  (void) ignored;
+}
+
+struct sigaction g_oldActions[4];
+const int g_fatalSignals[4] = {SIGSEGV, SIGABRT, SIGILL, SIGBUS};
+
+int signalSlot(int sig) {
+  for (int i = 0; i < 4; ++i) {
+    if (g_fatalSignals[i] == sig) return i;
+  }
+  return -1;
+}
+
+// Solo funciones seguras en señales: write y sigaction. Después devuelve el control al manejador anterior
+// (el de Android), que genera el tombstone como siempre.
+void onFatalSignal(int sig, siginfo_t * info, void *) {
+  char buf[96];
+  int n = 0;
+  const char * head = "SIGNAL ";
+  for (const char * c = head; *c != 0; ++c) buf[n++] = *c;
+  char digits[24];
+  int d = 0;
+  int v = sig;
+  do {
+    digits[d++] = static_cast<char>('0' + v % 10);
+    v /= 10;
+  } while (v > 0);
+  while (d > 0) buf[n++] = digits[--d];
+  const char * mid = " addr=0x";
+  for (const char * c = mid; *c != 0; ++c) buf[n++] = *c;
+  uintptr_t addr = info != nullptr ? reinterpret_cast<uintptr_t>(info->si_addr) : 0;
+  char hex[24];
+  int h = 0;
+  do {
+    const int digit = static_cast<int>(addr & 0xF);
+    hex[h++] = static_cast<char>(digit < 10 ? '0' + digit : 'a' + digit - 10);
+    addr >>= 4;
+  } while (addr > 0);
+  while (h > 0) buf[n++] = hex[--h];
+  buf[n++] = '\n';
+  if (g_crumbFd >= 0) {
+    const ssize_t ignored = write(g_crumbFd, buf, static_cast<size_t>(n));
+    (void) ignored;
+  }
+  const int slot = signalSlot(sig);
+  if (slot >= 0) sigaction(sig, &g_oldActions[slot], nullptr);
+}
+
+void installCrashHandler() {
+  for (int i = 0; i < 4; ++i) {
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_sigaction = onFatalSignal;
+    action.sa_flags = SA_SIGINFO;
+    sigemptyset(&action.sa_mask);
+    sigaction(g_fatalSignals[i], &action, &g_oldActions[i]);
+  }
+}
 
 void emit(JNIEnv * env, jobject sink, const char * type, const std::string & text, const std::string & usage) {
   jclass cls = env->GetObjectClass(sink);
@@ -37,16 +121,41 @@ void emit(JNIEnv * env, jobject sink, const char * type, const std::string & tex
   jstring jText = env->NewStringUTF(text.c_str());
   jstring jUsage = env->NewStringUTF(usage.c_str());
   env->CallVoidMethod(sink, method, jType, jText, jUsage);
+  if (env->ExceptionCheck()) {  // una excepción de Java pendiente haría fallar las siguientes llamadas JNI
+    env->ExceptionClear();
+    crumb("emit: la app lanzó una excepción al recibir el evento");
+  }
   env->DeleteLocalRef(jUsage);
   env->DeleteLocalRef(jText);
   env->DeleteLocalRef(jType);
   env->DeleteLocalRef(cls);
 }
 
-ModelState * getModel(jlong handle) {
+// Longitud del prefijo de `s` que termina en un carácter UTF-8 completo: un token puede cortar un carácter
+// de varios bytes y NewStringUTF no admite secuencias a medias.
+size_t completeUtf8Prefix(const std::string & s) {
+  size_t i = s.size();
+  for (int back = 0; i > 0 && back < 4; ++back) {
+    const unsigned char c = static_cast<unsigned char>(s[i - 1]);
+    if ((c & 0xC0) == 0x80) {  // byte de continuación: seguir hacia atrás hasta el inicial
+      --i;
+      continue;
+    }
+    size_t need = 1;
+    if ((c >> 5) == 0x6) need = 2;
+    else if ((c >> 4) == 0xE) need = 3;
+    else if ((c >> 3) == 0x1E) need = 4;
+    const size_t have = s.size() - (i - 1);
+    return have >= need ? s.size() : i - 1;
+  }
+  return s.size();
+}
+
+// shared_ptr: si se descarga mientras se genera, el modelo vive hasta que termine la generación.
+std::shared_ptr<ModelState> getModel(jlong handle) {
   std::lock_guard<std::mutex> lock(g_mutex);
   auto it = g_models.find(handle);
-  return it == g_models.end() ? nullptr : it->second.get();
+  return it == g_models.end() ? nullptr : it->second;
 }
 
 std::string formatPrompt(const llama_model * model, const std::string & text) {
@@ -87,128 +196,185 @@ std::string usageJson(int64_t ttftUs, int64_t totalUs, int promptTokens, int com
 }  // namespace
 
 extern "C" JNIEXPORT void JNICALL
-Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_initBackend(JNIEnv *, jobject) {
-  std::call_once(g_backendFlag, [] { llama_backend_init(); });
+Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_initBackend(JNIEnv * env, jobject, jstring jCrumbPath) {
+  std::call_once(g_backendFlag, [env, jCrumbPath] {
+    const char * path = env->GetStringUTFChars(jCrumbPath, nullptr);
+    g_crumbFd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0600);
+    env->ReleaseStringUTFChars(jCrumbPath, path);
+    installCrashHandler();
+    crumb("start");
+    llama_backend_init();
+    crumb("backend ok");
+  });
 }
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
     JNIEnv * env, jobject, jstring jPath, jint contextTokens, jint) {
-  const char * path = env->GetStringUTFChars(jPath, nullptr);
-  auto state = std::make_unique<ModelState>();
+  const char * pathChars = env->GetStringUTFChars(jPath, nullptr);
+  const std::string path(pathChars);
+  env->ReleaseStringUTFChars(jPath, pathChars);
 
-  llama_model_params modelParams = llama_model_default_params();
-  modelParams.n_gpu_layers = 0;
-  state->model = llama_model_load_from_file(path, modelParams);
-  env->ReleaseStringUTFChars(jPath, path);
-  if (state->model == nullptr) return 0;
+  try {
+    crumb("load: abrir modelo (n_ctx=" + std::to_string(contextTokens) + ")");
+    auto state = std::make_shared<ModelState>();
 
-  llama_context_params ctxParams = llama_context_default_params();
-  ctxParams.n_ctx = static_cast<uint32_t>(contextTokens);
-  ctxParams.n_batch = static_cast<uint32_t>(contextTokens);
-  ctxParams.no_perf = false;
-  state->ctx = llama_init_from_model(state->model, ctxParams);
-  if (state->ctx == nullptr) {
-    llama_model_free(state->model);
-    return 0;
+    llama_model_params modelParams = llama_model_default_params();
+    modelParams.n_gpu_layers = 0;
+    state->model = llama_model_load_from_file(path.c_str(), modelParams);
+    if (state->model == nullptr) {
+      crumb("load: el modelo no se pudo abrir");
+      return 0;
+    }
+    crumb("load: modelo ok");
+
+    llama_context_params ctxParams = llama_context_default_params();
+    ctxParams.n_ctx = static_cast<uint32_t>(contextTokens);
+    ctxParams.n_batch = static_cast<uint32_t>(contextTokens);
+    ctxParams.no_perf = false;
+    state->ctx = llama_init_from_model(state->model, ctxParams);
+    if (state->ctx == nullptr) {
+      crumb("load: no se pudo crear el contexto");
+      return 0;  // el destructor libera el modelo
+    }
+    crumb("load: contexto ok");
+
+    auto samplerParams = llama_sampler_chain_default_params();
+    samplerParams.no_perf = false;
+    state->sampler = llama_sampler_chain_init(samplerParams);
+    llama_sampler_chain_add(state->sampler, llama_sampler_init_top_k(40));
+    llama_sampler_chain_add(state->sampler, llama_sampler_init_top_p(0.9f, 1));
+    llama_sampler_chain_add(state->sampler, llama_sampler_init_temp(0.8f));
+    llama_sampler_chain_add(state->sampler, llama_sampler_init_dist(1234));
+
+    const jlong handle = g_nextHandle.fetch_add(1);
+    {
+      std::lock_guard<std::mutex> lock(g_mutex);
+      g_models[handle] = std::move(state);
+    }
+    crumb("load: listo (handle " + std::to_string(handle) + ")");
+    crumb("idle");
+    return handle;
+  } catch (const std::exception & e) {
+    crumb(std::string("load: excepción C++: ") + e.what());
+  } catch (...) {
+    crumb("load: excepción C++ desconocida");
   }
-
-  auto samplerParams = llama_sampler_chain_default_params();
-  samplerParams.no_perf = false;
-  state->sampler = llama_sampler_chain_init(samplerParams);
-  llama_sampler_chain_add(state->sampler, llama_sampler_init_top_k(40));
-  llama_sampler_chain_add(state->sampler, llama_sampler_init_top_p(0.9f, 1));
-  llama_sampler_chain_add(state->sampler, llama_sampler_init_temp(0.8f));
-  llama_sampler_chain_add(state->sampler, llama_sampler_init_dist(1234));
-
-  const jlong handle = g_nextHandle.fetch_add(1);
-  {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    g_models[handle] = std::move(state);
-  }
-  return handle;
+  return 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
     JNIEnv * env, jobject, jlong handle, jstring jPrompt, jint threads, jobject sink) {
-  ModelState * state = getModel(handle);
+  const std::shared_ptr<ModelState> state = getModel(handle);
   if (state == nullptr) {
     emit(env, sink, "error", "Modelo no cargado", "{}");
     return;
   }
 
-  state->cancelled.store(false);
-  llama_set_n_threads(state->ctx, threads, threads);
+  try {
+    state->cancelled.store(false);
+    llama_set_n_threads(state->ctx, threads, threads);
 
-  const char * promptChars = env->GetStringUTFChars(jPrompt, nullptr);
-  const std::string prompt = formatPrompt(state->model, promptChars);
-  env->ReleaseStringUTFChars(jPrompt, promptChars);
+    const char * promptChars = env->GetStringUTFChars(jPrompt, nullptr);
+    const std::string prompt = formatPrompt(state->model, promptChars);
+    env->ReleaseStringUTFChars(jPrompt, promptChars);
+    crumb("gen: plantilla aplicada (" + std::to_string(prompt.size()) + " bytes, hilos " + std::to_string(threads) + ")");
 
-  const llama_vocab * vocab = llama_model_get_vocab(state->model);
-  int32_t nPrompt = -llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), nullptr, 0, true, true);
-  if (nPrompt <= 0) {
-    emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
-    return;
-  }
-  std::vector<llama_token> tokens(static_cast<size_t>(nPrompt));
-  if (llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), tokens.data(), nPrompt, true, true) < 0) {
-    emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
-    return;
-  }
-
-  llama_batch_ext * batch = llama_batch_ext_init(state->ctx);
-  batchSetTokens(batch, tokens.data(), nPrompt, 0);
-
-  const auto started = std::chrono::steady_clock::now();
-  if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch) != 0) {
-    llama_batch_ext_free(batch);
-    emit(env, sink, "error", "Falló la evaluación del prompt", "{}");
-    return;
-  }
-
-  int64_t ttftUs = 0;
-  int generated = 0;
-  llama_pos pos = nPrompt;
-  constexpr int kMaxTokens = 512;
-  char piece[256];
-
-  while (generated < kMaxTokens && !state->cancelled.load()) {
-    const llama_token next = llama_sampler_sample(state->sampler, state->ctx, -1);
-    if (llama_vocab_is_eog(vocab, next)) break;
-
-    const int n = llama_token_to_piece(vocab, next, piece, sizeof(piece), 0, true);
-    if (n > 0) emit(env, sink, "token", std::string(piece, static_cast<size_t>(n)), "{}");
-    if (generated == 0) {
-      ttftUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+    const llama_vocab * vocab = llama_model_get_vocab(state->model);
+    int32_t nPrompt = -llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), nullptr, 0, true, true);
+    if (nPrompt <= 0) {
+      crumb("gen: tokenizar falló (tamaño)");
+      emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
+      return;
     }
-
-    llama_sampler_accept(state->sampler, next);
-    generated++;
-    batchSetTokens(batch, &next, 1, pos);
-    pos++;
-
-    if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch) != 0) {
-      emit(env, sink, "error", "Falló la generación", "{}");
-      break;
+    std::vector<llama_token> tokens(static_cast<size_t>(nPrompt));
+    if (llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), tokens.data(), nPrompt, true, true) < 0) {
+      crumb("gen: tokenizar falló");
+      emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
+      return;
     }
-  }
+    crumb("gen: " + std::to_string(nPrompt) + " tokens de prompt");
 
-  const auto finished = std::chrono::steady_clock::now();
-  const int64_t totalUs = std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count();
-  llama_batch_ext_free(batch);
-  emit(env, sink, "usage", "", usageJson(ttftUs, totalUs, nPrompt, generated));
-  emit(env, sink, "done", "", "{}");
+    std::unique_ptr<llama_batch_ext, void (*)(llama_batch_ext *)> batch(llama_batch_ext_init(state->ctx), llama_batch_ext_free);
+    batchSetTokens(batch.get(), tokens.data(), nPrompt, 0);
+
+    const auto started = std::chrono::steady_clock::now();
+    crumb("gen: evaluando el prompt");
+    if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
+      crumb("gen: llama_process falló con el prompt");
+      emit(env, sink, "error", "Falló la evaluación del prompt", "{}");
+      return;
+    }
+    crumb("gen: prompt evaluado en " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count()) + " ms");
+
+    int64_t ttftUs = 0;
+    int generated = 0;
+    llama_pos pos = nPrompt;
+    constexpr int kMaxTokens = 512;
+    char piece[256];
+    std::string pending;  // bytes de un carácter UTF-8 aún incompleto
+
+    while (generated < kMaxTokens && !state->cancelled.load()) {
+      const llama_token next = llama_sampler_sample(state->sampler, state->ctx, -1);
+      if (llama_vocab_is_eog(vocab, next)) break;
+
+      const int n = llama_token_to_piece(vocab, next, piece, sizeof(piece), 0, true);
+      if (n > 0) {
+        pending.append(piece, static_cast<size_t>(n));
+        const size_t whole = completeUtf8Prefix(pending);
+        if (whole > 0) {
+          emit(env, sink, "token", pending.substr(0, whole), "{}");
+          pending.erase(0, whole);
+        }
+      }
+      if (generated == 0) {
+        ttftUs = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+        crumb("gen: primer token");
+      }
+
+      llama_sampler_accept(state->sampler, next);
+      generated++;
+      if (generated % 64 == 0) crumb("gen: " + std::to_string(generated) + " tokens");
+      batchSetTokens(batch.get(), &next, 1, pos);
+      pos++;
+
+      if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
+        crumb("gen: llama_process falló generando");
+        emit(env, sink, "error", "Falló la generación", "{}");
+        break;
+      }
+    }
+    if (!pending.empty()) emit(env, sink, "token", pending, "{}");
+
+    const auto finished = std::chrono::steady_clock::now();
+    const int64_t totalUs = std::chrono::duration_cast<std::chrono::microseconds>(finished - started).count();
+    crumb("gen: fin (" + std::to_string(generated) + " tokens)");
+    emit(env, sink, "usage", "", usageJson(ttftUs, totalUs, nPrompt, generated));
+    emit(env, sink, "done", "", "{}");
+    crumb("idle");
+  } catch (const std::exception & e) {
+    crumb(std::string("gen: excepción C++: ") + e.what());
+    emit(env, sink, "error", std::string("Excepción en el motor: ") + e.what(), "{}");
+  } catch (...) {
+    crumb("gen: excepción C++ desconocida");
+    emit(env, sink, "error", "Excepción desconocida en el motor", "{}");
+  }
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_cancel(JNIEnv *, jobject, jlong handle) {
-  ModelState * state = getModel(handle);
+  const std::shared_ptr<ModelState> state = getModel(handle);
   if (state != nullptr) state->cancelled.store(true);
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_unloadModel(JNIEnv *, jobject, jlong handle) {
-  std::lock_guard<std::mutex> lock(g_mutex);
-  g_models.erase(handle);
+  crumb("unload: liberando");
+  {
+    std::lock_guard<std::mutex> lock(g_mutex);
+    g_models.erase(handle);
+  }
+  crumb("unload: liberado");
+  crumb("idle");
 }

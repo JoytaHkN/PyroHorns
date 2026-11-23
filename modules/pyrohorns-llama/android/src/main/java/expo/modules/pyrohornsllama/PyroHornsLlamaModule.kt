@@ -1,6 +1,8 @@
 package expo.modules.pyrohornsllama
 
+import android.app.ActivityManager
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -12,20 +14,100 @@ import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class PyroHornsLlamaModule : Module() {
   private val native = PyroHornsLlamaNative()
 
-  init {
-    native.initBackend()
+  private fun diagnosticsDir(): File {
+    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+    return File(context.filesDir, "diagnostics").apply { mkdirs() }
+  }
+
+  // Si la sesión anterior no terminó en reposo («idle»/«start»), se guarda su rastro como cierre inesperado.
+  private fun rotateSessionLog(dir: File) {
+    val current = File(dir, "session.log")
+    if (current.exists()) {
+      val lastLine = current.readLines().lastOrNull { it.isNotBlank() } ?: ""
+      val clean = lastLine.isEmpty() || lastLine.endsWith(" idle") || lastLine.endsWith(" start") || lastLine.endsWith(" backend ok")
+      if (!clean) current.copyTo(File(dir, "crash-last.log"), overwrite = true)
+      current.delete()
+    }
+  }
+
+  // Tramos de texto legible de un volcado binario (tombstone): nombres de bibliotecas y funciones.
+  private fun printableRuns(bytes: ByteArray): String {
+    val out = StringBuilder()
+    val run = StringBuilder()
+    for (b in bytes) {
+      val c = b.toInt() and 0xFF
+      if (c in 32..126) {
+        run.append(c.toChar())
+      } else {
+        if (run.length >= 8) out.append(run).append('\n')
+        run.setLength(0)
+      }
+      if (out.length > 3000) break
+    }
+    if (run.length >= 8 && out.length <= 3000) out.append(run)
+    return out.toString().take(3000)
+  }
+
+  private fun exitInfos(context: Context): JSONArray {
+    val result = JSONArray()
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return result
+    val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    for (info in manager.getHistoricalProcessExitReasons(context.packageName, 0, 6)) {
+      val item = JSONObject()
+        .put("reason", info.reason)
+        .put("description", info.description ?: "")
+        .put("status", info.status)
+        .put("timestamp", info.timestamp)
+        .put("rssKb", info.rss)
+      if (info.reason == android.app.ApplicationExitInfo.REASON_CRASH_NATIVE) {
+        val trace = try {
+          info.traceInputStream?.use { printableRuns(it.readBytes()) } ?: ""
+        } catch (e: Exception) {
+          ""
+        }
+        item.put("trace", trace)
+      }
+      result.put(item)
+    }
+    return result
   }
 
   override fun definition() = ModuleDefinition {
     Name("PyroHornsLlama")
 
     Events("onEvent")
+
+    OnCreate {
+      val dir = diagnosticsDir()
+      rotateSessionLog(dir)
+      native.initBackend(File(dir, "session.log").path)
+    }
+
+    // Rastros del motor y motivos de cierre que registra Android (sin conversaciones ni claves, S9).
+    Function("diagnostics") {
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val dir = diagnosticsDir()
+      fun read(name: String): String = File(dir, name).let { if (it.exists()) it.readText().takeLast(6000) else "" }
+      JSONObject()
+        .put("crashLog", read("crash-last.log"))
+        .put("sessionLog", read("session.log"))
+        .put("exits", exitInfos(context))
+        .put("sdk", Build.VERSION.SDK_INT)
+        .put("device", "${Build.MANUFACTURER} ${Build.MODEL}")
+        .toString()
+    }
+
+    Function("clearDiagnostics") {
+      File(diagnosticsDir(), "crash-last.log").delete()
+    }
 
     AsyncFunction("isAvailable") { true }
 

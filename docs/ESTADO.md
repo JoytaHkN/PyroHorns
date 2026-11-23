@@ -39,6 +39,16 @@
      (se conservan los demás permisos, D9). Nativo nuevo: `fileSize`, `hasAllFilesAccess`, `requestAllFilesAccess`.
      APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-P14C-prueba.apk` (+ `.sha256`; lleva `libpyrohorns_llama.so` y
      `MANAGE_EXTERNAL_STORAGE`). **Cómo probar:** instalar el APK nuevo → Modelos → importar LFM3 (vía B) → abrir un chat en modo General y escribir.
+   - **Prueba del APK P14-C (2026-11-23):** importar y «Disponible» funcionan, pero **al escribir en el chat la app se
+     cierra sola** con los 4 GGUF, sin mensaje de error. Causa **aún sin identificar** (no hay registro del móvil). Hallado
+     por lectura de código y corregido: (1) `ModelState` no liberaba modelo/contexto/sampler (con la carga por mensaje,
+     cada mensaje dejaba el modelo en RAM); (2) las excepciones C++ no se capturaban en el JNI; (3) un token que
+     cortaba un carácter UTF-8 se enviaba a medias. Añadido **Ajustes → Diagnóstico del motor**: el JNI escribe un rastro
+     por etapas (carga, plantilla, tokenizar, prompt, tokens) en un archivo que sobrevive al cierre, registra la señal
+     fatal (SIGSEGV/SIGABRT/SIGILL/SIGBUS) y la pantalla muestra además los motivos de cierre de Android
+     (`ApplicationExitInfo`: falta de memoria, fallo nativo + traza). **Siguiente:** instalar el APK nuevo, repetir la prueba
+     del chat, abrir Ajustes → Diagnóstico del motor, seleccionar el informe y pegarlo al agente.
+     Nota para P13: `GGML_NATIVE=OFF` compila ggml-cpu en armv8-a básico (sin dotprod/i8mm): funciona, pero más lento.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
@@ -98,3 +108,7 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   `MANAGE_EXTERNAL_STORAGE`, importación con selector, disponibilidad por modelo, mensajes de error accionables;
   21 pruebas nuevas (`tests/model-files.test.ts`). Typecheck, pruebas y bundle Android en verde; prebuild conserva los
   permisos previos. CI Android en verde (`955dbed`); falta probar en el móvil.
+- **2026-11-23** · Prueba del APK P14-C: los GGUF se importan, pero el chat cierra la app. Se corrigen la fuga del
+  modelo, las excepciones C++ y el corte de UTF-8, y se añade la pantalla «Diagnóstico del motor» (rastros en disco,
+  señal fatal y `ApplicationExitInfo`) para localizar la causa. 13 pruebas nuevas (`tests/diagnostics.test.ts`).
+  Pendiente: CI y nueva prueba en el móvil.

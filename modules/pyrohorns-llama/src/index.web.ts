@@ -12,6 +12,12 @@ export function fileSize(_path: string): number {
   return -1;
 }
 
+export function readDiagnostics(): string | null {
+  return null;
+}
+
+export function clearDiagnostics(): void {}
+
 export function requestAllFilesAccess(): void {}
 
 export async function loadModel(): Promise<number> {

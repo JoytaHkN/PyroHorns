@@ -35,6 +35,21 @@ export function fileSize(path: string): number {
   }
 }
 
+/** Rastros del motor y motivos de cierre (JSON), o null si el módulo no está. */
+export function readDiagnostics(): string | null {
+  try {
+    return Native.diagnostics();
+  } catch {
+    return null;
+  }
+}
+
+export function clearDiagnostics(): void {
+  try {
+    Native.clearDiagnostics();
+  } catch {}
+}
+
 /** Abre la pantalla del sistema donde se concede el acceso a todos los archivos. */
 export function requestAllFilesAccess(): void {
   Native.requestAllFilesAccess();
