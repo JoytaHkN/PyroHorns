@@ -1,0 +1,115 @@
+@import 'tailwindcss';
+@import 'uniwind';
+@import 'heroui-native/styles';
+
+@source './node_modules/heroui-native/lib';
+@source './src';
+
+/*
+ * Paleta Plasma (ver PLAN.md). Sobrescribe las variantes light/dark de HeroUI.
+ * Valores sacados del mockup aprobado "Agora Fire Mockup.html".
+ */
+@theme {
+  --color-plasma-1: #ff3366;
+  --color-plasma-2: #ff9900;
+  --color-plasma-3: #ffcc00;
+  --color-on-plasma: #1a0b05;
+}
+
+@layer theme {
+  :root {
+    @variant dark {
+      --font-normal: 'Outfit_400Regular';
+      --font-medium: 'Outfit_500Medium';
+      --font-semibold: 'Outfit_600SemiBold';
+      --font-bold: 'Outfit_700Bold';
+      --radius: 0.875rem;
+
+      --page: #121212;
+      --background: #1a1a1a;
+      --foreground: #e6e4e1;
+      --surface: #2d2d2d;
+      --surface-foreground: #e6e4e1;
+      --surface-secondary: #363636;
+      --surface-secondary-foreground: #e6e4e1;
+      --surface-tertiary: #3f3f3f;
+      --surface-tertiary-foreground: #e6e4e1;
+      --overlay: #2d2d2d;
+      --overlay-foreground: #e6e4e1;
+      --backdrop: rgba(0, 0, 0, 0.55);
+      --muted: #9c9893;
+      --default: #363636;
+      --default-foreground: #e6e4e1;
+      --accent: #ff9c66;
+      --accent-foreground: #1a0b05;
+      --field-background: #2d2d2d;
+      --field-foreground: #e6e4e1;
+      --field-placeholder: #9c9893;
+      --field-border: transparent;
+      --success: #5fb36b;
+      --success-foreground: #0f1a10;
+      --warning: #ffb547;
+      --warning-foreground: #1a0b05;
+      --danger: #ff5a5f;
+      --danger-foreground: #1a0505;
+      --segment: #3f3f3f;
+      --segment-foreground: #e6e4e1;
+      --border: rgba(255, 255, 255, 0.08);
+      --separator: rgba(255, 255, 255, 0.08);
+      --focus: #ff9c66;
+      --link: #ff9c66;
+      --surface-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.4);
+      --overlay-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.4);
+      --field-shadow: none;
+    }
+
+    @variant light {
+      --font-normal: 'Outfit_400Regular';
+      --font-medium: 'Outfit_500Medium';
+      --font-semibold: 'Outfit_600SemiBold';
+      --font-bold: 'Outfit_700Bold';
+      --radius: 0.875rem;
+
+      --page: #e3e0dc;
+      --background: #f1efec;
+      --foreground: #1d1c1a;
+      --surface: #ffffff;
+      --surface-foreground: #1d1c1a;
+      --surface-secondary: #e9e6e2;
+      --surface-secondary-foreground: #1d1c1a;
+      --surface-tertiary: #ffffff;
+      --surface-tertiary-foreground: #1d1c1a;
+      --overlay: #ffffff;
+      --overlay-foreground: #1d1c1a;
+      --backdrop: rgba(30, 25, 20, 0.35);
+      --muted: #6b6762;
+      --default: #e9e6e2;
+      --default-foreground: #1d1c1a;
+      --accent: #c4133f;
+      --accent-foreground: #ffffff;
+      --field-background: #ffffff;
+      --field-foreground: #1d1c1a;
+      --field-placeholder: #6b6762;
+      --field-border: transparent;
+      --success: #2f7d3a;
+      --success-foreground: #ffffff;
+      --warning: #b06a00;
+      --warning-foreground: #ffffff;
+      --danger: #c62828;
+      --danger-foreground: #ffffff;
+      --segment: #ffffff;
+      --segment-foreground: #1d1c1a;
+      --border: rgba(0, 0, 0, 0.09);
+      --separator: rgba(0, 0, 0, 0.09);
+      --focus: #c4133f;
+      --link: #c4133f;
+      --surface-shadow: 0 10px 22px rgba(60, 40, 20, 0.16), 0 2px 4px rgba(60, 40, 20, 0.1);
+      --overlay-shadow: 0 10px 22px rgba(60, 40, 20, 0.16), 0 2px 4px rgba(60, 40, 20, 0.1);
+      --field-shadow: 0 2px 4px rgba(60, 40, 20, 0.08);
+    }
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+}
