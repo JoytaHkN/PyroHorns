@@ -23,14 +23,16 @@
 1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
    - Paso 1 ✅: `LlamaProvider` en TypeScript (`src/providers/llama.ts`) con fallback a
      `MockProvider` cuando el módulo nativo no esté disponible; integración en `src/lib/engine.ts`.
-   - Paso 2 ⚠️ (implementado; **el CI en verde de `bc145ff` era un falso positivo**: `.gitignore` tenía `android/`
-     sin anclar y ocultaba `modules/pyrohorns-llama/android/` y `fastlane/metadata/android/`, así que el módulo
-     nativo nunca se subió ni se compiló, y el APK no llevaba ningún `.so` de llama. Corregido a `/android/`;
-     falta confirmar que el CI compila el módulo y que el APK trae `libpyrohorns_llama.so`; después, probar
-     en el móvil): módulo nativo propio
+   - Paso 2 ✅ en CI (`f5503ca`), **pendiente de probar en el móvil**: el CI en verde de `bc145ff` era un
+     falso positivo (`.gitignore` con `android/` sin anclar ocultaba `modules/pyrohorns-llama/android/` y
+     `fastlane/metadata/android/`; el módulo no se había subido ni compilado). Corregido a `/android/`; además
+     `AsyncFunction` pasó a `Coroutine` (no compilaba). Ahora el APK lleva `libpyrohorns_llama.so` (arm64-v8a).
+     APK para probar: `APK IA/apk/PyroHorns-0.1.0-F1.5-paso2-prueba.apk` (+ `.sha256`). Módulo propio
      `modules/pyrohorns-llama` (Expo Modules + JNI + CMake), con llama.cpp `dc33e61` vendimizado por
      `scripts/vendor-llama.sh` (SHA-256). Se registra solo en Android; en web y pruebas sigue
      `MockProvider`. `android.yml` instala NDK 27.1.12297006 y CMake 3.31.6.
+   - **Antes del paso 3**: instalar ese APK y comprobar que el chat genera con LFM3 (abrir un chat con un
+     modo General, mandar un mensaje). Si falla, el fallo real aparece en el chat; copiar el mensaje.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -76,3 +78,6 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-23** · Hallazgo: el módulo nativo no estaba en git por un `.gitignore` demasiado amplio (`android/`);
   el APK de `bc145ff` no contenía `libpyrohorns_llama.so`. Se ancla a `/android/` y `/ios/`, y se añaden
   el módulo Android y los metadatos de F-Droid (`fastlane/`). Pendiente: CI y comprobación del `.so`.
+- **2026-11-23** · F1.5 paso 2 corregido (`5ce99a6`, `f5503ca`): `.gitignore` anclado, módulo Android y
+  `fastlane/` añadidos a git, Kotlin con `Coroutine`. CI Android en verde y APK con `libpyrohorns_llama.so`
+  (copiado a `APK IA/apk/`). No probado todavía en el móvil. Siguiente: probarlo y seguir con pasos 3 y 4.
