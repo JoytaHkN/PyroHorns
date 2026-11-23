@@ -1,0 +1,13 @@
+PyroHorns es un asistente de IA que funciona en tu propio móvil con modelos GGUF locales.
+
+<b>Estado actual (0.1.0, fase F1.1)</b>
+<ul>
+<li>Chat con respuestas simuladas en streaming; el modelo local real llega en la siguiente versión.</li>
+<li>Diez modos (general, planificación, programación, depuración, investigación, Red/Blue Cyber…) que eligen el modelo adecuado.</li>
+<li>Interruptor Profundo: razonamiento plegable y más contexto.</li>
+<li>Conversaciones cifradas en el dispositivo (SQLCipher) con búsqueda de texto completo.</li>
+<li>Contraseña de copia para poder restaurar tus conversaciones desde una copia de seguridad de Android.</li>
+<li>Proyectos, catálogo de modelos GGUF y temas oscuro y claro con la paleta Plasma.</li>
+</ul>
+
+Sin anuncios ni telemetría. Código abierto bajo GPL-3.0.

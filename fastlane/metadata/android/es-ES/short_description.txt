@@ -1,0 +1,1 @@
+Asistente de IA local: modelos GGUF en tu móvil, sin enviar tus datos a nadie

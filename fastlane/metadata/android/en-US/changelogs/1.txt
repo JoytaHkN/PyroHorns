@@ -1,0 +1,1 @@
+First version: Plasma design, simulated chat, modes, Deep switch, encrypted conversations and backup password.

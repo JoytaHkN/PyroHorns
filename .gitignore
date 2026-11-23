@@ -2,8 +2,8 @@ node_modules/
 .expo/
 dist/
 *.log
-android/
-ios/
+/android/
+/ios/
 
 # Claves de firma: nunca en el repositorio
 *.p12

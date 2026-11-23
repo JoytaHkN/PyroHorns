@@ -1,0 +1,1 @@
+Primera versión: diseño Plasma, chat simulado, modos, interruptor Profundo, conversaciones cifradas y contraseña de copia.
