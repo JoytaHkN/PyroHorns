@@ -31,8 +31,13 @@
      `modules/pyrohorns-llama` (Expo Modules + JNI + CMake), con llama.cpp `dc33e61` vendimizado por
      `scripts/vendor-llama.sh` (SHA-256). Se registra solo en Android; en web y pruebas sigue
      `MockProvider`. `android.yml` instala NDK 27.1.12297006 y CMake 3.31.6.
-   - **Probado en el móvil (2026-11-23): falla** con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
-     almacenamiento de la app». Causa: sin acceso a `/sdcard` (ver P14). Bloqueado hasta que el usuario elija A/B/C.
+   - **Probado en el móvil (2026-11-23): falló** con «No se encontró LFM3-1.7B-Q4_K_M.gguf…»: la app no tenía acceso
+     a `/sdcard`. El usuario eligió **P14-C** (A y B seleccionables, por defecto B) y está **implementado, pendiente de CI
+     y de probar en el móvil**: Modelos → «Acceso a los modelos» (carpeta de la app / todo el almacenamiento), botón para
+     conceder `MANAGE_EXTERNAL_STORAGE`, «Importar archivo .gguf» con el selector del sistema (copia a `models/` de la app,
+     por nombre o por tamaño exacto) y estado «Disponible/Falta» por modelo. `app.json` declara `MANAGE_EXTERNAL_STORAGE`
+     (se conservan los demás permisos, D9). Nativo nuevo: `fileSize`, `hasAllFilesAccess`, `requestAllFilesAccess`.
+     **Cómo probar:** instalar el APK nuevo → Modelos → importar LFM3 (vía B) → abrir un chat en modo General y escribir.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
@@ -44,10 +49,7 @@
 ## Pendiente de decisión del usuario
 - **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
   bueno y las cinco decisiones abiertas (variante sin mmap, barrido de hilos, modelos a probar, salida de
-  resultados, tok/s del chat). No se ha escrito código.
-- **P14 (bloquea F1.5 y P13):** cómo lee la app los GGUF. El APK probado no encuentra el modelo porque no tiene
-  acceso a `/sdcard/IA/…` (sin `MANAGE_EXTERNAL_STORAGE`). Opciones A/B/C en `PLAN.md` §7 (recomendación: C, A y B
-  seleccionables, por defecto B). Hasta decidir, el chat no puede cargar LFM3.
+  resultados, tok/s del chat). No se ha escrito código. Ya no está bloqueada por P14.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -91,3 +93,7 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-23** · F1.5: propuesta P13 (pantalla de benchmark) redactada en `PLAN.md` §7; sin código, pendiente de visto bueno.
 - **2026-11-23** · Prueba del APK F1.5 paso 2 en el móvil: el motor nativo se carga, pero no encuentra el GGUF por falta de
   acceso a `/sdcard`. Se registra P14 (acceso a modelos) en `PLAN.md` §7, pendiente de decisión; P13 (benchmark) queda tras ella.
+- **2026-11-23** · P14 decidida por el usuario: opción C. Implementada: ajuste `modelAccess`, permiso
+  `MANAGE_EXTERNAL_STORAGE`, importación con selector, disponibilidad por modelo, mensajes de error accionables;
+  21 pruebas nuevas (`tests/model-files.test.ts`). Typecheck, pruebas y bundle Android en verde; prebuild conserva los
+  permisos previos. Falta CI y probar en el móvil.

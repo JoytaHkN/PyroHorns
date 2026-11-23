@@ -17,6 +17,29 @@ export async function isLlamaNativeAvailable(): Promise<boolean> {
   }
 }
 
+/** ¿Tiene la app «Acceso a todos los archivos»? (Android 11+; antes siempre true). */
+export function hasAllFilesAccess(): boolean {
+  try {
+    return Native.hasAllFilesAccess();
+  } catch {
+    return false;
+  }
+}
+
+/** Tamaño en bytes de un archivo legible, o -1 si no existe o no se puede leer. */
+export function fileSize(path: string): number {
+  try {
+    return Native.fileSize(path);
+  } catch {
+    return -1;
+  }
+}
+
+/** Abre la pantalla del sistema donde se concede el acceso a todos los archivos. */
+export function requestAllFilesAccess(): void {
+  Native.requestAllFilesAccess();
+}
+
 export async function loadModel(path: string, contextTokens: number, threads: number): Promise<number> {
   return Native.loadModel(path, contextTokens, threads);
 }

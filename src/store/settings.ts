@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { modelForMode, type ModeId } from '@/data/agents';
+import { DEFAULT_MODEL_ACCESS, type ModelAccess } from '@/lib/model-files';
 import { persistStorage } from './storage';
 
 export type SchemePref = 'dark' | 'light';
@@ -12,6 +13,8 @@ interface SettingsState {
   deep: boolean;
   /** Modelo elegido a mano en "Avanzado"; null = el que corresponde al modo (D1). */
   modelOverride: string | null;
+  /** Cómo lee la app los GGUF (S3): carpeta de la app (sin permisos) o todo el almacenamiento. */
+  modelAccess: ModelAccess;
   setScheme: (s: SchemePref) => void;
   toggleScheme: () => void;
   /** Cambiar de modo vuelve al modelo automático. */
@@ -19,6 +22,7 @@ interface SettingsState {
   setDeep: (v: boolean) => void;
   toggleDeep: () => void;
   setModelOverride: (id: string | null) => void;
+  setModelAccess: (a: ModelAccess) => void;
 }
 
 /** Solo ajustes de interfaz (nada sensible): se guardan sin cifrar, también en el visor web. */
@@ -29,12 +33,14 @@ export const useSettings = create<SettingsState>()(
       mode: 'general',
       deep: false,
       modelOverride: null,
+      modelAccess: DEFAULT_MODEL_ACCESS,
       setScheme: (scheme) => set({ scheme }),
       toggleScheme: () => set((s) => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
       setMode: (mode) => set({ mode, modelOverride: null }),
       setDeep: (deep) => set({ deep }),
       toggleDeep: () => set((s) => ({ deep: !s.deep })),
       setModelOverride: (modelOverride) => set({ modelOverride }),
+      setModelAccess: (modelAccess) => set({ modelAccess }),
     }),
     { name: 'pyrohorns-settings', storage: persistStorage, version: 1 },
   ),

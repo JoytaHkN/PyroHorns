@@ -4,6 +4,16 @@ export async function isLlamaNativeAvailable(): Promise<boolean> {
   return false;
 }
 
+export function hasAllFilesAccess(): boolean {
+  return false;
+}
+
+export function fileSize(_path: string): number {
+  return -1;
+}
+
+export function requestAllFilesAccess(): void {}
+
 export async function loadModel(): Promise<number> {
   throw new Error('El motor nativo solo está disponible en Android');
 }

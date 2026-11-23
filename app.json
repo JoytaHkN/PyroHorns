@@ -16,7 +16,8 @@
       },
       "edgeToEdgeEnabled": true,
       "versionCode": 1,
-      "allowBackup": true
+      "allowBackup": true,
+      "permissions": ["android.permission.MANAGE_EXTERNAL_STORAGE"]
     },
     "web": {
       "bundler": "metro",

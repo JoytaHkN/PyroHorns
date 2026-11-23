@@ -11,6 +11,9 @@ export interface LlamaNativeEvent {
 
 declare class PyroHornsLlamaModule extends NativeModule<{ onEvent: (event: LlamaNativeEvent) => void }> {
   isAvailable(): Promise<boolean>;
+  hasAllFilesAccess(): boolean;
+  requestAllFilesAccess(): void;
+  fileSize(path: string): number;
   loadModel(path: string, contextTokens: number, threads: number): Promise<number>;
   generate(handle: number, prompt: string, threads: number): Promise<void>;
   cancel(handle: number): Promise<void>;

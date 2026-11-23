@@ -67,6 +67,7 @@ no en el repo). El cloud solo sirve para TS/pruebas, y para eso está GitHub Act
 4. `npm ci` → `npm run typecheck && npm test`.
 5. APK: `npx expo prebuild --platform android --no-install` y
    `cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a` (`gradlew.bat` en Windows).
-6. Para probar inferencia, copia los GGUF al móvil: `src/lib/native.ts` busca
-   `/sdcard/IA/Proyectos/APK IA/<archivo>` y después `Paths.document`. Los modelos no están en el repo.
+6. Para probar inferencia, lleva los GGUF al móvil: en Modelos eliges la vía (P14-C). «Carpeta de la app» (por defecto)
+   los copia con el selector de archivos a `Paths.document/models`; «Todo el almacenamiento» los abre desde
+   `/sdcard/IA/Proyectos/APK IA/` y pide el permiso «Acceso a todos los archivos». Los modelos no están en el repo.
 7. Nunca subas `firma-prelanzamiento/` ni claves.

@@ -1,30 +1,34 @@
-import { Paths } from 'expo-file-system';
 import { modelById } from '@/data/models';
 import { activateNativeLlama, setNativeLlamaModule } from '@/lib/engine';
+import { findModelPath, missingModelMessage, modelSearchFolders } from '@/lib/model-files';
+import { appModelsPath } from '@/lib/model-import';
 import type { NativeLlamaModule } from '@/providers/llama';
+import { useSettings } from '@/store/settings';
 import type { Usage } from '@/types/chat';
 import {
   cancel as nativeCancel,
+  fileSize,
   generate as nativeGenerate,
+  hasAllFilesAccess,
   isLlamaNativeAvailable,
   loadModel as nativeLoadModel,
   unloadModel as nativeUnloadModel,
 } from '@pyrohorns/llama';
 
 const handles = new Map<string, number>();
-const folders = ['/sdcard/IA/Proyectos/APK IA/', Paths.document.uri.replace(/\/$/, '')];
+
+/** Ruta real del GGUF según la vía elegida en Modelos (S3), o null si no está. */
+export function locateModel(file: string): string | null {
+  const folders = modelSearchFolders(useSettings.getState().modelAccess, appModelsPath());
+  return findModelPath(file, folders, (path) => fileSize(path) > 0);
+}
 
 async function resolveModelPath(modelId: string): Promise<string> {
   if (modelId.startsWith('/')) return modelId;
   const file = modelById(modelId).file;
-  for (const folder of folders) {
-    if (!folder) continue;
-    const path = `${folder.replace(/\/$/, '')}/${file}`;
-    try {
-      if (Paths.info(`file://${path}`).exists) return path;
-    } catch {}
-  }
-  throw new Error(`No se encontró ${file} en /sdcard ni en el almacenamiento de la app`);
+  const found = locateModel(file);
+  if (found) return found;
+  throw new Error(missingModelMessage(file, useSettings.getState().modelAccess, hasAllFilesAccess()));
 }
 
 export const nativeLlamaModule: NativeLlamaModule = {
