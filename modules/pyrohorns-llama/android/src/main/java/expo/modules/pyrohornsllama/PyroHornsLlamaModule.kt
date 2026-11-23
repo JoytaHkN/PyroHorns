@@ -1,6 +1,7 @@
 package expo.modules.pyrohornsllama
 
 import androidx.core.os.bundleOf
+import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.Dispatchers
@@ -20,11 +21,11 @@ class PyroHornsLlamaModule : Module() {
 
     AsyncFunction("isAvailable") { true }
 
-    AsyncFunction("loadModel") { path: String, contextTokens: Int, threads: Int ->
+    AsyncFunction("loadModel") Coroutine { path: String, contextTokens: Int, threads: Int ->
       withContext(Dispatchers.IO) { native.loadModel(path, contextTokens, threads) }
     }
 
-    AsyncFunction("generate") { handle: Long, prompt: String, threads: Int ->
+    AsyncFunction("generate") Coroutine { handle: Long, prompt: String, threads: Int ->
       withContext(Dispatchers.IO) {
         native.generate(handle, prompt, threads, object : LlamaEventSink {
           override fun emit(type: String, text: String, usage: String) {
@@ -39,11 +40,11 @@ class PyroHornsLlamaModule : Module() {
       }
     }
 
-    AsyncFunction("cancel") { handle: Long ->
+    AsyncFunction("cancel") Coroutine { handle: Long ->
       withContext(Dispatchers.IO) { native.cancel(handle) }
     }
 
-    AsyncFunction("unloadModel") { handle: Long ->
+    AsyncFunction("unloadModel") Coroutine { handle: Long ->
       withContext(Dispatchers.IO) { native.unloadModel(handle) }
     }
   }
