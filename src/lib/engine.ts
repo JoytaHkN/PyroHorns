@@ -1,13 +1,15 @@
 import { contextTokens, modelById } from '@/data/models';
 import { MockProvider } from '@/providers/mock';
+import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
 import type { ChatProvider } from '@/providers/types';
 import { activeModelId, useSettings } from '@/store/settings';
 import { uid, useChat, type AgentSnapshot } from '@/store/chat';
 import { buildContext } from './context';
 import { errorSummary, log } from './log';
 
-/** F1.5/F2 sustituye esto por el LlamaProvider. */
-let provider: ChatProvider = MockProvider;
+/** F1.5/F2: usa el módulo nativo si está disponible, si no el mock. */
+export { setNativeLlamaModule };
+let provider: ChatProvider = isNativeLlamaAvailable() ? LlamaProvider : MockProvider;
 export const setProvider = (p: ChatProvider) => {
   provider = p;
 };

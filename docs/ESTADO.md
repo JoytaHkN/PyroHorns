@@ -21,11 +21,14 @@
 
 ## Siguiente paso
 1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
-   - módulo nativo propio (Expo Modules + JNI) basado en LMPlayground;
-   - LFM3 respondiendo en el chat real;
-   - comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
-   - medir tiempo hasta el primer token, tok/s y RAM con 1K y 8K de contexto;
-   - plan B: llama.rn.
+   - Paso 1 ✅: `LlamaProvider` en TypeScript (`src/providers/llama.ts`) con fallback a
+     `MockProvider` cuando el módulo nativo no esté disponible; integración en `src/lib/engine.ts`.
+   - Paso 2 (pendiente): módulo nativo propio (Expo Modules + JNI) basado en LMPlayground
+     (`dc33e61`, vendizado en el repo, compilado con CMake/NDK en CI).
+   - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
+     elegir la más rápida.
+   - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
+   - Sin plan B: directo con el módulo nativo (decisión del usuario).
 2. Revisar los PR de Dependabot que quedan: #1–#5 (acciones de GitHub; relanzar su CI, que falló por
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
@@ -47,3 +50,6 @@ envía esto primero:
 - **2026-11-23** · El usuario probó el APK: todo OK. Los permisos declarados se mantienen (D9).
   Comprobado que llama.cpp `dc33e61` soporta LFM3.
 - **2026-11-23** · S10 confirmado (javascript:/data: como texto). Publicada `v0.1.0-alpha.1` firmada. Empieza F1.5.
+- **2026-11-23** · F1.5 paso 1: `LlamaProvider` en TypeScript con fallback a `MockProvider`; integración en
+  `engine.ts`; typecheck y 83 pruebas en verde. Siguiente: módulo nativo (Expo Modules + JNI) basado en
+  LMPlayground `dc33e61`.
