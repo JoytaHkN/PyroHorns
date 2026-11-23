@@ -1,6 +1,6 @@
 # PLAN — PyroHorns
 
-> **Versión 2.2** · 2026-11-23
+> **Versión 2.3** · 2026-11-23
 > Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S17 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
@@ -219,6 +219,32 @@ Rendimiento (F1.5, pasos 3 y 4):
 
 Arquitectura:
 - P12. Sustituir la "variante Compose completa" por piezas nativas solo donde React Native no llega (ventana flotante, terminal).
+
+Bloqueo de F1.5 (2026-11-23):
+- **P13. Cómo lee la app los GGUF.** El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
+  almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a
+  `/sdcard/IA/…`, y `MANAGE_EXTERNAL_STORAGE` no está declarado; `Paths.info` devuelve `exists:false`. Opciones (de la
+  más libre a la más protegida; encajan con S3):
+  - **A. Acceso a todos los archivos:** declarar `MANAGE_EXTERNAL_STORAGE` y un botón en Ajustes que abre la pantalla del
+    sistema. El modelo se abre directo desde `/sdcard`, sin duplicarlo.
+  - **B. Selector de archivos:** el GGUF se copia al almacenamiento de la app. Sin permisos nuevos; ocupa 1–2,5 GB más por modelo.
+  - **C. A y B seleccionables (S3 ya decidido), por defecto B.** El paso 3 de F1.5 (comparar /sdcard con copia) necesita
+    las dos. Recomendación del agente: C, y el permiso A solo se pide si eliges «Todo el almacenamiento».
+- **P14. Pantalla de benchmark (F1.5 pasos 3 y 4)**, en Ajustes → Prueba de rendimiento. Propuesta:
+  - **Nativo:** una función `bench(handle, nPrompt, nGen)` (como `llama-bench`) que mide por separado el prefill y la
+    generación (hoy `tokPerSec` mezcla ambos), y una función de memoria que lee `/proc/self/status` (VmRSS y pico VmHWM)
+    y `/proc/meminfo` (MemAvailable). Opcional: parámetro `useMmap` en `loadModel`.
+  - **Pantalla:** modelo (LFM3 primero), origen (A directo / B copia), hilos (4, 6, 8), contexto 8K con prompt de ~1K y de
+    ~7,5K, 128 tokens generados, 3 repeticiones (mediana). Muestra tiempo de carga, TTFT, tok/s de prefill y de generación,
+    RAM antes y pico, y el veredicto contra los objetivos de F1.5 (TTFT < 1,5 s con 1K, ≥ 10 tok/s, sin cierre a 8K).
+  - **Cierres por memoria:** antes de cada prueba se guarda un marcador; si Android mata la app, al reabrir se indica qué
+    prueba la cerró.
+  - **Resultados:** se muestran en pantalla y se pueden copiar como texto (requiere decidir: dependencia `expo-clipboard`
+    o guardar un JSON en la carpeta de la app). Sin conversaciones ni claves (S9).
+  - **Pruebas:** estadísticas, matriz de pruebas y lectura de `/proc` como lógica pura con pruebas automáticas; el JNI se valida
+    compilando en CI y ejecutando en el móvil.
+  - **Detalle a corregir en F2:** `LlamaProvider` carga y descarga el modelo en cada mensaje y solo envía el último mensaje
+    del usuario (el JNI sí le aplica la plantilla del GGUF, pero sin historial ni sistema).
 
 ## 8. Riesgos
 
