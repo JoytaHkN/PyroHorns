@@ -3,7 +3,7 @@
 > Documento vivo para retomar el trabajo desde cualquier agente o entorno. Se actualiza al cerrar
 > cada bloque de trabajo (ver `AGENTS.md`).
 
-**Última actualización:** 2026-11-23 · Claude Code (Opus 5.5) en and-code
+**Última actualización:** 2026-11-23 · OpenCode en and-code
 
 ## Dónde estamos
 - **F1** ✅ y **F1.1** ✅, cerradas: el usuario probó el APK en su móvil y todo está OK (2026-11-23).
@@ -41,8 +41,13 @@
 Si cambias de agente (and-code → menú del chat → *Continuar en otro runtime*) o abres un chat nuevo,
 envía esto primero:
 
-> Trabaja en /sdcard/IA/Proyectos/APK IA/PyroHorns. Lee AGENTS.md, docs/ESTADO.md y PLAN.md, revisa
-> `git log --oneline -10` y continúa con el siguiente paso de docs/ESTADO.md. Responde en español.
+> Trabaja en /sdcard/IA/Proyectos/APK IA/PyroHorns. Lee AGENTS.md, docs/ESTADO.md, PLAN.md y
+> docs/CONTINUIDAD.md; revisa `git log --oneline -10`, `git status` y `gh run list --limit 4`, y continúa
+> con el siguiente paso de docs/ESTADO.md. No des por cerrado lo que esté pendiente de decisión o de
+> validar en CI/móvil; al cerrar cada bloque actualiza ESTADO.md (y PLAN.md si cambia el alcance), pasa
+> `sh scripts/sync-build.sh`, haz commit en español y push. Responde en español.
+
+Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CONTINUIDAD.md`.
 
 ## Registro
 - **2026-11-23** · F1 (commit `c8234c0`) y F1.1 (commit `66dd555`). Repo creado y hecho público;
@@ -60,3 +65,7 @@ envía esto primero:
   `android.yml`, avisos de terceros actualizados. Typecheck, 83 pruebas y bundle Android en verde;
   autolinking resuelve el módulo. Falta validar la compilación nativa en GitHub Actions y probar el APK
   en el móvil. Siguiente: paso 3 (ruta del GGUF).
+- **2026-11-23** · CI de F1.5 paso 2 en verde (`bc145ff`): el primer intento falló por licencias del SDK
+  en `android-actions/setup-android@v3`; se sustituyó por el `sdkmanager` preinstalado del runner.
+- **2026-11-23** · Continuidad: `docs/CONTINUIDAD.md` con checklist de cierre, prompt reforzado para
+  and-code, prompt para PC y pasos de instalación; referenciado desde `AGENTS.md` y este archivo.

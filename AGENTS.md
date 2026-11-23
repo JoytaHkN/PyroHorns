@@ -5,8 +5,8 @@ este repositorio. El usuario cambia de agente cuando se le acaban los créditos:
 necesario está en este repo**, no en la memoria de ningún agente.
 
 ## Al empezar (obligatorio)
-1. Lee `docs/ESTADO.md` (qué está hecho y qué sigue) y `PLAN.md` (decisiones D1–D8, seguridad
-   S1–S17, fases).
+1. Lee `docs/ESTADO.md` (qué está hecho y qué sigue), `PLAN.md` (decisiones D1–D8, seguridad
+   S1–S17, fases) y `docs/CONTINUIDAD.md` (checklist de cierre y prompts para móvil y PC).
 2. Ejecuta `git log --oneline -10` y `git status`: puede haber trabajo hecho desde otro agente.
 3. Responde siempre en español, con explicaciones claras (el usuario trabaja desde el móvil).
 
@@ -17,9 +17,10 @@ necesario está en este repo**, no en la memoria de ningún agente.
   restricciones ni avisos por tu cuenta; si crees que hace falta uno nuevo, preséntalo como opciones
   (de la más libre a la más protegida) y que decida.
 - **Todo dentro de APK IA.** El proyecto es `/sdcard/IA/Proyectos/APK IA`; el repo, `APK IA/PyroHorns`.
-- **Al cerrar cada bloque de trabajo:** actualiza `docs/ESTADO.md` (estado, siguiente paso, registro),
-  comprueba que todo está en verde, haz commit y push. El usuario lo pidió el 2026-11-23 para poder
-  continuar desde otro entorno. Nunca subas claves ni secretos.
+- **Al cerrar cada bloque de trabajo:** sigue el checklist de `docs/CONTINUIDAD.md` §2: actualiza
+  `docs/ESTADO.md` (estado, siguiente paso, registro) y `PLAN.md` si cambia el alcance, comprueba que
+  todo está en verde, haz commit y push. El usuario lo pidió el 2026-11-23 para poder continuar desde
+  otro entorno. Nunca subas claves ni secretos.
 - Commits en español. Autor ya configurado en el repo: `JoytaHkN <JoytaHkN@users.noreply.github.com>`.
 
 ## Entorno (and-code en Android, Linux PRoot)
