@@ -132,6 +132,9 @@ Objetivo: comprobar lo más arriesgado antes de construir F2.
 - Comparar abrir el GGUF desde `/sdcard` con copiarlo al almacenamiento de la app.
 - Medir en tu móvil el tiempo hasta el primer token, los tok/s y el pico de RAM, con 1K y 8K de contexto.
 - Plan B si el módulo propio se atasca: llama.rn (MIT).
+- **Primeros resultados (2026-11-24, teléfono HUAWEI LMR-LX9, LFM3, compilación base armv8-a):** prefill 17–21 tok/s (TTFT 48–59 s con un prompt de 1K: no cumple),
+  generación 13,3 tok/s con mmap y 11,2 sin mmap a 1K (cumple) y 8,8/8,4 a 7,6K (no cumple), RAM pico ≈ 1,6 GB (sin cierres). La CPU soporta dotprod/fp16/i8mm; se
+  prueba `armv8.2-a+dotprod+fp16` (decisión f-B). Detalle y tabla en `docs/ESTADO.md`.
 - **Objetivos iniciales** (se ajustan tras medir): primer token en < 1,5 s con un prompt de 1K · ≥ 10 tok/s · sin cierres por memoria a 8K.
 - **Salida:** decidir entre módulo propio y llama.rn.
 

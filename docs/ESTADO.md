@@ -93,6 +93,24 @@
      (LFM3, 4 hilos, con y sin mmap: 12 pruebas) y **Completa** (144 pruebas, larga). 35 pruebas nuevas (`tests/bench.test.ts`).
      **Cómo ejecutarla:** instalar el APK → Ajustes → Prueba de rendimiento → «Rápida» → Empezar → al terminar, «Copiar resultados» y pegarlos al agente.
      Con la decisión (f): primero se mide con la compilación base; después se prueba `armv8.2-a+dotprod` y se comparan.
+   - **Resultados de P13 en el teléfono (HUAWEI LMR-LX9, compilación base armv8-a, preajuste Rápida, 2026-11-24 03:32):**
+
+     | Modelo | mmap | Hilos | Prompt | Carga s | TTFT ms | Prefill tok/s | Gen tok/s | RAM pico MB | Objetivo |
+     |---|---|---|---|---|---|---|---|---|---|
+     | LFM3 1.7B | sí | 4 | 1024 | 4.4 | 48307 | 21.2 | 13.3 | 1611 | TTFT ✗ gen ✓ |
+     | LFM3 1.7B | sí | 4 | 7616 | 4.4 | 449620 | 16.9 | 8.8 | 1623 | gen ✗ |
+     | LFM3 1.7B | no | 4 | 1024 | 1.0 | 59188 | 17.3 | 11.2 | 1623 | TTFT ✗ gen ✓ |
+     | LFM3 1.7B | no | 4 | 7616 | 1.0 | 448013 | 17.0 | 8.4 | 1623 | gen ✗ |
+
+     **Lectura:** (1) el **prefill es el cuello de botella**: 17–21 tok/s → 48–59 s para un prompt de 1K (objetivo 1,5 s) y ≈ 7,5 min para
+     7616 tokens; (2) la **generación cumple a 1K** (13,3 y 11,2 tok/s) pero **no a 7,6K** (8,8 y 8,4); (3) **RAM pico ≈ 1,6 GB**: sin
+     problemas de memoria con LFM3 a 8K; (4) **mmap frente a sin mmap**: generación parecida (mmap algo más rápida); la carga (4,4 s frente a
+     1,0 s) está **confundida por el orden** (la primera carga es con el archivo «frío» y la segunda con él ya en la caché de Android), así
+     que no es concluyente; el 3,0 tok/s del primer mensaje del chat **no se reproduce** (la mediana de 3 repeticiones oculta la primera).
+     **CPU del teléfono** (`/proc/cpuinfo`): HiSilicon, 8 núcleos desiguales (4 a 1,6 GHz parte 0xd23, 3 a 2,15 GHz parte 0xd46 y 1 a 2,15 GHz
+     parte 0xd05); soporta **asimddp (dotprod), fp16, i8mm, bf16 y sve**. La compilación base no usa dotprod ni fp16: es la causa más probable del
+     prefill lento. **Siguiente (decisión f-B, ya aprobada por el usuario):** compilar ggml-cpu con `armv8.2-a+dotprod+fp16`, añadir al informe
+     la línea de CPU y de compilación, y comparar. Los datos de la tablet del usuario llegarán después (misma compilación base).
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -173,3 +191,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   nuevas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y ejecutarla en el móvil.
 - **2026-11-24** · CI de P13 en verde (`6456a98`) tras corregir `use_mmap` → `load_mode`; APK en `APK IA/apk/`. Pendiente: ejecutar la prueba
   «Rápida» en el móvil y pegar los resultados.
+- **2026-11-24** · Primeros resultados de P13 (teléfono, compilación base): prefill 17–21 tok/s (TTFT 48–59 s con 1K), generación 13,3/11,2 tok/s a 1K
+  y 8,8/8,4 a 7,6K, RAM pico ≈ 1,6 GB; CPU con dotprod/fp16/i8mm. Se pasa a la decisión (f)-B (dotprod+fp16).
