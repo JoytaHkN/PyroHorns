@@ -6,6 +6,7 @@ import {
   cancel,
   keepScreenOn,
   loadModel,
+  readDeviceStatus,
   readMemoryInfo,
   resetPeakMemory,
   unloadModel,
@@ -15,8 +16,11 @@ import {
   GEN_TOKENS,
   countRuns,
   describeCase,
+  describeDevice,
   parseBenchRaw,
+  parseDeviceStatus,
   parseMemoryInfo,
+  thermalLabel,
   toResult,
   type BenchGroup,
   type BenchRaw,
@@ -47,6 +51,7 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
   store().clearLog();
   store().setRunning(true);
   store().setProgress({ done, total, current: 'preparando' });
+  store().pushLog(`Equipo al empezar: ${describeDevice(parseDeviceStatus(readDeviceStatus()))}`);
   try {
     await unloadLlamaModel(); // el chat puede tener un modelo cargado: solo uno a la vez en RAM
     keepScreenOn(true);
@@ -89,6 +94,8 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
           store().setInProgress(what);
           store().setProgress({ done, total, current: what });
           resetPeakMemory();
+          // Estado del equipo justo antes y después de cada prueba (P13: temperatura, batería y térmico).
+          const before = parseDeviceStatus(readDeviceStatus());
 
           let raw: BenchRaw;
           try {
@@ -99,15 +106,18 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
             raw = { promptTokens: 0, genTokens: 0, prefillMs: 0, genMs: 0, cancelled: false, error: String(e) };
           }
           const mem = parseMemoryInfo(readMemoryInfo());
+          const after = parseDeviceStatus(readDeviceStatus());
           store().setInProgress(null);
           if (stopRequested && raw.cancelled) break; // la prueba cortada por el usuario no se registra
 
-          const result = toResult(c, raw, { loadMs, mem });
+          const result = toResult(c, raw, { loadMs, mem, before, after });
           store().addResult(result);
           done++;
           store().pushLog(
             result.ok
-              ? `${what}: TTFT ${Math.round(result.ttftMs)} ms · prefill ${result.prefillTokPerSec.toFixed(1)} · gen ${result.genTokPerSec.toFixed(1)} tok/s`
+              ? `${what}: TTFT ${Math.round(result.ttftMs)} ms · prefill ${result.prefillTokPerSec.toFixed(1)} · gen ${result.genTokPerSec.toFixed(1)} tok/s · ${
+                  after ? `${after.batteryTempC >= 0 ? after.batteryTempC.toFixed(1) : '?'} °C · bat ${after.batteryPct} % · térmico ${thermalLabel(after.thermal)}` : 'equipo ?'
+                }`
               : `${what}: falló (${result.error ?? 'sin datos'})`,
           );
           if (!stopRequested) await sleep(COOLDOWN_MS);

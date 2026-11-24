@@ -4,9 +4,12 @@ import android.app.ActivityManager
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Environment
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.WindowManager
 import androidx.core.os.bundleOf
@@ -161,6 +164,32 @@ class PyroHornsLlamaModule : Module() {
     // Prueba de rendimiento (P13): devuelve JSON con los tiempos de prefill y generación.
     AsyncFunction("bench") Coroutine { handle: Long, nPrompt: Int, nGen: Int, threads: Int ->
       withContext(Dispatchers.IO) { native.bench(handle, nPrompt, nGen, threads) }
+    }
+
+    // Estado del equipo (P13): batería, temperatura de la batería, estado térmico de Android y ahorro de energía.
+    // Todo sin permisos: la batería llega por el broadcast fijo ACTION_BATTERY_CHANGED.
+    Function("deviceStatus") {
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val battery = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+      val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+      val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+      val pct = if (level >= 0 && scale > 0) level * 100 / scale else -1
+      // Android da la temperatura de la batería en décimas de grado. No es la del procesador, que suele ir por delante.
+      val tenthsC = battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+      val status = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+      val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+      // Estado térmico que usa Android para limitar la CPU: 0 normal … 6 apagado (desde Android 10).
+      val thermal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) power.currentThermalStatus else -1
+      JSONObject()
+        .put("batteryPct", pct)
+        .put("batteryTempC", if (tenthsC >= 0) tenthsC / 10.0 else -1.0)
+        .put(
+          "charging",
+          status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        )
+        .put("thermal", thermal)
+        .put("powerSave", power.isPowerSaveMode)
+        .toString()
     }
 
     // Memoria del proceso (RSS y pico) y del sistema, leída de /proc (sin permisos).

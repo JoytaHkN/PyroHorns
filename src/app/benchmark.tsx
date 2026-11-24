@@ -12,7 +12,9 @@ import {
   buildGroups,
   countRuns,
   describeCpu,
+  describeDevice,
   formatResults,
+  parseDeviceStatus,
   type BenchConfig,
   type MmapMode,
 } from '@/lib/bench';
@@ -21,7 +23,7 @@ import { parseDiagnostics } from '@/lib/diagnostics';
 import { locateModel } from '@/lib/native';
 import { useBench } from '@/store/bench';
 import { usePalette } from '@/theme/use-palette';
-import { readCpuInfo, readDiagnostics } from '@pyrohorns/llama';
+import { readCpuInfo, readDeviceStatus, readDiagnostics } from '@pyrohorns/llama';
 
 const toggle = <V,>(list: V[], v: V) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -70,7 +72,15 @@ export default function Benchmark() {
   const set = (patch: Partial<BenchConfig>) => useBench.getState().setConfig({ ...config, ...patch });
 
   const device = parseDiagnostics(readDiagnostics())?.device ?? '';
-  const report = formatResults(results, { device, cpu: describeCpu(readCpuInfo()), at: results[results.length - 1]?.at ?? Date.now() });
+  // El informe muestra el estado del equipo al empezar la primera medición de esta lista.
+  const start = results[0]?.before ?? null;
+  const now = parseDeviceStatus(readDeviceStatus());
+  const report = formatResults(results, {
+    device,
+    cpu: describeCpu(readCpuInfo()),
+    at: results[results.length - 1]?.at ?? Date.now(),
+    start,
+  });
   const mono = { fontFamily: 'JetBrainsMono_400Regular', lineHeight: 17 } as const;
 
   return (
@@ -95,6 +105,12 @@ export default function Benchmark() {
           Mide cuánto tarda en cargar cada modelo, el primer token (TTFT), la velocidad de prefill y de generación (128 tokens) y la RAM pico, con
           3 repeticiones por prueba. La pantalla se mantiene encendida mientras dura. Objetivos de F1.5: TTFT &lt; 1,5 s con un prompt de 1K y ≥ 10 tok/s.
         </T>
+        <View style={{ backgroundColor: pal.surface, borderRadius: 14, borderWidth: 1, borderColor: pal.line, padding: 12, gap: 6 }}>
+          <T size={13}>Ahora: {describeDevice(now)}</T>
+          <T size={12} tone="muted">
+            Para medir con precisión: sin cargador, con el ahorro de energía desactivado y el equipo a temperatura normal. El informe anota la temperatura y el estado térmico antes y después de cada prueba.
+          </T>
+        </View>
 
         <SectionLabel>Preajustes</SectionLabel>
         <Card center onPress={running ? undefined : () => useBench.getState().setConfig(PRESETS.rapida)}>

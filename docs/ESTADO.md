@@ -3,7 +3,7 @@
 > Documento vivo para retomar el trabajo desde cualquier agente o entorno. Se actualiza al cerrar
 > cada bloque de trabajo (ver `AGENTS.md`).
 
-**Última actualización:** 2026-11-24 · Claude Code en and-code
+**Última actualización:** 2026-11-24 · Claude Haiku 5.5 en and-code
 
 ## Dónde estamos
 - **F1** ✅ y **F1.1** ✅, cerradas: el usuario probó el APK en su móvil y todo está OK (2026-11-23).
@@ -130,6 +130,13 @@
      **compilación**. **Riesgo:** en una CPU sin dotprod/fp16 (Cortex-A53/A72/A73 y similares) la app se cae con SIGILL al generar. Este teléfono sí los tiene.
      La tablet del usuario: **no instalar este APK ahí hasta conocer su CPU** (o hacerlo sabiendo que puede cerrarse); la línea de CPU del informe lo dirá. La
      alternativa segura para todos los móviles son variantes con elección en tiempo de ejecución (decisión f-C, F2).
+   - **Informe de P13 con condiciones del equipo (2026-11-24), pendiente de CI y de medir:** antes y después de cada prueba se lee la
+     **temperatura de la batería**, el **porcentaje de batería**, el **estado térmico de Android** (`PowerManager`, desde Android 10; 0 normal …
+     6 apagado), si hay **cargador** y si está el **ahorro de energía** (`deviceStatus()` nativo, sin permisos). El informe muestra el equipo al
+     empezar, las columnas «Temp °C ini→fin», «Batería % ini→fin» y «Térmico máx», y avisos si hubo carga, ahorro de energía o pruebas en caliente
+     (batería ≥ 40 °C o térmico moderado o peor). El registro en vivo de cada prueba también los muestra. **Límite:** la temperatura es la de la
+     batería, que va por detrás de la del procesador; el estado térmico es el indicador que de verdad limita la CPU.
+     **Pendiente de decisión (no implementado):** esperar a que el equipo baje de un umbral antes de cada prueba, y/o descartar las pruebas hechas en caliente.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -217,3 +224,6 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · CI de (f)-B en verde (`6f481b0`); APK en `APK IA/apk/`. Pendiente: medir con la prueba «Rápida» en el teléfono (con batería) y comparar con la base.
 - **2026-11-24** · Resultados de P13 en la tablet (HUAWEI TGR-W09, base): casi idénticos a los del teléfono (prefill 18–21 tok/s, generación 12,6/11,4 a 1K y 7,8/7,7 a 7,6K,
   RAM ≈ 1,55 GB). Resultado reproducible; falta medir con dotprod y conocer la CPU de la tablet.
+- **2026-11-24** · Informe de P13 con temperatura, batería, estado térmico y ahorro de energía antes y después de cada prueba (nativo `deviceStatus`,
+  `parseDeviceStatus`, `conditionsOf`, avisos en el informe). 17 pruebas nuevas (58 en `tests/bench.test.ts`). Typecheck, pruebas y bundle Android en verde.
+  Pendiente: CI y medir con batería.

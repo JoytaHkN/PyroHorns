@@ -148,6 +148,60 @@ export function parseMemoryInfo(json: string | null): MemoryInfo | null {
   }
 }
 
+/** Estado del equipo en un instante (sin permisos). Se lee antes y después de cada prueba. */
+export interface DeviceStatus {
+  /** Porcentaje de batería; -1 si no se sabe. */
+  batteryPct: number;
+  /** Temperatura de la batería en °C. No es la del procesador, que suele ir por delante; -1 si no se sabe. */
+  batteryTempC: number;
+  /** Con el cargador conectado (la carga calienta el equipo y altera la medida). */
+  charging: boolean;
+  /** Estado térmico que usa Android para limitar la CPU: 0 normal … 6 apagado; -1 si la versión no lo expone. */
+  thermal: number;
+  /** Modo ahorro de energía activo (Android puede limitar la CPU). */
+  powerSave: boolean;
+}
+
+const THERMAL_LABELS: string[] = ['normal', 'ligero', 'moderado', 'grave', 'crítico', 'emergencia', 'apagado'];
+/** Desde «moderado» Android empieza a limitar la CPU. */
+export const HOT_THERMAL = 2;
+/** Temperatura de la batería a partir de la cual se considera caliente. */
+export const HOT_TEMP_C = 40;
+
+export function thermalLabel(code: number): string {
+  if (code < 0) return 'desconocido';
+  return THERMAL_LABELS[code] ?? `nivel ${code}`;
+}
+
+export function parseDeviceStatus(json: string | null): DeviceStatus | null {
+  if (!json) return null;
+  try {
+    const d = JSON.parse(json) as Partial<DeviceStatus>;
+    return {
+      batteryPct: Number(d.batteryPct ?? -1),
+      batteryTempC: Number(d.batteryTempC ?? -1),
+      charging: d.charging === true,
+      thermal: Number(d.thermal ?? -1),
+      powerSave: d.powerSave === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** ¿Está caliente el equipo en ese instante? */
+export function isHot(s: DeviceStatus | null | undefined): boolean {
+  return !!s && (s.thermal >= HOT_THERMAL || s.batteryTempC >= HOT_TEMP_C);
+}
+
+/** Una línea legible: «batería 78 % · 34,0 °C · térmico normal · sin cargador · ahorro de energía no». */
+export function describeDevice(s: DeviceStatus | null | undefined): string {
+  if (!s) return 'desconocido';
+  const pct = s.batteryPct >= 0 ? `${s.batteryPct} %` : '?';
+  const temp = s.batteryTempC >= 0 ? `${s.batteryTempC.toFixed(1).replace('.', ',')} °C` : '? °C';
+  return `batería ${pct} · ${temp} · térmico ${thermalLabel(s.thermal)} · ${s.charging ? 'cargando' : 'sin cargador'} · ahorro de energía ${s.powerSave ? 'sí' : 'no'}`;
+}
+
 export interface BenchResult {
   caseId: string;
   modelId: string;
@@ -169,12 +223,19 @@ export interface BenchResult {
   ttftMs: number;
   /** Pico de RAM del proceso durante la prueba (MB); -1 si no se pudo leer. */
   peakRssMb: number;
+  /** Estado del equipo antes y después de la prueba (null si no se pudo leer). */
+  before: DeviceStatus | null;
+  after: DeviceStatus | null;
   at: number;
 }
 
 const perSec = (tokens: number, ms: number) => (ms > 0 ? (tokens / ms) * 1000 : 0);
 
-export function toResult(c: BenchCase, raw: BenchRaw, extra: { loadMs: number; mem: MemoryInfo | null; at?: number }): BenchResult {
+export function toResult(
+  c: BenchCase,
+  raw: BenchRaw,
+  extra: { loadMs: number; mem: MemoryInfo | null; at?: number; before?: DeviceStatus | null; after?: DeviceStatus | null },
+): BenchResult {
   const ok = !raw.error && !raw.cancelled && raw.genTokens > 0 && raw.prefillMs > 0;
   return {
     caseId: c.id,
@@ -195,6 +256,8 @@ export function toResult(c: BenchCase, raw: BenchRaw, extra: { loadMs: number; m
     genTokPerSec: perSec(raw.genTokens, raw.genMs),
     ttftMs: raw.prefillMs + (raw.genTokens > 0 ? raw.genMs / raw.genTokens : 0),
     peakRssMb: extra.mem && extra.mem.hwmKb > 0 ? Math.round(extra.mem.hwmKb / 1024) : -1,
+    before: extra.before ?? null,
+    after: extra.after ?? null,
     at: extra.at ?? Date.now(),
   };
 }
@@ -204,6 +267,43 @@ export function median(values: number[]): number {
   const s = [...values].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
   return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
+}
+
+/** Condiciones del equipo de una combinación: medianas de temperatura y batería, y recuentos. */
+export interface ConditionsSummary {
+  tempStartC: number;
+  tempEndC: number;
+  battStartPct: number;
+  battEndPct: number;
+  /** Estado térmico máximo observado (-1 si no se sabe). */
+  thermalMax: number;
+  /** Pruebas con el cargador conectado. */
+  charging: number;
+  /** Pruebas con ahorro de energía. */
+  powerSave: number;
+  /** Pruebas en caliente. */
+  hot: number;
+}
+
+/** Mediana de los valores válidos (>= 0); -1 si no hay ninguno. */
+function medianValid(values: number[]): number {
+  const valid = values.filter((v) => v >= 0);
+  return valid.length ? median(valid) : -1;
+}
+
+export function conditionsOf(rs: BenchResult[]): ConditionsSummary {
+  const befores = rs.map((r) => r.before).filter((s): s is DeviceStatus => !!s);
+  const afters = rs.map((r) => r.after).filter((s): s is DeviceStatus => !!s);
+  return {
+    tempStartC: medianValid(befores.map((s) => s.batteryTempC)),
+    tempEndC: medianValid(afters.map((s) => s.batteryTempC)),
+    battStartPct: medianValid(befores.map((s) => s.batteryPct)),
+    battEndPct: medianValid(afters.map((s) => s.batteryPct)),
+    thermalMax: Math.max(-1, ...befores.map((s) => s.thermal), ...afters.map((s) => s.thermal)),
+    charging: rs.filter((r) => r.before?.charging || r.after?.charging).length,
+    powerSave: rs.filter((r) => r.before?.powerSave || r.after?.powerSave).length,
+    hot: rs.filter((r) => isHot(r.before) || isHot(r.after)).length,
+  };
 }
 
 export interface BenchSummary {
@@ -220,6 +320,7 @@ export interface BenchSummary {
   prefillTokPerSec: number;
   genTokPerSec: number;
   peakRssMb: number;
+  cond: ConditionsSummary;
 }
 
 /** Medianas por combinación (modelo, mmap, hilos, prompt); las pruebas fallidas se cuentan aparte. */
@@ -250,6 +351,7 @@ export function summarize(results: BenchResult[], models: LocalModel[] = LOCAL_M
         prefillTokPerSec: median(good.map((r) => r.prefillTokPerSec)),
         genTokPerSec: median(good.map((r) => r.genTokPerSec)),
         peakRssMb: Math.max(-1, ...good.map((r) => r.peakRssMb)),
+        cond: conditionsOf(rs),
       };
     })
     .sort(
@@ -290,13 +392,19 @@ export function describeCpu(json: string | null): string {
 const f1 = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '-');
 
 /** Informe en Markdown para leer en pantalla o pegar en un chat. Sin conversaciones ni claves (S9). */
-export function formatResults(results: BenchResult[], meta: { device: string; at: number; cpu?: string }, models: LocalModel[] = LOCAL_MODELS): string {
+export function formatResults(
+  results: BenchResult[],
+  meta: { device: string; at: number; cpu?: string; start?: DeviceStatus | null },
+  models: LocalModel[] = LOCAL_MODELS,
+): string {
   const name = (id: string) => models.find((m) => m.id === id)?.name ?? id;
   const lines: string[] = [
     `# Prueba de rendimiento PyroHorns · ${new Date(meta.at).toISOString().slice(0, 16).replace('T', ' ')}`,
     `Dispositivo: ${meta.device || 'desconocido'}`,
     meta.cpu ?? 'CPU: desconocida',
     `Compilación ggml-cpu: ${ENGINE_BUILD}`,
+    `Equipo al empezar: ${describeDevice(meta.start ?? null)}`,
+    'Temperatura: la de la batería (el procesador puede estar más caliente). Térmico: el que usa Android para limitar la CPU.',
     `Objetivos F1.5: TTFT < ${TARGETS.ttftMs} ms con prompt de 1K · ≥ ${TARGETS.genTokPerSec} tok/s generando`,
     `Cada fila es la mediana de hasta ${REPS} repeticiones de ${GEN_TOKENS} tokens generados.`,
     '',
@@ -304,17 +412,35 @@ export function formatResults(results: BenchResult[], meta: { device: string; at
   const sums = summarize(results, models);
   if (sums.length === 0) return [...lines, '(sin resultados)'].join('\n');
   lines.push(
-    '| Modelo | mmap | Hilos | Prompt | Carga s | TTFT ms | Prefill tok/s | Gen tok/s | RAM pico MB | Objetivo |',
-    '|---|---|---|---|---|---|---|---|---|---|',
+    '| Modelo | mmap | Hilos | Prompt | Carga s | TTFT ms | Prefill tok/s | Gen tok/s | RAM pico MB | Temp °C ini→fin | Batería % ini→fin | Térmico máx | Objetivo |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   );
   for (const s of sums) {
     const v = verdict(s);
+    const c = s.cond;
+    const dash = (n: number) => (n >= 0 ? f1(n) : '-');
+    const pct = (n: number) => (n >= 0 ? String(n) : '-');
+    const temp = `${dash(c.tempStartC)}→${dash(c.tempEndC)}`;
+    const batt = `${pct(c.battStartPct)}→${pct(c.battEndPct)}`;
+    const thermal = `${thermalLabel(c.thermalMax)}${c.hot ? ' ⚠' : ''}`;
     const goal = s.runs === 0 ? 'FALLÓ' : [v.ttft === null ? null : `TTFT ${v.ttft ? '✓' : '✗'}`, `gen ${v.gen ? '✓' : '✗'}`].filter(Boolean).join(' ');
     lines.push(
-      `| ${name(s.modelId)} | ${s.mmap === 'mmap' ? 'sí' : 'no'} | ${s.threads} | ${s.promptTokens} | ${f1(s.loadMs / 1000)} | ${s.runs ? Math.round(s.ttftMs) : '-'} | ${s.runs ? f1(s.prefillTokPerSec) : '-'} | ${s.runs ? f1(s.genTokPerSec) : '-'} | ${s.peakRssMb > 0 ? s.peakRssMb : '-'} | ${goal}${s.failed && s.runs ? ` (${s.failed} fallidas)` : ''} |`,
+      `| ${name(s.modelId)} | ${s.mmap === 'mmap' ? 'sí' : 'no'} | ${s.threads} | ${s.promptTokens} | ${f1(s.loadMs / 1000)} | ${s.runs ? Math.round(s.ttftMs) : '-'} | ${s.runs ? f1(s.prefillTokPerSec) : '-'} | ${s.runs ? f1(s.genTokPerSec) : '-'} | ${s.peakRssMb > 0 ? s.peakRssMb : '-'} | ${temp} | ${batt} | ${thermal} | ${goal}${s.failed && s.runs ? ` (${s.failed} fallidas)` : ''} |`,
     );
   }
   const errors = [...new Set(results.filter((r) => !r.ok && r.error).map((r) => r.error!))];
+  const warnings: string[] = [];
+  if (results.some((r) => r.before?.charging || r.after?.charging)) {
+    warnings.push('⚠ Hubo pruebas con el cargador conectado: la carga calienta el equipo y altera los resultados.');
+  }
+  if (results.some((r) => r.before?.powerSave || r.after?.powerSave)) {
+    warnings.push('⚠ Modo ahorro de energía activo en alguna prueba: Android puede limitar la CPU.');
+  }
+  const hot = results.filter((r) => isHot(r.before) || isHot(r.after)).length;
+  if (hot) {
+    warnings.push(`⚠ ${hot} de ${results.length} mediciones con el equipo caliente (batería ≥ ${HOT_TEMP_C} °C o térmico moderado o peor).`);
+  }
+  if (warnings.length) lines.push('', ...warnings);
   if (errors.length) lines.push('', `Errores: ${errors.join('; ')}`);
   return lines.join('\n');
 }

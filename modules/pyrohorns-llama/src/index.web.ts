@@ -32,6 +32,10 @@ export function readCpuInfo(): string | null {
   return null;
 }
 
+export function readDeviceStatus(): string | null {
+  return null;
+}
+
 export function resetPeakMemory(): boolean {
   return false;
 }

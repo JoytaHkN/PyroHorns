@@ -6,6 +6,11 @@ import {
   SHORT_PROMPT,
   buildGroups,
   ENGINE_BUILD,
+  conditionsOf,
+  describeDevice,
+  isHot,
+  parseDeviceStatus,
+  thermalLabel,
   countRuns,
   describeCase,
   describeCpu,
@@ -104,5 +109,47 @@ const withMeta = formatResults(results, { device: 'D', cpu, at: 0 });
 check(withMeta.includes(cpu) && withMeta.includes(`Compilación ggml-cpu: ${ENGINE_BUILD}`), 'el informe incluye CPU y compilación');
 check(ENGINE_BUILD === 'armv8.2-a+dotprod+fp16', 'ENGINE_BUILD coincide con la bandera de build.gradle');
 check(LOCAL_MODELS.length === 4, 'la matriz completa cubre los cuatro modelos');
+
+
+// --- Estado del equipo (temperatura, batería, térmico) --------------------------------------------
+const base = { batteryPct: 78, batteryTempC: 35.2, charging: false, thermal: 1, powerSave: false };
+const dev = parseDeviceStatus(JSON.stringify(base))!;
+check(dev.batteryPct === 78 && dev.batteryTempC === 35.2 && !dev.charging && dev.thermal === 1 && !dev.powerSave, 'parseDeviceStatus');
+check(parseDeviceStatus(null) === null && parseDeviceStatus('no es json') === null, 'parseDeviceStatus: ausente o inválido');
+const missing = parseDeviceStatus('{}')!;
+check(missing.batteryPct === -1 && missing.batteryTempC === -1 && missing.thermal === -1 && !missing.charging, 'parseDeviceStatus: campos ausentes quedan en -1 o false');
+check(thermalLabel(0) === 'normal' && thermalLabel(2) === 'moderado' && thermalLabel(-1) === 'desconocido' && thermalLabel(9) === 'nivel 9', 'thermalLabel');
+check(!isHot(dev) && isHot({ ...dev, thermal: 2 }) && isHot({ ...dev, batteryTempC: 40 }) && !isHot(null), 'isHot: térmico moderado o batería a 40 °C');
+check(describeDevice(dev).includes('batería 78 %') && describeDevice(dev).includes('35,2 °C') && describeDevice(dev).includes('térmico ligero'), 'describeDevice legible');
+check(describeDevice(null) === 'desconocido', 'describeDevice sin datos');
+
+const at = (tempC: number, thermal: number, charging = false, powerSave = false, pct = 80) => ({
+  batteryPct: pct,
+  batteryTempC: tempC,
+  charging,
+  thermal,
+  powerSave,
+});
+const withStatus = (over: Partial<BenchResult>): BenchResult => ({ ...r1, ...over });
+const condRs: BenchResult[] = [
+  withStatus({ rep: 1, before: at(33, 0, false, false, 80), after: at(34, 0, false, false, 79) }),
+  withStatus({ rep: 2, before: at(35, 1, false, false, 79), after: at(37, 2, false, false, 78) }), // caliente: térmico moderado
+  withStatus({ rep: 3, before: at(36, 0, true, false, 78), after: at(38, 1, true, true, 77) }), // cargador y ahorro de energía
+];
+const cs = conditionsOf(condRs);
+check(cs.tempStartC === 35 && cs.tempEndC === 37 && cs.battStartPct === 79 && cs.battEndPct === 78, 'conditionsOf: medianas de temperatura y batería');
+check(cs.thermalMax === 2 && cs.charging === 1 && cs.powerSave === 1 && cs.hot === 1, 'conditionsOf: térmico máximo y recuentos');
+const none = conditionsOf([withStatus({ before: null, after: null })]);
+check(none.tempStartC === -1 && none.battEndPct === -1 && none.thermalMax === -1 && none.hot === 0, 'conditionsOf: sin datos del equipo');
+check(summarize(condRs)[0]!.cond.hot === 1, 'el resumen por combinación lleva las condiciones');
+
+const withDevice = formatResults(condRs, { device: 'D', at: 0, start: at(33, 0, false, false, 80) });
+check(withDevice.includes('Equipo al empezar: batería 80 %') && withDevice.includes('33,0 °C'), 'informe: equipo al empezar');
+check(withDevice.includes('Temp °C ini→fin') && withDevice.includes('Batería % ini→fin') && withDevice.includes('Térmico máx'), 'informe: columnas de temperatura, batería y térmico');
+check(withDevice.includes('35.0→37.0') && withDevice.includes('79→78') && withDevice.includes('moderado ⚠'), 'informe: medianas de la fila y aviso de caliente');
+check(withDevice.includes('⚠ Hubo pruebas con el cargador conectado') && withDevice.includes('ahorro de energía activo'), 'informe: avisos de cargador y ahorro de energía');
+check(withDevice.includes('1 de 3 mediciones con el equipo caliente'), 'informe: cuenta las mediciones en caliente');
+const quiet = formatResults([withStatus({ before: at(33, 0), after: at(34, 0) })], { device: 'D', at: 0 });
+check(!quiet.includes('⚠') && quiet.includes('Equipo al empezar: desconocido'), 'informe: sin avisos cuando el equipo está normal y sin datos iniciales');
 
 done();

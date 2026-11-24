@@ -82,6 +82,15 @@ export function readCpuInfo(): string | null {
   }
 }
 
+/** Batería, temperatura, estado térmico y ahorro de energía (JSON), o null si no está disponible. */
+export function readDeviceStatus(): string | null {
+  try {
+    return Native.deviceStatus();
+  } catch {
+    return null;
+  }
+}
+
 /** Reinicia el pico de RAM del proceso; false si el sistema no lo permite. */
 export function resetPeakMemory(): boolean {
   try {
