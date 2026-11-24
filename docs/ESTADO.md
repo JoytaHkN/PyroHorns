@@ -157,7 +157,7 @@
      (3) **sin control térmico**: solo el aviso del informe. **Modelo nuevo:** `NVIDIA-Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf` (6,18 GB; el GGUF declara arquitectura **gemma4**,
      42 capas, ventana deslizante de 512, 2 cabezas KV; llama.cpp `dc33e61` la soporta) añadido a `LOCAL_MODELS` como opcional (id `nemotron-bolt-e4b`, contexto 4K, KV 172 KB/token = cota
      superior). Se importa con el selector (copia 6,2 GB) o con «Todo el almacenamiento». Sin probar: plantilla de chat y razonamiento (`thinking: false`). **Preajuste nuevo «Resumen»:**
-     los 5 modelos, solo con mmap, 4 y 8 hilos, prompts corto y largo, 1 repetición = **20 ejecuciones** (la completa pasa a 180). Pendiente: CI y probar.
+     los 5 modelos, solo con mmap, 4 y 8 hilos, prompts corto y largo, 1 repetición = **20 ejecuciones** (la completa pasa a 180). CI Android en verde (`af00214`); APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-resumen-prueba.apk` (+ `.sha256`). Pendiente: probar en el móvil.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
