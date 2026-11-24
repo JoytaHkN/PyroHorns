@@ -208,14 +208,14 @@ Interacción:
 - P11. Indicador "Local / Nube" en cada conversación (F6).
 
 Rendimiento (F1.5, pasos 3 y 4):
-- P13. **Pantalla de prueba de rendimiento** (Ajustes → Diagnóstico). Estado: **propuesta, pendiente de visto bueno**.
+- P13. **Pantalla de prueba de rendimiento** (Ajustes → Diagnóstico). Estado: **decisiones tomadas el 2026-11-24; falta confirmar el inicio de la implementación**.
   - **Nativo (JNI):** `bench(handle, nPrompt, nGen)` estilo llama-bench: procesa `nPrompt` tokens sintéticos por lotes y genera `nGen`; devuelve por separado prompt tok/s (pp), generación tok/s (tg) y TTFT. Hoy `usage.tokPerSec` divide entre el tiempo total e incluye el prefill, así que subestima la generación. `memoryInfo()` lee `VmRSS`/`VmHWM` de `/proc/self/status` y `MemAvailable` de `/proc/meminfo` (sin permisos). `loadModel` ganaría el parámetro `useMmap` y usaría `threads`, que hoy ignora.
   - **Paso 3 (ruta del GGUF):** A) `/sdcard` con mmap · B) `/sdcard` sin mmap (una lectura secuencial) · C) copia en el almacenamiento de la app con mmap. Se mide tiempo de copia (una vez), de carga y tok/s. La caché de archivos de Android falsea las cargas repetidas: la primera es la fría y se anota el orden.
   - **Paso 4 (medidas):** LFM3 con contexto 8K; prompts de 1K y de ~7,5K tokens; 128 tokens generados; 3 repeticiones (mediana); pico de RAM por prueba. Hilos: 4 por defecto, con barrido opcional 4/6/8. Se contrastan los objetivos de §5 (TTFT < 1,5 s con 1K, ≥ 10 tok/s, sin cierres a 8K).
   - **Robustez:** se guarda una marca «prueba en curso» antes de cada ejecución; si Android cierra la app por memoria, al reabrir la pantalla indica qué prueba la mató. Pausa entre pruebas por temperatura.
   - **Resultados:** tabla en pantalla y botón «Copiar resultados» (JSON/Markdown). Requiere decidir cómo: `expo-clipboard` (dependencia nueva) o escribir un archivo en el almacenamiento de la app. Sin conversaciones ni claves (S9).
   - **Pruebas:** la lógica pura (matriz de pruebas, medianas, formato, lectura de `/proc`) con pruebas de Node; el JNI se valida por compilación en CI y la medición, en el móvil.
-  - **Decisiones abiertas:** (a) ¿incluir la variante B sin mmap? (observado el 2026-11-24: el primer mensaje con LFM3 dio 3,0 tok/s y el segundo 12,6, probablemente por la caché de archivos fría del mmap); (b) ¿barrido de hilos?; (c) ¿probar también Qwen3-1.7B o solo LFM3?; (d) cómo sacar los resultados (portapapeles o archivo); (e) ✅ resuelta en P15 (tok/s del chat ya cuenta solo la generación); (f) ¿compilar ggml-cpu con dotprod/i8mm (más rápido, no arranca en CPUs que no los tengan) o mantener la base armv8-a?
+  - **Decisiones del usuario (2026-11-24):** (a) **B**: con y sin mmap (parámetro `useMmap` en `loadModel`; se observó 3,0 → 12,6 tok/s entre el primer y el segundo mensaje con LFM3); (b) **B**: barrido de 4, 6 y 8 hilos; (c) **C**: los cuatro modelos (Cyber y Phi con su contexto por defecto de 4K, LFM3 y Qwen3 con 8K; la pantalla debe permitir elegir un subconjunto porque la matriz completa es larga); (d) **B**: botón «Copiar» con `expo-clipboard` (dependencia nueva) y texto seleccionable como respaldo; (e) resuelta en P15 (tok/s del chat cuenta solo la generación); (f) **A ahora** (compilación base armv8-a) y **B después de medir** (probar `armv8.2-a+dotprod`).
 
 Arquitectura:
 - P12. Sustituir la "variante Compose completa" por piezas nativas solo donde React Native no llega (ventana flotante, terminal).
@@ -232,7 +232,7 @@ Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
     las dos. Recomendación del agente: C, y el permiso A solo se pide si eliges «Todo el almacenamiento».
 
 Pulido del chat real (F1.5, 2026-11-24):
-- **P15. Lo que muestran las capturas del primer chat real** — **Decidido por el usuario el 2026-11-24: opción 2**; implementada (pendiente de probar en el móvil); la opción 3 (modelo cargado entre mensajes) queda para antes de medir (P13). (LFM3 y Qwen3 responden en el móvil: ≈ 11,1 y ≈ 10,5 tok/s en conjunto).
+- **P15. Lo que muestran las capturas del primer chat real** — **Decidido por el usuario el 2026-11-24: opción 2**; implementada (pendiente de probar en el móvil); la opción 3 (modelo cargado entre mensajes) **hecha el 2026-11-24** (pendiente de probar en el móvil). (LFM3 y Qwen3 responden en el móvil: ≈ 11,1 y ≈ 10,5 tok/s en conjunto).
   Problemas vistos, todos de la integración TypeScript, no del motor:
   - a) El `<think>…</think>` sale dentro de la burbuja: `LlamaProvider` nunca emite `thinking_delta`, así que el razonamiento no
     se pliega (PLAN §3 dice que va plegado y no se reenvía).

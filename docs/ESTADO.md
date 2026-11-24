@@ -76,7 +76,11 @@
      fría del mmap al cargar el modelo de nuevo; lo debe confirmar P13); Qwen3 ≈ 11,3–11,5 tok/s. (2) Qwen3 con Profundo apagado
      respondió en **portugués** a una pregunta en español (con Profundo encendido, en español): posible efecto del bloque
      `<think>` vacío o del muestreo (temp 0,8, top-k 40, top-p 0,9; Qwen3 recomienda 0,7/20/0,8 sin razonar); a revisar en F2/F3.
-     Pendiente (opción 3, antes de P13): mantener el modelo cargado entre mensajes.
+     **Opción 3 hecha (2026-11-24), pendiente de CI y de probar en el móvil:** `LlamaProvider` mantiene el modelo cargado entre
+     mensajes (se recarga solo si cambia el modelo o el contexto, o tras un error), encola las generaciones (un contexto no admite dos
+     a la vez) y expone `unloadLlamaModel()`; el JNI vacía la caché KV y el sampler antes de cada generación. 22 pruebas del proveedor.
+     **Qué comprobar:** el segundo mensaje ya no debe tardar unos 6 s en empezar, y las respuestas siguientes deben ser independientes
+     (sin restos del mensaje anterior).
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
@@ -86,9 +90,9 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
-- **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
-  bueno y las decisiones abiertas (a) variante sin mmap, (b) barrido de hilos, (c) modelos a probar, (d) salida de
-  resultados y (f) compilación con dotprod/i8mm; la (e) tok/s del chat ya está resuelta en P15. No se ha escrito código.
+- **P13** · pantalla de prueba de rendimiento: **decisiones tomadas por el usuario el 2026-11-24** — (a) con y sin mmap, (b) hilos 4/6/8,
+  (c) los cuatro modelos, (d) botón «Copiar» con `expo-clipboard`, (f) compilación base ahora y `dotprod` después de medir (detalle en
+  `PLAN.md` §7). Falta que el usuario confirme que empiece la implementación.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -151,3 +155,6 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · El usuario probó el APK de P15-2: Profundo apagado/encendido funciona como se diseñó en LFM3 y Qwen3. Se registran las
   observaciones (3,0 → 12,6 tok/s en LFM3 entre el primer y el segundo mensaje; Qwen3 en portugués con Profundo apagado) y se
   añade la decisión (f) (dotprod/i8mm) a P13.
+- **2026-11-24** · El usuario decide P13: (a) B, (b) B, (c) C, (d) B, (f) A ahora y B después de medir; y pide la opción 3 de P15.
+  Hecha: modelo cargado entre mensajes, generaciones en cola, KV y sampler vaciados en cada generación; 22 pruebas del proveedor.
+  Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil; P13 espera confirmación para empezar.

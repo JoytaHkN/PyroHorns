@@ -29,8 +29,53 @@ export interface NativeLlamaModule {
 
 let nativeModule: NativeLlamaModule | null = null;
 
+/** Modelo que se queda cargado entre mensajes (P15-3). Solo hay uno a la vez (PLAN §3). */
+let loaded: { key: string; id: string } | null = null;
+/** Cola de generaciones: un contexto nativo no admite dos generaciones a la vez. */
+let tail: Promise<unknown> = Promise.resolve();
+
 export function setNativeLlamaModule(mod: NativeLlamaModule) {
   nativeModule = mod;
+  loaded = null; // el modelo cargado pertenecía al módulo anterior
+}
+
+/** Espera su turno; devuelve la función que lo libera. */
+function acquire(): Promise<() => void> {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const prev = tail;
+  tail = prev.then(() => gate);
+  return prev.then(() => release);
+}
+
+/** Carga el modelo si no está ya cargado con el mismo contexto; si cambia el modelo o el contexto, descarga el anterior. */
+async function ensureLoaded(native: NativeLlamaModule, opts: StreamOptions): Promise<string> {
+  const key = `${opts.modelId}@${opts.contextTokens}`;
+  if (loaded && loaded.key === key) return loaded.id;
+  await dropLoaded(native);
+  const id = await native.loadModel(opts.modelId, opts.contextTokens, 4);
+  loaded = { key, id };
+  return id;
+}
+
+async function dropLoaded(native: NativeLlamaModule) {
+  const current = loaded;
+  loaded = null;
+  if (current) await native.unloadModel(current.id).catch(() => {});
+}
+
+/** Libera el modelo cargado (por ejemplo, para recuperar RAM). La siguiente generación lo vuelve a cargar. */
+export async function unloadLlamaModel(): Promise<void> {
+  const native = nativeModule;
+  if (!native) return;
+  const release = await acquire();
+  try {
+    await dropLoaded(native);
+  } finally {
+    release();
+  }
 }
 
 export function isNativeLlamaAvailable(): boolean {
@@ -50,16 +95,27 @@ export const LlamaProvider: ChatProvider = {
       return;
     }
 
+    const native = nativeModule;
     const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
-    const modelId = await nativeModule.loadModel(opts.modelId, opts.contextTokens, 4);
 
     // Profundo apagado: los modelos con razonamiento no deben razonar (PLAN §3).
     const noThink = !opts.deep && (LOCAL_MODELS.find((m) => m.id === opts.modelId)?.thinking ?? false);
 
+    const release = await acquire();
+    let failed = false;
     try {
-      yield* streamFromNative(nativeModule, modelId, last, opts, noThink);
+      const modelId = await ensureLoaded(native, opts);
+      for await (const ev of streamFromNative(native, modelId, last, opts, noThink)) {
+        if (ev.type === 'error') failed = true;
+        yield ev;
+      }
+    } catch (e) {
+      failed = true;
+      throw e;
     } finally {
-      await nativeModule.unloadModel(modelId).catch(() => {});
+      // Tras un error el contexto nativo puede quedar en mal estado: la próxima vez se carga de nuevo.
+      if (failed) await dropLoaded(native);
+      release();
     }
   },
 };

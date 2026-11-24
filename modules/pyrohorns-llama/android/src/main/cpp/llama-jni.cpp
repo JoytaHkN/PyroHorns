@@ -286,6 +286,9 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
   try {
     state->cancelled.store(false);
     llama_set_n_threads(state->ctx, threads, threads);
+    // El modelo se reutiliza entre mensajes: se vacía la caché KV (las posiciones empiezan en 0) y el estado del sampler.
+    llama_memory_clear(llama_get_memory(state->ctx), true);
+    llama_sampler_reset(state->sampler);
 
     const char * promptChars = env->GetStringUTFChars(jPrompt, nullptr);
     std::string prompt = formatPrompt(state->model, promptChars);
