@@ -111,6 +111,20 @@
      parte 0xd05); soporta **asimddp (dotprod), fp16, i8mm, bf16 y sve**. La compilación base no usa dotprod ni fp16: es la causa más probable del
      prefill lento. **Siguiente (decisión f-B, ya aprobada por el usuario):** compilar ggml-cpu con `armv8.2-a+dotprod+fp16`, añadir al informe
      la línea de CPU y de compilación, y comparar. Los datos de la tablet del usuario llegarán después (misma compilación base).
+   - **Resultados de P13 en la tablet (HUAWEI TGR-W09, misma compilación base y preajuste Rápida, 2026-11-24 03:40):**
+
+     | Modelo | mmap | Hilos | Prompt | Carga s | TTFT ms | Prefill tok/s | Gen tok/s | RAM pico MB | Objetivo |
+     |---|---|---|---|---|---|---|---|---|---|
+     | LFM3 1.7B | sí | 4 | 1024 | 6.0 | 49670 | 20.6 | 12.6 | 1550 | TTFT ✗ gen ✓ |
+     | LFM3 1.7B | sí | 4 | 7616 | 6.0 | 409055 | 18.6 | 7.8 | 1557 | gen ✗ |
+     | LFM3 1.7B | no | 4 | 1024 | 1.1 | 53687 | 19.1 | 11.4 | 1557 | TTFT ✗ gen ✓ |
+     | LFM3 1.7B | no | 4 | 7616 | 1.1 | 422740 | 18.0 | 7.7 | 1557 | gen ✗ |
+
+     **Comparación teléfono / tablet:** prácticamente iguales (prefill 17–21 y 18–21 tok/s; generación 13,3/11,2 frente a 12,6/11,4 a 1K y 8,8/8,4 frente
+     a 7,8/7,7 a 7,6K; RAM pico ≈ 1,55–1,62 GB). Conclusiones: (1) el resultado es **reproducible**, no ruido de un dispositivo; (2) los dos Huawei rinden igual,
+     probablemente con la misma familia de CPU; (3) en los dos, **con mmap la carga es la «fría» (4,4 y 6,0 s) y sin mmap la «caliente» (1,0 y 1,1 s)**: el
+     orden de la prueba domina la comparación de carga, y para la generación mmap es 10–15 % más rápido. **Pendiente de saber si la tablet soporta dotprod/fp16**
+     (este informe es del APK base y no trae la línea de CPU).
    - **(f)-B hecho (2026-11-24), CI Android en verde (`6f481b0`), pendiente de medir en el teléfono** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p13-dotprod-prueba.apk` + `.sha256`): `-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16` en `modules/pyrohorns-llama/android/build.gradle`
      (`ENGINE_BUILD` en `src/lib/bench.ts` lo refleja) y el informe incluye ahora la línea de **CPU** (núcleos por frecuencia; dotprod/fp16/i8mm/bf16/sve) y la de
      **compilación**. **Riesgo:** en una CPU sin dotprod/fp16 (Cortex-A53/A72/A73 y similares) la app se cae con SIGILL al generar. Este teléfono sí los tiene.
@@ -201,3 +215,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · (f)-B: ggml-cpu con `armv8.2-a+dotprod+fp16`; el informe de la prueba incluye CPU y compilación (`describeCpu`, `ENGINE_BUILD`; 6 pruebas
   nuevas, 41 en `tests/bench.test.ts`). Typecheck, pruebas y bundle Android en verde. Pendiente: CI y medir en el teléfono.
 - **2026-11-24** · CI de (f)-B en verde (`6f481b0`); APK en `APK IA/apk/`. Pendiente: medir con la prueba «Rápida» en el teléfono (con batería) y comparar con la base.
+- **2026-11-24** · Resultados de P13 en la tablet (HUAWEI TGR-W09, base): casi idénticos a los del teléfono (prefill 18–21 tok/s, generación 12,6/11,4 a 1K y 7,8/7,7 a 7,6K,
+  RAM ≈ 1,55 GB). Resultado reproducible; falta medir con dotprod y conocer la CPU de la tablet.
