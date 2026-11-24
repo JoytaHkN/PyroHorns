@@ -1,5 +1,6 @@
 import { Button, Dialog, Switch } from 'heroui-native';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { MODES, modeById, modelForMode } from '@/data/agents';
 import { LOCAL_MODELS, contextTokens, modelById } from '@/data/models';
 import { formatTokens } from '@/lib/context';
@@ -42,6 +43,8 @@ export function AgentPicker({ open, onOpenChange }: { open: boolean; onOpenChang
   const s = useSettings();
   const current = modelById(activeModelId(s));
   const auto = modelForMode(s.mode);
+  // La lista se desplaza dentro del diálogo: altura según la pantalla (con la fija de 480 px el botón «Listo» tapaba los modelos).
+  const { height } = useWindowDimensions();
   return (
     <Dialog isOpen={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -49,7 +52,12 @@ export function AgentPicker({ open, onOpenChange }: { open: boolean; onOpenChang
         <Dialog.Content>
           <Dialog.Close />
           <Dialog.Title>Agente</Dialog.Title>
-          <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ gap: 8, paddingTop: 4 }}>
+          <ScrollView
+            style={{ maxHeight: Math.max(240, height * 0.5) }}
+            contentContainerStyle={{ gap: 8, paddingTop: 4, paddingBottom: 8 }}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+          >
             <SectionLabel>Modo</SectionLabel>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               {MODES.map((m) => (

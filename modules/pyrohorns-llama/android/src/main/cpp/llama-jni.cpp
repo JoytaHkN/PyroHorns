@@ -170,12 +170,23 @@ std::shared_ptr<ModelState> getModel(jlong handle) {
 
 std::string formatPrompt(const llama_model * model, const std::string & text) {
   const char * tmpl = llama_model_chat_template(model, nullptr);
-  if (tmpl == nullptr) return text;
+  if (tmpl == nullptr) {
+    crumb("plantilla: el modelo no trae plantilla, se usa el texto tal cual");
+    return text;
+  }
+  // Gemma 4 (p. ej. Nemotron 3.5 Bolt): su plantilla es Jinja y llama_chat_apply_template no la reconoce, así que el modelo
+  // recibía el texto crudo y terminaba al instante. El BOS lo añade el tokenizador.
+  if (std::strstr(tmpl, "<|turn>") != nullptr && std::strstr(tmpl, "<turn|>") != nullptr) {
+    return "<|turn>user\n" + text + "<turn|>\n<|turn>model\n";
+  }
   llama_chat_message msg{"user", text.c_str()};
   int32_t size = static_cast<int32_t>(text.size() * 2 + 512);
   std::vector<char> buf(static_cast<size_t>(size));
   int32_t n = llama_chat_apply_template(tmpl, &msg, 1, true, buf.data(), size);
-  if (n < 0) return text;
+  if (n < 0) {
+    crumb("plantilla: no reconocida por llama_chat_apply_template, se usa el texto tal cual");
+    return text;
+  }
   if (n > size) {
     buf.resize(static_cast<size_t>(n));
     n = llama_chat_apply_template(tmpl, &msg, 1, true, buf.data(), n);
