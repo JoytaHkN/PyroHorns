@@ -1,3 +1,5 @@
+import { LOCAL_MODELS } from '@/data/models';
+import { ThinkSplitter } from '@/lib/think-parser';
 import { MockProvider } from './mock';
 import type { ChatProvider, ProviderMessage, StreamEvent, StreamOptions } from './types';
 
@@ -11,6 +13,8 @@ export interface NativeLlamaModule {
     prompt: string,
     options: {
       threads?: number;
+      /** Pide al modelo que no razone (se añade un bloque `<think></think>` vacío tras la plantilla). */
+      noThink?: boolean;
       onEvent: (ev: StreamEvent) => void;
     },
     signal: AbortSignal
@@ -49,8 +53,11 @@ export const LlamaProvider: ChatProvider = {
     const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
     const modelId = await nativeModule.loadModel(opts.modelId, opts.contextTokens, 4);
 
+    // Profundo apagado: los modelos con razonamiento no deben razonar (PLAN §3).
+    const noThink = !opts.deep && (LOCAL_MODELS.find((m) => m.id === opts.modelId)?.thinking ?? false);
+
     try {
-      yield* streamFromNative(nativeModule, modelId, last, opts);
+      yield* streamFromNative(nativeModule, modelId, last, opts, noThink);
     } finally {
       await nativeModule.unloadModel(modelId).catch(() => {});
     }
@@ -61,7 +68,8 @@ async function* streamFromNative(
   native: NativeLlamaModule,
   modelId: string,
   prompt: string,
-  opts: StreamOptions
+  opts: StreamOptions,
+  noThink: boolean
 ): AsyncGenerator<StreamEvent> {
   const queue: StreamEvent[] = [];
   let resolveEvent: (() => void) | null = null;
@@ -83,7 +91,7 @@ async function* streamFromNative(
   signal.addEventListener('abort', abort, { once: true });
 
   try {
-    await native.generate(modelId, prompt, { threads: 4, onEvent: enqueue }, signal);
+    await native.generate(modelId, prompt, { threads: 4, noThink, onEvent: enqueue }, signal);
   } catch (e) {
     errored = e;
     done = true;
@@ -92,9 +100,26 @@ async function* streamFromNative(
     signal.removeEventListener('abort', abort);
   }
 
+  // El motor entrega todo mezclado; aquí se separa el razonamiento `<think>` del texto de la respuesta.
+  const splitter = new ThinkSplitter();
+  const mapEvent = function* (ev: StreamEvent): Generator<StreamEvent> {
+    if (ev.type === 'token') {
+      for (const part of splitter.push(ev.text)) {
+        yield part.kind === 'thinking' ? { type: 'thinking_delta', text: part.text } : { type: 'token', text: part.text };
+      }
+      return;
+    }
+    if (ev.type === 'usage' || ev.type === 'done' || ev.type === 'error') {
+      for (const part of splitter.flush()) {
+        yield part.kind === 'thinking' ? { type: 'thinking_delta', text: part.text } : { type: 'token', text: part.text };
+      }
+    }
+    yield ev;
+  };
+
   while (queue.length > 0 || !done) {
     if (queue.length > 0) {
-      yield queue.shift()!;
+      yield* mapEvent(queue.shift()!);
       continue;
     }
     await new Promise<void>((res) => {

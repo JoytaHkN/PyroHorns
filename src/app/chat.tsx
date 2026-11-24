@@ -16,6 +16,7 @@ import { contextTokens, modelById } from '@/data/models';
 import { conversationTokens, formatTokens } from '@/lib/context';
 import { send, stop } from '@/lib/engine';
 import { useActiveConversation, useChat } from '@/store/chat';
+import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
 import { usePalette } from '@/theme/use-palette';
 
@@ -28,6 +29,7 @@ const SUGGESTIONS = [
 export default function ChatScreen() {
   const pal = usePalette();
   const conv = useActiveConversation();
+  const native = useEngine((s) => s.native);
   const select = useChat((s) => s.select);
   const remove = useChat((s) => s.remove);
   const settings = useSettings();
@@ -126,7 +128,7 @@ export default function ChatScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                 <Orb size={10} active={busy} />
                 <T size={12} tone="muted">
-                  {busy ? `${model.name} generando…` : `${model.name} · respuestas simuladas hasta F1.5`}
+                  {busy ? `${model.name} generando…` : native ? `${model.name} · en tu dispositivo` : `${model.name} · respuestas simuladas`}
                 </T>
               </View>
             }

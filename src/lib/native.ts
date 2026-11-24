@@ -3,6 +3,7 @@ import { activateNativeLlama, setNativeLlamaModule } from '@/lib/engine';
 import { findModelPath, missingModelMessage, modelSearchFolders } from '@/lib/model-files';
 import { appModelsPath } from '@/lib/model-import';
 import type { NativeLlamaModule } from '@/providers/llama';
+import { useEngine } from '@/store/engine';
 import { useSettings } from '@/store/settings';
 import type { Usage } from '@/types/chat';
 import {
@@ -48,7 +49,7 @@ export const nativeLlamaModule: NativeLlamaModule = {
   async generate(modelId, prompt, options, _signal) {
     const handle = handles.get(modelId);
     if (handle === undefined) throw new Error('Modelo no cargado');
-    await nativeGenerate(handle, prompt, options.threads ?? 4, (ev) => {
+    await nativeGenerate(handle, prompt, options.threads ?? 4, options.noThink ?? false, (ev) => {
       switch (ev.type) {
         case 'token':
           options.onEvent({ type: 'token', text: ev.text });
@@ -82,5 +83,6 @@ export async function registerNativeLlama(): Promise<boolean> {
   if (!(await nativeLlamaModule.isAvailable())) return false;
   setNativeLlamaModule(nativeLlamaModule);
   activateNativeLlama();
+  useEngine.getState().setNative(true);
   return true;
 }

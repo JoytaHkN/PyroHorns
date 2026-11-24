@@ -6,9 +6,11 @@ import { PlasmaGradient } from '@/components/plasma';
 import { Screen } from '@/components/screen';
 import { T } from '@/components/text';
 import { useChat } from '@/store/chat';
+import { useEngine } from '@/store/engine';
 
 /** Pantalla hero: Ibex, nombre y entrada al chat. */
 export default function Hero() {
+  const native = useEngine((s) => s.native);
   const count = useChat((s) => s.conversations.length);
   return (
     <Screen>
@@ -23,7 +25,7 @@ export default function Hero() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Orb size={10} active />
           <T size={13} tone="muted">
-            Modo demostración · respuestas simuladas hasta F1.5
+            {native ? 'Motor local activo · IA en tu dispositivo' : 'Modo demostración · respuestas simuladas'}
           </T>
         </View>
         <Pressable

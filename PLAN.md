@@ -232,7 +232,7 @@ Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
     las dos. Recomendación del agente: C, y el permiso A solo se pide si eliges «Todo el almacenamiento».
 
 Pulido del chat real (F1.5, 2026-11-24):
-- **P15. Lo que muestran las capturas del primer chat real** (LFM3 y Qwen3 responden en el móvil: ≈ 11,1 y ≈ 10,5 tok/s en conjunto).
+- **P15. Lo que muestran las capturas del primer chat real** — **Decidido por el usuario el 2026-11-24: opción 2**; implementada (pendiente de probar en el móvil); la opción 3 (modelo cargado entre mensajes) queda para antes de medir (P13). (LFM3 y Qwen3 responden en el móvil: ≈ 11,1 y ≈ 10,5 tok/s en conjunto).
   Problemas vistos, todos de la integración TypeScript, no del motor:
   - a) El `<think>…</think>` sale dentro de la burbuja: `LlamaProvider` nunca emite `thinking_delta`, así que el razonamiento no
     se pliega (PLAN §3 dice que va plegado y no se reenvía).

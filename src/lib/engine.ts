@@ -67,16 +67,19 @@ export async function send(text: string, convId?: string | null): Promise<string
   const ctrl = new AbortController();
   controllers.set(convId_, ctrl);
   let firstToken = true;
+  /** Inicio del razonamiento: «Pensó N s» mide solo el razonamiento (no la carga del modelo ni el prefill). */
+  let thinkStart: number | null = null;
   try {
     for await (const ev of provider.stream(history, { ...agent, contextTokens: ctx, signal: ctrl.signal })) {
       switch (ev.type) {
         case 'thinking_delta':
+          if (thinkStart === null) thinkStart = Date.now();
           patch((m) => ({ thinking: (m.thinking ?? '') + ev.text, status: 'thinking' }));
           break;
         case 'token':
           if (firstToken) {
             firstToken = false;
-            patch({ thinkMs: Date.now() - started });
+            if (thinkStart !== null) patch({ thinkMs: Date.now() - thinkStart });
           }
           patch((m) => ({ content: m.content + ev.text, status: 'streaming' }));
           break;

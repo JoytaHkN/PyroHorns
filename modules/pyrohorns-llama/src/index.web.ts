@@ -28,6 +28,7 @@ export async function generate(
   _handle: number,
   _prompt: string,
   _threads: number,
+  _noThink: boolean,
   _onEvent: (event: LlamaNativeEvent) => void
 ): Promise<void> {
   throw new Error('El motor nativo solo está disponible en Android');

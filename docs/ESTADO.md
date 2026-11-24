@@ -63,6 +63,14 @@
      formato, etiqueta «simuladas» obsoleta y razonamiento con Profundo apagado → **P15** (`PLAN.md` §7), pendiente de decisión.
      Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
      compilar ggml-cpu sin dotprod/i8mm; el modelo tardó ≈ 5,8 s en abrirse desde la carpeta de la app.
+   - **P15 opción 2 decidida e implementada (2026-11-24), pendiente de CI y de probar en el móvil:** `ThinkSplitter`
+     (`src/lib/think-parser.ts`) separa `<think>` del texto aunque la etiqueta llegue partida y `LlamaProvider` lo emite como
+     `thinking_delta` (se pliega y no se reenvía); «Pensó N s» mide solo el razonamiento (si no hay, no aparece); tok/s con un
+     decimal y calculado solo sobre la generación (sin prefill) en el JNI; etiqueta «en tu dispositivo» / «respuestas simuladas»
+     según el motor activo (`src/store/engine.ts`); con **Profundo apagado** y un modelo con razonamiento, el JNI añade
+     `<think>\n\n</think>\n\n` tras la plantilla (lo mismo que hace Qwen3 con enable_thinking=false). **Hay que comprobar en el móvil**
+     que LFM3 y Qwen3 realmente dejan de razonar con Profundo apagado y que con Profundo encendido el razonamiento sale plegado.
+     Pendiente (opción 3, antes de P13): mantener el modelo cargado entre mensajes.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
@@ -75,8 +83,6 @@
 - **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
   bueno y las cinco decisiones abiertas (variante sin mmap, barrido de hilos, modelos a probar, salida de
   resultados, tok/s del chat). No se ha escrito código. Ya no está bloqueada por P14.
-- **P15** · pulido del chat real (`<think>` visible, «Pensó» mal medido, tok/s, etiqueta obsoleta, Profundo): opciones 1/2/3 en
-  `PLAN.md` §7; recomendación: 2 ahora y 3 antes de medir (P13). No se ha escrito código.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -133,3 +139,6 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   CI en verde (`88369c6`), APK en `APK IA/apk/`. Pendiente: nueva prueba en el móvil.
 - **2026-11-24** · El usuario probó el APK con la corrección de R8: el chat responde con LFM3 y Qwen3 (≈ 11 y ≈ 10,5 tok/s en
   conjunto). Paso 2 de F1.5 validado en el móvil. Se registra P15 (pulido del chat real) en `PLAN.md` §7, pendiente de decisión.
+- **2026-11-24** · P15 opción 2 (elegida por el usuario): separación de `<think>`, «Pensó» solo del razonamiento, tok/s de generación
+  y formateado, etiqueta según el motor, Profundo apagado sin razonamiento (`noThink` hasta el JNI). 19 pruebas nuevas
+  (`tests/think-parser.test.ts`, `tests/llama-provider.test.ts`). Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.

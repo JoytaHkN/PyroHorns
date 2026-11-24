@@ -56,7 +56,7 @@ const conv = (id: string) => useChat.getState().conversations.find((c) => c.id =
   check(c.messages.length === 2, 'mensaje del usuario + respuesta');
   check(ai.status === 'done' && ai.content.includes('Qwen3 1.7B'), 'streaming completo con el modelo del modo');
   check(!!ai.thinking && ai.thinking.length > 20, 'Profundo: razonamiento separado de la respuesta');
-  check((ai.thinkMs ?? 0) > 0, 'tiempo hasta el primer token');
+  check((ai.thinkMs ?? 0) > 0, 'Pensó N s: tiempo del razonamiento');
   check((ai.usage?.tokPerSec ?? 0) > 0 && (ai.usage?.completionTokens ?? 0) > 0, 'métricas de la respuesta');
   check(ai.modelId === 'qwen3-1.7b', 'modelo registrado en el mensaje');
   check(c.agent.mode === 'code' && c.agent.deep && c.agent.modelId === 'qwen3-1.7b', 'instantánea del agente');

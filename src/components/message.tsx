@@ -71,7 +71,7 @@ function AiBubble({ m }: { m: Message }) {
   const showBody = m.status !== 'thinking' || !!m.content;
   const footer = [
     m.modelId ? modelById(m.modelId).name : null,
-    m.status === 'done' && m.usage ? `${m.usage.tokPerSec} tok/s` : null,
+    m.status === 'done' && m.usage ? `${m.usage.tokPerSec.toFixed(1)} tok/s` : null,
     m.status === 'stopped' ? 'Detenido' : null,
   ].filter(Boolean);
   return (

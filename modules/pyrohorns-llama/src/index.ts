@@ -63,12 +63,13 @@ export async function generate(
   handle: number,
   prompt: string,
   threads: number,
+  noThink: boolean,
   onEvent: (event: LlamaNativeEvent) => void
 ): Promise<void> {
   ensureSubscription();
   listeners.add(onEvent);
   try {
-    await Native.generate(handle, prompt, threads);
+    await Native.generate(handle, prompt, threads, noThink);
   } finally {
     listeners.delete(onEvent);
   }

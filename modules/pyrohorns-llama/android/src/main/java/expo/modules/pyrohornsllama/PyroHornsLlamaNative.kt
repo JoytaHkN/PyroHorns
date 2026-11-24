@@ -9,7 +9,7 @@ class PyroHornsLlamaNative {
 
   external fun loadModel(path: String, contextTokens: Int, threads: Int): Long
 
-  external fun generate(handle: Long, prompt: String, threads: Int, sink: LlamaEventSink)
+  external fun generate(handle: Long, prompt: String, threads: Int, noThink: Boolean, sink: LlamaEventSink)
 
   external fun cancel(handle: Long)
 

@@ -141,9 +141,9 @@ class PyroHornsLlamaModule : Module() {
       withContext(Dispatchers.IO) { native.loadModel(path, contextTokens, threads) }
     }
 
-    AsyncFunction("generate") Coroutine { handle: Long, prompt: String, threads: Int ->
+    AsyncFunction("generate") Coroutine { handle: Long, prompt: String, threads: Int, noThink: Boolean ->
       withContext(Dispatchers.IO) {
-        native.generate(handle, prompt, threads, object : LlamaEventSink {
+        native.generate(handle, prompt, threads, noThink, object : LlamaEventSink {
           override fun emit(type: String, text: String, usage: String) {
             sendEvent("onEvent", bundleOf(
               "handle" to handle,

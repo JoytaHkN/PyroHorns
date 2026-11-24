@@ -195,8 +195,9 @@ void batchSetTokens(llama_batch_ext * batch, const llama_token * tokens, int32_t
 }
 
 std::string usageJson(int64_t ttftUs, int64_t totalUs, int promptTokens, int completionTokens) {
-  const double seconds = static_cast<double>(totalUs) / 1000000.0;
-  const double rate = seconds > 0.0 ? static_cast<double>(completionTokens) / seconds : 0.0;
+  // Velocidad de generación: los tokens posteriores al primero entre el tiempo posterior al primer token (sin el prefill).
+  const double seconds = static_cast<double>(totalUs - ttftUs) / 1000000.0;
+  const double rate = (seconds > 0.0 && completionTokens > 1) ? static_cast<double>(completionTokens - 1) / seconds : 0.0;
   return "{\"promptTokens\":" + std::to_string(promptTokens) +
          ",\"completionTokens\":" + std::to_string(completionTokens) +
          ",\"ttftMs\":" + std::to_string(ttftUs / 1000) +
@@ -275,7 +276,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
 
 extern "C" JNIEXPORT void JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
-    JNIEnv * env, jobject, jlong handle, jstring jPrompt, jint threads, jobject sink) {
+    JNIEnv * env, jobject, jlong handle, jstring jPrompt, jint threads, jboolean noThink, jobject sink) {
   const std::shared_ptr<ModelState> state = getModel(handle);
   if (state == nullptr) {
     emit(env, sink, "error", "Modelo no cargado", "{}");
@@ -287,9 +288,11 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
     llama_set_n_threads(state->ctx, threads, threads);
 
     const char * promptChars = env->GetStringUTFChars(jPrompt, nullptr);
-    const std::string prompt = formatPrompt(state->model, promptChars);
+    std::string prompt = formatPrompt(state->model, promptChars);
     env->ReleaseStringUTFChars(jPrompt, promptChars);
-    crumb("gen: plantilla aplicada (" + std::to_string(prompt.size()) + " bytes, hilos " + std::to_string(threads) + ")");
+    // Profundo apagado: se cierra un bloque de razonamiento vacío, igual que la plantilla de Qwen3 con enable_thinking=false.
+    if (noThink == JNI_TRUE) prompt += "<think>\n\n</think>\n\n";
+    crumb("gen: plantilla aplicada (" + std::to_string(prompt.size()) + " bytes, hilos " + std::to_string(threads) + (noThink == JNI_TRUE ? ", sin razonamiento)" : ")"));
 
     const llama_vocab * vocab = llama_model_get_vocab(state->model);
     int32_t nPrompt = -llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), nullptr, 0, true, true);
