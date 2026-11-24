@@ -63,7 +63,7 @@
      formato, etiqueta «simuladas» obsoleta y razonamiento con Profundo apagado → **P15** (`PLAN.md` §7), pendiente de decisión.
      Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
      compilar ggml-cpu sin dotprod/i8mm; el modelo tardó ≈ 5,8 s en abrirse desde la carpeta de la app.
-   - **P15 opción 2 decidida e implementada (2026-11-24), pendiente de CI y de probar en el móvil:** `ThinkSplitter`
+   - **P15 opción 2 decidida e implementada (2026-11-24), CI Android en verde (`d216048`), pendiente de probar en el móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p15-prueba.apk` + `.sha256`)**:** `ThinkSplitter`
      (`src/lib/think-parser.ts`) separa `<think>` del texto aunque la etiqueta llegue partida y `LlamaProvider` lo emite como
      `thinking_delta` (se pliega y no se reenvía); «Pensó N s» mide solo el razonamiento (si no hay, no aparece); tok/s con un
      decimal y calculado solo sobre la generación (sin prefill) en el JNI; etiqueta «en tu dispositivo» / «respuestas simuladas»
@@ -141,4 +141,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   conjunto). Paso 2 de F1.5 validado en el móvil. Se registra P15 (pulido del chat real) en `PLAN.md` §7, pendiente de decisión.
 - **2026-11-24** · P15 opción 2 (elegida por el usuario): separación de `<think>`, «Pensó» solo del razonamiento, tok/s de generación
   y formateado, etiqueta según el motor, Profundo apagado sin razonamiento (`noThink` hasta el JNI). 19 pruebas nuevas
-  (`tests/think-parser.test.ts`, `tests/llama-provider.test.ts`). Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
+  (`tests/think-parser.test.ts`, `tests/llama-provider.test.ts`). Typecheck, pruebas y bundle Android en verde. CI en verde (`d216048`), APK en `APK IA/apk/`. Pendiente: móvil.
