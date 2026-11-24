@@ -84,6 +84,8 @@ interface ChatState {
   removeAll: () => void;
   rename: (id: string, title: string) => void;
   addMessage: (convId: string, msg: Message) => void;
+  /** Conversación nueva con los mensajes hasta `msgId` (incluido). Devuelve su id, o null si no existe. */
+  branch: (convId: string, msgId: string) => string | null;
   patchMessage: (convId: string, msgId: string, patch: Partial<Message> | ((m: Message) => Partial<Message>)) => void;
   setAgent: (convId: string, agent: AgentSnapshot) => void;
   addProject: (name: string) => string;
@@ -132,6 +134,17 @@ export const useChat = create<ChatState>()((set, get) => ({
     set((s) => ({ conversations: s.conversations.map((c) => (c.id === id ? touch(c, { title }) : c)) }));
     const c = get().conversations.find((x) => x.id === id);
     if (c) enqueue((r) => r.saveConversation(metaOf(c)));
+  },
+
+  branch: (convId, msgId) => {
+    const source = get().conversations.find((c) => c.id === convId);
+    const end = source ? source.messages.findIndex((m) => m.id === msgId) : -1;
+    if (!source || end < 0) return null;
+    const copies = source.messages.slice(0, end + 1).map((m) => ({ ...m, id: uid() }));
+    const id = get().newConversation(source.agent, source.projectId);
+    get().rename(id, `${source.title} (rama)`);
+    for (const m of copies) get().addMessage(id, m);
+    return id;
   },
 
   addMessage: (convId, msg) => {

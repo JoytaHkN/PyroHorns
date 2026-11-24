@@ -1,9 +1,16 @@
-import { LlamaProvider, setNativeLlamaModule, unloadLlamaModel, type NativeLlamaModule } from '@/providers/llama';
+import {
+  LlamaProvider,
+  preloadLlamaModel,
+  setNativeLlamaModule,
+  unloadLlamaModel,
+  type NativeLlamaModule,
+} from '@/providers/llama';
 import type { StreamEvent } from '@/providers/types';
 import { check, done } from './helpers';
 
 interface Seen {
   noThink?: boolean;
+  roles?: string;
   loads: string[];
   unloads: number;
   generates: number;
@@ -20,7 +27,8 @@ function fakeNative(script: () => StreamEvent[] | string[], seen: Seen, delayMs 
       seen.loads.push(modelId);
       return `${modelId}#${seen.loads.length}`;
     },
-    generate: async (_id, _prompt, options) => {
+    generate: async (_id, messages, options) => {
+      seen.roles = messages.map((m) => m.role).join(',');
       running++;
       seen.maxConcurrent = Math.max(seen.maxConcurrent, running);
       seen.generates++;
@@ -127,6 +135,32 @@ async function withModule(chunks: string[], delayMs = 0) {
   await Promise.all([run('lfm3-1.7b', true), run('lfm3-1.7b', true), run('lfm3-1.7b', true)]);
   check(seen.generates === 3 && seen.maxConcurrent === 1, 'generaciones simultáneas: se encolan (máximo 1 a la vez)');
   check(seen.loads.length === 1, 'las generaciones encoladas comparten el modelo cargado');
+
+  // Memoria: al motor le llega la conversación completa, no solo el último mensaje.
+  seen = await withModule(['Vale']);
+  for await (const _ of LlamaProvider.stream(
+    [
+      { role: 'system', content: 'instrucción' },
+      { role: 'user', content: 'uno' },
+      { role: 'assistant', content: 'dos' },
+      { role: 'user', content: 'tres' },
+    ],
+    { modelId: 'lfm3-1.7b', mode: 'general', deep: true, contextTokens: 8192 },
+  )) {
+    // se consume el stream
+  }
+  check(seen.roles === 'system,user,assistant,user', 'el motor recibe instrucción e historial');
+
+  // Carga anticipada: el mensaje reutiliza el modelo ya cargado, y de varios cambios seguidos solo vale el último.
+  seen = await withModule(['Hola']);
+  await preloadLlamaModel({ modelId: 'lfm3-1.7b', contextTokens: 8192 });
+  await run('lfm3-1.7b', true);
+  check(seen.loads.length === 1 && seen.generates === 1, 'carga anticipada: al enviar no se vuelve a cargar');
+  seen = await withModule(['Hola']);
+  await Promise.all(
+    ['lfm3-1.7b', 'phi-3.5-mini', 'qwen3-1.7b'].map((modelId) => preloadLlamaModel({ modelId, contextTokens: 8192 })),
+  );
+  check(seen.loads.join(',') === 'qwen3-1.7b', 'cambios seguidos de modelo: solo se carga el último');
 
   done();
 })();

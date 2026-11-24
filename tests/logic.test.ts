@@ -2,7 +2,8 @@ import { modelForMode } from '@/data/agents';
 import { estimateRamGiB, fitsInMemory, modelById } from '@/data/models';
 import { migrate } from '@/db/schema';
 import { SqlChatRepo } from '@/db/sql-repo';
-import { send, stop } from '@/lib/engine';
+import { regenerate, send, stop } from '@/lib/engine';
+import { usageLine } from '@/lib/stats';
 import { attachRepo, flushWrites, searchConversations, useChat } from '@/store/chat';
 import { activeModelId, useSettings } from '@/store/settings';
 import { check, done, nodeDb } from './helpers';
@@ -74,6 +75,34 @@ const conv = (id: string) => useChat.getState().conversations.find((c) => c.id =
   );
   check(reloaded.agent.deep && reloaded.agent.modelId === 'qwen3-1.7b', 'instantánea del agente guardada');
 
+  check((ai.usage?.totalMs ?? 0) > 0, 'tiempo total de la respuesta');
+  check(
+    usageLine({ promptTokens: 1, completionTokens: 149, ttftMs: 1, tokPerSec: 4.3, totalMs: 34100 }) ===
+      '149 tokens · 34 s · 4,3 tok/s',
+    'línea de métricas',
+  );
+
+  // Valoración y rama.
+  useChat.getState().patchMessage(id, ai.id, { feedback: 'up' });
+  const branched = useChat.getState().branch(id, ai.id)!;
+  await flushWrites();
+  check(
+    conv(branched).messages.length === 2 && conv(branched).title.endsWith('(rama)') && conv(branched).messages[1]!.id !== ai.id,
+    'ramificar copia la conversación hasta ese mensaje',
+  );
+  const saved = (await new SqlChatRepo(db, fts).loadAll()).conversations;
+  check(saved.find((x) => x.id === id)!.messages[1]!.feedback === 'up', 'la valoración se guarda');
+  check(saved.find((x) => x.id === branched)!.messages.length === 2, 'la rama se guarda');
+
+  // Regenerar sustituye la última respuesta sin duplicar mensajes.
+  await regenerate(branched);
+  await flushWrites();
+  check(
+    conv(branched).messages.length === 2 && conv(branched).messages[1]!.status === 'done' && !conv(branched).messages[1]!.feedback,
+    'regenerar sustituye la respuesta',
+  );
+  useChat.getState().select(id);
+
   // Detener a mitad.
   const p = send('segundo mensaje', id);
   setTimeout(() => stop(id), 700);
@@ -90,6 +119,8 @@ const conv = (id: string) => useChat.getState().conversations.find((c) => c.id =
   check((await searchConversations('zzzz')).length === 0, 'búsqueda sin resultados');
 
   // Borrar.
+  useChat.getState().remove(branched);
+  useChat.getState().select(id);
   useChat.getState().remove(id);
   await flushWrites();
   const after = await new SqlChatRepo(db, fts).loadAll();

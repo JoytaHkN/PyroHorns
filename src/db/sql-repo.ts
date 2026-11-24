@@ -25,6 +25,7 @@ interface MessageRow {
   model_id: string | null;
   usage: string | null;
   tool_calls: string | null;
+  feedback: string | null;
   created_at: number;
 }
 
@@ -52,6 +53,7 @@ function toMessage(r: MessageRow): Message {
   if (usage) m.usage = usage;
   const calls = parseJson<ToolCall[]>(r.tool_calls);
   if (calls?.length) m.toolCalls = calls;
+  if (r.feedback === 'up' || r.feedback === 'down') m.feedback = r.feedback;
   return settleStatus(m);
 }
 
@@ -117,8 +119,8 @@ export class SqlChatRepo implements ChatRepo {
   async insertMessage(conversationId: string, m: Message): Promise<void> {
     await this.db.transaction(async () => {
       await this.db.run(
-        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           m.id,
           conversationId,
@@ -130,6 +132,7 @@ export class SqlChatRepo implements ChatRepo {
           m.modelId ?? null,
           m.usage ? JSON.stringify(m.usage) : null,
           m.toolCalls?.length ? JSON.stringify(m.toolCalls) : null,
+          m.feedback ?? null,
           m.createdAt,
         ],
       );
@@ -139,7 +142,7 @@ export class SqlChatRepo implements ChatRepo {
 
   async updateMessage(m: Message): Promise<void> {
     await this.db.run(
-      `UPDATE messages SET content = ?, thinking = ?, status = ?, think_ms = ?, model_id = ?, usage = ?, tool_calls = ?
+      `UPDATE messages SET content = ?, thinking = ?, status = ?, think_ms = ?, model_id = ?, usage = ?, tool_calls = ?, feedback = ?
        WHERE id = ?`,
       [
         m.content,
@@ -149,6 +152,7 @@ export class SqlChatRepo implements ChatRepo {
         m.modelId ?? null,
         m.usage ? JSON.stringify(m.usage) : null,
         m.toolCalls?.length ? JSON.stringify(m.toolCalls) : null,
+        m.feedback ?? null,
         m.id,
       ],
     );

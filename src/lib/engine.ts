@@ -4,8 +4,9 @@ import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/p
 import type { ChatProvider } from '@/providers/types';
 import { activeModelId, useSettings } from '@/store/settings';
 import { uid, useChat, type AgentSnapshot } from '@/store/chat';
-import { buildContext } from './context';
+import { buildContext, estimateTokens } from './context';
 import { errorSummary, log } from './log';
+import { systemPrompt } from './system-prompt';
 
 /** F1.5/F2: usa el módulo nativo si está disponible, si no el mock. */
 export { setNativeLlamaModule };
@@ -44,24 +45,53 @@ export async function send(text: string, convId?: string | null): Promise<string
 
   chat.addMessage(convId_, { id: uid(), role: 'user', content: text, createdAt: Date.now() });
   const aiId = uid();
-  const started = Date.now();
   chat.addMessage(convId_, {
     id: aiId,
     role: 'assistant',
     content: '',
-    createdAt: started,
+    createdAt: Date.now(),
     status: 'thinking',
     modelId: agent.modelId,
   });
+  await reply(convId_, aiId, agent);
+  return convId_;
+}
 
+/** Vuelve a generar la última respuesta de la conversación (sustituye a la anterior). */
+export async function regenerate(convId: string): Promise<void> {
+  const conv = useChat.getState().conversations.find((c) => c.id === convId);
+  const last = conv?.messages[conv.messages.length - 1];
+  if (!last || last.role !== 'assistant' || isGenerating(convId)) return;
+  const agent = currentAgent();
+  const chat = useChat.getState();
+  chat.setAgent(convId, agent);
+  chat.patchMessage(convId, last.id, {
+    content: '',
+    thinking: undefined,
+    thinkMs: undefined,
+    usage: undefined,
+    toolCalls: undefined,
+    feedback: null,
+    status: 'thinking',
+    modelId: agent.modelId,
+  });
+  await reply(convId, last.id, agent);
+}
+
+/** Genera la respuesta `aiId` a partir de los mensajes anteriores a ella. */
+async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promise<void> {
+  const chat = useChat.getState();
+  const started = Date.now();
   const ctx = contextTokens(modelById(agent.modelId), agent.deep);
-  const history = buildContext(
-    useChat
-      .getState()
-      .conversations.find((c) => c.id === convId_)!
-      .messages.filter((m) => m.id !== aiId),
-    { contextTokens: ctx },
-  );
+  const system = systemPrompt(agent.modelId);
+  const messages = useChat.getState().conversations.find((c) => c.id === convId_)!.messages;
+  const history = [
+    { role: 'system' as const, content: system },
+    ...buildContext(
+      messages.slice(0, messages.findIndex((m) => m.id === aiId)),
+      { contextTokens: ctx - estimateTokens(system) },
+    ),
+  ];
 
   const patch = (p: Parameters<typeof chat.patchMessage>[2]) => chat.patchMessage(convId_, aiId, p);
   const ctrl = new AbortController();
@@ -87,12 +117,12 @@ export async function send(text: string, convId?: string | null): Promise<string
           patch((m) => ({ toolCalls: [...(m.toolCalls ?? []), { id: ev.id, name: ev.name, args: ev.args }] }));
           break;
         case 'usage':
-          patch({ usage: ev.usage });
+          patch({ usage: { ...ev.usage, totalMs: Date.now() - started } });
           break;
         case 'error':
           throw new Error(ev.message);
         case 'done':
-          patch({ status: 'done' });
+          patch((m) => ({ status: 'done', ...(m.usage ? { usage: { ...m.usage, totalMs: Date.now() - started } } : {}) }));
           break;
       }
     }
@@ -108,7 +138,6 @@ export async function send(text: string, convId?: string | null): Promise<string
   } finally {
     controllers.delete(convId_);
   }
-  return convId_;
 }
 
 export function stop(convId: string) {

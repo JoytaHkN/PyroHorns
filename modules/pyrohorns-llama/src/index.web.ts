@@ -48,7 +48,7 @@ export async function loadModel(): Promise<number> {
 
 export async function generate(
   _handle: number,
-  _prompt: string,
+  _messages: { role: string; content: string }[],
   _threads: number,
   _noThink: boolean,
   _onEvent: (event: LlamaNativeEvent) => void

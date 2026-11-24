@@ -109,7 +109,7 @@ export function keepScreenOn(on: boolean): void {
 
 export async function generate(
   handle: number,
-  prompt: string,
+  messages: { role: string; content: string }[],
   threads: number,
   noThink: boolean,
   onEvent: (event: LlamaNativeEvent) => void
@@ -117,7 +117,13 @@ export async function generate(
   ensureSubscription();
   listeners.add(onEvent);
   try {
-    await Native.generate(handle, prompt, threads, noThink);
+    await Native.generate(
+      handle,
+      messages.map((m) => m.role),
+      messages.map((m) => m.content),
+      threads,
+      noThink
+    );
   } finally {
     listeners.delete(onEvent);
   }

@@ -46,10 +46,10 @@ export const nativeLlamaModule: NativeLlamaModule = {
     return id;
   },
 
-  async generate(modelId, prompt, options, _signal) {
+  async generate(modelId, messages, options, _signal) {
     const handle = handles.get(modelId);
     if (handle === undefined) throw new Error('Modelo no cargado');
-    await nativeGenerate(handle, prompt, options.threads ?? 4, options.noThink ?? false, (ev) => {
+    await nativeGenerate(handle, messages, options.threads ?? 4, options.noThink ?? false, (ev) => {
       switch (ev.type) {
         case 'token':
           options.onEvent({ type: 'token', text: ev.text });

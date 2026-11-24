@@ -7,6 +7,12 @@ import { usePalette } from '@/theme/use-palette';
 /** Trazos del sistema de iconos (mockup): 24×24, trazo redondeado. */
 export const ICON_PATHS = {
   menu: 'M4 7h16M4 12h16M4 17h10',
+  share: 'M18 3a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM6 9.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM18 16a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM8.2 10.8l7.6-4.1M8.2 13.2l7.6 4.1',
+  copy: 'M10 8h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM5 16V4a1 1 0 0 1 1-1h10',
+  thumbUp: 'M7 11v9H4v-9zM7 11l4-8c1.7 0 2.6 1.2 2.3 2.8L12.7 9H18a2 2 0 0 1 2 2.4l-1.4 7a2 2 0 0 1-2 1.6H7',
+  thumbDown: 'M7 13V4H4v9zM7 13l4 8c1.7 0 2.6-1.2 2.3-2.8L12.7 15H18a2 2 0 0 0 2-2.4l-1.4-7a2 2 0 0 0-2-1.6H7',
+  refresh: 'M20 12a8 8 0 1 1-2.4-5.7M20 4v5h-5',
+  branch: 'M12 21v-8l-6-6M12 13l6-6M6 12V7h5M13 7h5v5',
   plus: 'M12 5v14M5 12h14',
   more: 'M12 6h.01M12 12h.01M12 18h.01',
   chat: 'M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z',

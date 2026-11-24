@@ -15,6 +15,7 @@ import { modeById } from '@/data/agents';
 import { contextTokens, modelById } from '@/data/models';
 import { conversationTokens, formatTokens } from '@/lib/context';
 import { send, stop } from '@/lib/engine';
+import { preloadLlamaModel } from '@/providers/llama';
 import { useActiveConversation, useChat } from '@/store/chat';
 import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
@@ -30,6 +31,7 @@ export default function ChatScreen() {
   const pal = usePalette();
   const conv = useActiveConversation();
   const native = useEngine((s) => s.native);
+  const loading = useEngine((s) => s.loading);
   const select = useChat((s) => s.select);
   const remove = useChat((s) => s.remove);
   const settings = useSettings();
@@ -44,6 +46,11 @@ export default function ChatScreen() {
   const busy = !!last && last.role === 'assistant' && (last.status === 'thinking' || last.status === 'streaming');
   const used = conversationTokens(messages);
   const ctx = contextTokens(model, settings.deep);
+
+  // Carga anticipada: al abrir el chat y al cambiar de modelo o de contexto.
+  useEffect(() => {
+    if (native) void preloadLlamaModel({ modelId: model.id, contextTokens: ctx });
+  }, [native, model.id, ctx]);
 
   useEffect(() => {
     if (messages.length) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
@@ -93,6 +100,14 @@ export default function ChatScreen() {
             <T weight="bold" size={22}>
               ¿En qué trabajamos hoy?
             </T>
+            {loading ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Orb size={10} active />
+                <T size={12} tone="muted">
+                  Cargando {model.name}…
+                </T>
+              </View>
+            ) : null}
             <View style={{ gap: 8, alignSelf: 'stretch' }}>
               {SUGGESTIONS.map((s) => (
                 <Pressable
@@ -122,13 +137,14 @@ export default function ChatScreen() {
             ref={listRef}
             data={messages}
             keyExtractor={(m) => m.id}
-            renderItem={({ item }) => <MessageBubble m={item} />}
+            renderItem={({ item }) => <MessageBubble m={item} convId={conv!.id} isLast={item.id === last?.id} />}
+            extraData={last?.id}
             contentContainerStyle={{ padding: 16, gap: 16 }}
             ListFooterComponent={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <Orb size={10} active={busy} />
+                <Orb size={10} active={busy || loading} />
                 <T size={12} tone="muted">
-                  {busy ? `${model.name} generando…` : native ? `${model.name} · en tu dispositivo` : `${model.name} · respuestas simuladas`}
+                  {loading ? `Cargando ${model.name}…` : busy ? `${model.name} generando…` : native ? `${model.name} · en tu dispositivo` : `${model.name} · respuestas simuladas`}
                 </T>
               </View>
             }

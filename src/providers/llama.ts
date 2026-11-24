@@ -1,5 +1,6 @@
 import { LOCAL_MODELS } from '@/data/models';
 import { ThinkSplitter } from '@/lib/think-parser';
+import { useEngine } from '@/store/engine';
 import { MockProvider } from './mock';
 import type { ChatProvider, ProviderMessage, StreamEvent, StreamOptions } from './types';
 
@@ -10,7 +11,8 @@ export interface NativeLlamaModule {
   /** Genera streaming de tokens. Los eventos llegan por `onEvent`. */
   generate(
     modelId: string,
-    prompt: string,
+    /** Conversación completa: instrucción, mensajes anteriores y el nuevo. */
+    messages: ProviderMessage[],
     options: {
       threads?: number;
       /** Pide al modelo que no razone (se añade un bloque `<think></think>` vacío tras la plantilla). */
@@ -31,6 +33,11 @@ export interface NativeLlamaModule {
 const DEFAULT_THREADS = 6;
 
 let nativeModule: NativeLlamaModule | null = null;
+
+type LoadTarget = Pick<StreamOptions, 'modelId' | 'contextTokens'>;
+
+/** Última carga anticipada pedida: si se cambia varias veces de modelo, solo se carga el último. */
+let wanted: LoadTarget | null = null;
 
 /** Modelo que se queda cargado entre mensajes (P15-3). Solo hay uno a la vez (PLAN §3). */
 let loaded: { key: string; id: string } | null = null;
@@ -54,13 +61,18 @@ function acquire(): Promise<() => void> {
 }
 
 /** Carga el modelo si no está ya cargado con el mismo contexto; si cambia el modelo o el contexto, descarga el anterior. */
-async function ensureLoaded(native: NativeLlamaModule, opts: StreamOptions): Promise<string> {
+async function ensureLoaded(native: NativeLlamaModule, opts: LoadTarget): Promise<string> {
   const key = `${opts.modelId}@${opts.contextTokens}`;
   if (loaded && loaded.key === key) return loaded.id;
   await dropLoaded(native);
-  const id = await native.loadModel(opts.modelId, opts.contextTokens, DEFAULT_THREADS);
-  loaded = { key, id };
-  return id;
+  useEngine.getState().setLoading(true);
+  try {
+    const id = await native.loadModel(opts.modelId, opts.contextTokens, DEFAULT_THREADS);
+    loaded = { key, id };
+    return id;
+  } finally {
+    useEngine.getState().setLoading(false);
+  }
 }
 
 async function dropLoaded(native: NativeLlamaModule) {
@@ -69,10 +81,29 @@ async function dropLoaded(native: NativeLlamaModule) {
   if (current) await native.unloadModel(current.id).catch(() => {});
 }
 
+/**
+ * Carga el modelo antes de que haga falta (al abrir el chat o cambiar de modelo). Los errores se callan aquí:
+ * si falta el archivo o no se puede abrir, el mensaje lo dirá al enviar.
+ */
+export async function preloadLlamaModel(target: LoadTarget): Promise<void> {
+  const native = nativeModule;
+  if (!native) return;
+  wanted = target;
+  const release = await acquire();
+  try {
+    if (wanted === target) await ensureLoaded(native, target);
+  } catch {
+    // Se reintenta al enviar.
+  } finally {
+    release();
+  }
+}
+
 /** Libera el modelo cargado (por ejemplo, para recuperar RAM). La siguiente generación lo vuelve a cargar. */
 export async function unloadLlamaModel(): Promise<void> {
   const native = nativeModule;
   if (!native) return;
+  wanted = null;
   const release = await acquire();
   try {
     await dropLoaded(native);
@@ -99,21 +130,23 @@ export const LlamaProvider: ChatProvider = {
     }
 
     const native = nativeModule;
-    const last = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
 
     // Profundo apagado: los modelos con razonamiento no deben razonar (PLAN §3).
     const noThink = !opts.deep && (LOCAL_MODELS.find((m) => m.id === opts.modelId)?.thinking ?? false);
 
+    wanted = null; // el mensaje manda sobre una carga anticipada pendiente
     const release = await acquire();
     let failed = false;
     try {
       const modelId = await ensureLoaded(native, opts);
-      for await (const ev of streamFromNative(native, modelId, last, opts, noThink)) {
+      // «Detener» pulsado mientras se cargaba: no se genera nada.
+      if (opts.signal?.aborted) throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+      for await (const ev of streamFromNative(native, modelId, messages, opts, noThink)) {
         if (ev.type === 'error') failed = true;
         yield ev;
       }
     } catch (e) {
-      failed = true;
+      failed = !(e instanceof Error && e.name === 'AbortError');
       throw e;
     } finally {
       // Tras un error el contexto nativo puede quedar en mal estado: la próxima vez se carga de nuevo.
@@ -126,7 +159,7 @@ export const LlamaProvider: ChatProvider = {
 async function* streamFromNative(
   native: NativeLlamaModule,
   modelId: string,
-  prompt: string,
+  messages: ProviderMessage[],
   opts: StreamOptions,
   noThink: boolean
 ): AsyncGenerator<StreamEvent> {
@@ -150,7 +183,7 @@ async function* streamFromNative(
   signal.addEventListener('abort', abort, { once: true });
 
   try {
-    await native.generate(modelId, prompt, { threads: DEFAULT_THREADS, noThink, onEvent: enqueue }, signal);
+    await native.generate(modelId, messages, { threads: DEFAULT_THREADS, noThink, onEvent: enqueue }, signal);
   } catch (e) {
     errored = e;
     done = true;

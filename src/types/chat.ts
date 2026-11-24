@@ -9,6 +9,8 @@ export interface Usage {
   /** Milisegundos hasta el primer token de respuesta. */
   ttftMs: number;
   tokPerSec: number;
+  /** Milisegundos desde que se envió hasta que terminó (incluye la carga del modelo si la hubo). */
+  totalMs?: number;
 }
 
 /** Llamada a herramienta emitida por el modelo (el bucle de herramientas llega en F3). */
@@ -33,6 +35,8 @@ export interface Message {
   modelId?: string;
   usage?: Usage;
   toolCalls?: ToolCall[];
+  /** Solo IA: valoración del usuario. Se guarda solo en el dispositivo. */
+  feedback?: 'up' | 'down' | null;
 }
 
 /** Agente con el que se creó o continuó la conversación. */

@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstring>
@@ -24,6 +25,8 @@ struct ModelState {
   llama_context * ctx = nullptr;
   llama_sampler * sampler = nullptr;
   std::atomic<bool> cancelled{false};
+  // Tokens que hay ahora mismo en la caché KV: el siguiente mensaje solo procesa lo que añade (memoria de la conversación).
+  std::vector<llama_token> cached;
 
   // Libera el modelo, el contexto y el sampler: antes no se liberaba nada y cada mensaje dejaba el modelo en RAM.
   ~ModelState() {
@@ -168,31 +171,87 @@ std::shared_ptr<ModelState> getModel(jlong handle) {
   return it == g_models.end() ? nullptr : it->second;
 }
 
-std::string formatPrompt(const llama_model * model, const std::string & text) {
+struct ChatTurn {
+  std::string role;  // "system", "user" o "assistant"
+  std::string content;
+};
+
+// Sin plantilla reconocible: los textos seguidos.
+std::string plainPrompt(const std::vector<ChatTurn> & turns) {
+  std::string out;
+  for (const auto & t : turns) {
+    if (!out.empty()) out += "\n\n";
+    out += t.content;
+  }
+  return out;
+}
+
+std::string formatPrompt(const llama_model * model, const std::vector<ChatTurn> & turns) {
   const char * tmpl = llama_model_chat_template(model, nullptr);
   if (tmpl == nullptr) {
     crumb("plantilla: el modelo no trae plantilla, se usa el texto tal cual");
-    return text;
+    return plainPrompt(turns);
   }
   // Gemma 4 (p. ej. Nemotron 3.5 Bolt): su plantilla es Jinja y llama_chat_apply_template no la reconoce, así que el modelo
   // recibía el texto crudo y terminaba al instante. El BOS lo añade el tokenizador.
   if (std::strstr(tmpl, "<|turn>") != nullptr && std::strstr(tmpl, "<turn|>") != nullptr) {
-    return "<|turn>user\n" + text + "<turn|>\n<|turn>model\n";
+    std::string out;
+    for (const auto & t : turns) {
+      out += "<|turn>" + (t.role == "assistant" ? std::string("model") : t.role) + "\n" + t.content + "<turn|>\n";
+    }
+    return out + "<|turn>model\n";
   }
-  llama_chat_message msg{"user", text.c_str()};
-  int32_t size = static_cast<int32_t>(text.size() * 2 + 512);
-  std::vector<char> buf(static_cast<size_t>(size));
-  int32_t n = llama_chat_apply_template(tmpl, &msg, 1, true, buf.data(), size);
+  std::vector<llama_chat_message> msgs;
+  size_t chars = 0;
+  for (const auto & t : turns) {
+    msgs.push_back({t.role.c_str(), t.content.c_str()});
+    chars += t.content.size() + 64;
+  }
+  std::vector<char> buf(chars * 2 + 512);
+  int32_t n = llama_chat_apply_template(tmpl, msgs.data(), msgs.size(), true, buf.data(), static_cast<int32_t>(buf.size()));
   if (n < 0) {
     crumb("plantilla: no reconocida por llama_chat_apply_template, se usa el texto tal cual");
-    return text;
+    return plainPrompt(turns);
   }
-  if (n > size) {
+  if (n > static_cast<int32_t>(buf.size())) {
     buf.resize(static_cast<size_t>(n));
-    n = llama_chat_apply_template(tmpl, &msg, 1, true, buf.data(), n);
-    if (n < 0 || n > static_cast<int32_t>(buf.size())) return text;
+    n = llama_chat_apply_template(tmpl, msgs.data(), msgs.size(), true, buf.data(), static_cast<int32_t>(buf.size()));
+    if (n < 0 || n > static_cast<int32_t>(buf.size())) return plainPrompt(turns);
   }
   return std::string(buf.data(), static_cast<size_t>(n));
+}
+
+std::string toString(JNIEnv * env, jobjectArray array, jsize i) {
+  jstring j = static_cast<jstring>(env->GetObjectArrayElement(array, i));
+  const char * chars = env->GetStringUTFChars(j, nullptr);
+  std::string out(chars);
+  env->ReleaseStringUTFChars(j, chars);
+  env->DeleteLocalRef(j);
+  return out;
+}
+
+std::vector<llama_token> tokenize(const llama_vocab * vocab, const std::string & text) {
+  const int32_t n = -llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), nullptr, 0, true, true);
+  if (n <= 0) return {};
+  std::vector<llama_token> tokens(static_cast<size_t>(n));
+  if (llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), tokens.data(), n, true, true) < 0) return {};
+  return tokens;
+}
+
+// Cuántos tokens del principio del prompt ya están en la caché KV. Deja la caché solo con esos (o vacía si la memoria del
+// modelo no permite recortarla, como puede pasar en los híbridos o con ventana deslizante).
+int32_t reuseCache(ModelState & state, const std::vector<llama_token> & tokens) {
+  size_t n = 0;
+  // Siempre se procesa al menos el último token: hacen falta sus probabilidades.
+  while (n < state.cached.size() && n + 1 < tokens.size() && state.cached[n] == tokens[n]) ++n;
+  llama_memory_t memory = llama_get_memory(state.ctx);
+  if (n > 0 && n < state.cached.size() && !llama_memory_seq_rm(memory, 0, static_cast<llama_pos>(n), -1)) {
+    crumb("gen: la memoria no se puede recortar, se procesa todo de nuevo");
+    n = 0;
+  }
+  if (n == 0) llama_memory_clear(memory, true);
+  state.cached.resize(n);
+  return static_cast<int32_t>(n);
 }
 
 void batchSetTokens(llama_batch_ext * batch, const llama_token * tokens, int32_t n, llama_pos pos0) {
@@ -279,7 +338,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
     llama_sampler_chain_add(state->sampler, llama_sampler_init_top_k(40));
     llama_sampler_chain_add(state->sampler, llama_sampler_init_top_p(0.9f, 1));
     llama_sampler_chain_add(state->sampler, llama_sampler_init_temp(0.8f));
-    llama_sampler_chain_add(state->sampler, llama_sampler_init_dist(1234));
+    llama_sampler_chain_add(state->sampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 
     const jlong handle = g_nextHandle.fetch_add(1);
     {
@@ -299,7 +358,8 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
 
 extern "C" JNIEXPORT void JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
-    JNIEnv * env, jobject, jlong handle, jstring jPrompt, jint threads, jboolean noThink, jobject sink) {
+    JNIEnv * env, jobject, jlong handle, jobjectArray jRoles, jobjectArray jContents, jint threads, jboolean noThink,
+    jobject sink) {
   const std::shared_ptr<ModelState> state = getModel(handle);
   if (state == nullptr) {
     emit(env, sink, "error", "Modelo no cargado", "{}");
@@ -309,52 +369,75 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
   try {
     state->cancelled.store(false);
     llama_set_n_threads(state->ctx, threads, threads);
-    // El modelo se reutiliza entre mensajes: se vacía la caché KV (las posiciones empiezan en 0) y el estado del sampler.
-    llama_memory_clear(llama_get_memory(state->ctx), true);
     llama_sampler_reset(state->sampler);
 
-    const char * promptChars = env->GetStringUTFChars(jPrompt, nullptr);
-    std::string prompt = formatPrompt(state->model, promptChars);
-    env->ReleaseStringUTFChars(jPrompt, promptChars);
-    // Profundo apagado: se cierra un bloque de razonamiento vacío, igual que la plantilla de Qwen3 con enable_thinking=false.
-    if (noThink == JNI_TRUE) prompt += "<think>\n\n</think>\n\n";
-    crumb("gen: plantilla aplicada (" + std::to_string(prompt.size()) + " bytes, hilos " + std::to_string(threads) + (noThink == JNI_TRUE ? ", sin razonamiento)" : ")"));
+    const jsize count = env->GetArrayLength(jRoles);
+    std::vector<ChatTurn> turns;
+    for (jsize i = 0; i < count; ++i) {
+      ChatTurn turn{toString(env, jRoles, i), toString(env, jContents, i)};
+      // Profundo apagado: las respuestas anteriores se generaron tras un bloque de razonamiento vacío; se repone para que
+      // coincidan con lo que ya está en la caché.
+      if (noThink == JNI_TRUE && turn.role == "assistant") turn.content = "<think>\n\n</think>\n\n" + turn.content;
+      turns.push_back(std::move(turn));
+    }
 
     const llama_vocab * vocab = llama_model_get_vocab(state->model);
-    int32_t nPrompt = -llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), nullptr, 0, true, true);
-    if (nPrompt <= 0) {
-      crumb("gen: tokenizar falló (tamaño)");
-      emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
-      return;
+    const int32_t nCtx = static_cast<int32_t>(llama_n_ctx(state->ctx));
+    // Se deja sitio para responder: un cuarto del contexto, como mucho 512 tokens.
+    const int32_t room = std::min(512, nCtx / 4);
+    std::string prompt;
+    std::vector<llama_token> tokens;
+    while (true) {
+      prompt = formatPrompt(state->model, turns);
+      // Profundo apagado: se cierra un bloque de razonamiento vacío, igual que la plantilla de Qwen3 con enable_thinking=false.
+      if (noThink == JNI_TRUE) prompt += "<think>\n\n</think>\n\n";
+      tokens = tokenize(vocab, prompt);
+      if (tokens.empty()) {
+        crumb("gen: tokenizar falló");
+        emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
+        return;
+      }
+      if (static_cast<int32_t>(tokens.size()) <= nCtx - room) break;
+      // La estimación de la app se quedó corta: se quita el mensaje más antiguo (nunca la instrucción ni el último).
+      const size_t first = (!turns.empty() && turns[0].role == "system") ? 1 : 0;
+      if (turns.size() <= first + 1) {
+        crumb("gen: el mensaje no cabe en el contexto");
+        emit(env, sink, "error", "El mensaje es demasiado largo para este modelo", "{}");
+        return;
+      }
+      turns.erase(turns.begin() + static_cast<std::ptrdiff_t>(first));
     }
-    std::vector<llama_token> tokens(static_cast<size_t>(nPrompt));
-    if (llama_tokenize(vocab, prompt.c_str(), static_cast<int32_t>(prompt.size()), tokens.data(), nPrompt, true, true) < 0) {
-      crumb("gen: tokenizar falló");
-      emit(env, sink, "error", "No se pudo tokenizar el prompt", "{}");
-      return;
-    }
-    crumb("gen: " + std::to_string(nPrompt) + " tokens de prompt");
+    const int32_t nPrompt = static_cast<int32_t>(tokens.size());
+    crumb("gen: plantilla aplicada (" + std::to_string(prompt.size()) + " bytes, " + std::to_string(turns.size()) + " mensajes, hilos " +
+          std::to_string(threads) + (noThink == JNI_TRUE ? ", sin razonamiento)" : ")"));
+
+    const int32_t reused = reuseCache(*state, tokens);
+    crumb("gen: " + std::to_string(nPrompt) + " tokens de prompt (" + std::to_string(reused) + " ya en memoria)");
 
     std::unique_ptr<llama_batch_ext, void (*)(llama_batch_ext *)> batch(llama_batch_ext_init(state->ctx), llama_batch_ext_free);
-    batchSetTokens(batch.get(), tokens.data(), nPrompt, 0);
+    batchSetTokens(batch.get(), tokens.data() + reused, nPrompt - reused, reused);
 
     const auto started = std::chrono::steady_clock::now();
     crumb("gen: evaluando el prompt");
     if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
       crumb("gen: llama_process falló con el prompt");
+      state->cached.clear();
+      llama_memory_clear(llama_get_memory(state->ctx), true);
       emit(env, sink, "error", "Falló la evaluación del prompt", "{}");
       return;
     }
+    state->cached.insert(state->cached.end(), tokens.begin() + reused, tokens.end());
     crumb("gen: prompt evaluado en " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count()) + " ms");
 
     int64_t ttftUs = 0;
     int generated = 0;
     llama_pos pos = nPrompt;
-    constexpr int kMaxTokens = 512;
+    // Tope de la respuesta: 2048 tokens o lo que quede de contexto.
+    const int maxTokens = std::min(2048, static_cast<int>(nCtx - nPrompt));
     char piece[256];
     std::string pending;  // bytes de un carácter UTF-8 aún incompleto
 
-    while (generated < kMaxTokens && !state->cancelled.load()) {
+    while (generated < maxTokens && !state->cancelled.load()) {
       const llama_token next = llama_sampler_sample(state->sampler, state->ctx, -1);
       if (llama_vocab_is_eog(vocab, next)) break;
 
@@ -383,6 +466,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
         emit(env, sink, "error", "Falló la generación", "{}");
         break;
       }
+      state->cached.push_back(next);
     }
     if (!pending.empty()) emit(env, sink, "token", pending, "{}");
 
@@ -416,6 +500,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_bench(
     state->cancelled.store(false);
     llama_set_n_threads(state->ctx, threads, threads);
     llama_memory_clear(llama_get_memory(state->ctx), true);
+    state->cached.clear();
     llama_sampler_reset(state->sampler);
 
     // Texto fijo repetido hasta tener tokens de sobra; se recorta a nPrompt.

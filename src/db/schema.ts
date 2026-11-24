@@ -39,6 +39,10 @@ const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL
   );
   `,
+  // v2: valoración de las respuestas (👍/👎)
+  `
+  ALTER TABLE messages ADD COLUMN feedback TEXT;
+  `,
 ];
 
 /** Búsqueda de texto completo. Se crea aparte para poder seguir sin ella si el motor no trae FTS5. */

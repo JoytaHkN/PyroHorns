@@ -227,6 +227,8 @@ Rendimiento (F1.5, pasos 3 y 4):
 Arquitectura:
 - P12. Sustituir la "variante Compose completa" por piezas nativas solo donde React Native no llega (ventana flotante, terminal).
 
+- **P16. Chat como LM Playground** — **aprobada por el usuario el 2026-11-24** e implementada (pendiente de móvil): instrucción de sistema breve, tope de 2048 tokens, carga del modelo al abrir el chat, compartir/copiar/👍/👎/⋮ y memoria de la conversación con reutilización de la caché KV. ssd-llm (streaming de capas desde SSD) descartado tras leer su código.
+
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
   almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a
