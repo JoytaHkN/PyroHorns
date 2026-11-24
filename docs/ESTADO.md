@@ -137,16 +137,21 @@
      (batería ≥ 40 °C o térmico moderado o peor). El registro en vivo de cada prueba también los muestra. **Límite:** la temperatura es la de la
      batería, que va por detrás de la del procesador; el estado térmico es el indicador que de verdad limita la CPU.
      **Pendiente de decisión (no implementado):** esperar a que el equipo baje de un umbral antes de cada prueba, y/o descartar las pruebas hechas en caliente.
-   - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
-     elegir la más rápida.
-   - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
+   - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
+     la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
+     con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
+   - Paso 4 ✅ (medido con P13): TTFT, tok/s y RAM con 1K y 7,6K de contexto; no cumple el objetivo de TTFT ni la generación a 7,6K.
+     Pendiente: medir con `dotprod` y con batería, y decidir el control térmico (ver abajo).
    - Sin plan B: directo con el módulo nativo (decisión del usuario).
 2. Revisar los PR de Dependabot que quedan: #1–#5 (acciones de GitHub; relanzar su CI, que falló por
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
-- **(f)** Compilar ggml-cpu con `armv8.2-a+dotprod` (decidido: «base ahora y dotprod después de medir»): pendiente de hacerlo
-  cuando haya los primeros resultados de P13.
+- **Medir con `dotprod` (f-B):** el APK `PyroHorns-0.1.0-F1.5-p13-dotprod-prueba.apk` está en CI (`6f481b0`); falta la prueba Rápida en el teléfono con batería.
+  La tablet solo si se confirma que tiene dotprod y fp16 (la línea de CPU del informe lo dirá).
+- **Control térmico de P13 (no implementado):** (1) esperar a que el equipo baje de un umbral antes de cada prueba (propuesta: 35 °C);
+  (2) descartar o separar las pruebas hechas en caliente. Recomendación: 1, y 2 como respaldo.
+- **Revisar en F2/F3:** Qwen3 respondió en portugués con Profundo apagado (`PLAN.md` §7, P15).
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
