@@ -152,6 +152,7 @@ export default function Settings() {
           <Item first icon="cloud" title="Proveedores" subtitle="Claves API, URL base y selección" onPress={soon('Proveedores online', 'F6')} />
           <Item icon="chip" title="Modelos" subtitle="Activar, desactivar y configurar" onPress={() => router.push('/models')} />
           <Item icon="sliders" title="Diagnóstico del motor" subtitle="Rastros y cierres inesperados (F1.5)" onPress={() => router.push('/diagnostico')} />
+          <Item icon="chip" title="Prueba de rendimiento" subtitle="Carga, primer token, tok/s y RAM (F1.5)" onPress={() => router.push('/benchmark')} />
         </Group>
 
         <SectionLabel>Respuestas</SectionLabel>

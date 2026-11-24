@@ -208,7 +208,7 @@ Interacción:
 - P11. Indicador "Local / Nube" en cada conversación (F6).
 
 Rendimiento (F1.5, pasos 3 y 4):
-- P13. **Pantalla de prueba de rendimiento** (Ajustes → Diagnóstico). Estado: **decisiones tomadas el 2026-11-24; falta confirmar el inicio de la implementación**.
+- P13. **Pantalla de prueba de rendimiento** (Ajustes → Diagnóstico). Estado: **decisiones tomadas el 2026-11-24; implementada el 2026-11-24 (Ajustes → Prueba de rendimiento), pendiente de CI y de ejecutarla en el móvil**.
   - **Nativo (JNI):** `bench(handle, nPrompt, nGen)` estilo llama-bench: procesa `nPrompt` tokens sintéticos por lotes y genera `nGen`; devuelve por separado prompt tok/s (pp), generación tok/s (tg) y TTFT. Hoy `usage.tokPerSec` divide entre el tiempo total e incluye el prefill, así que subestima la generación. `memoryInfo()` lee `VmRSS`/`VmHWM` de `/proc/self/status` y `MemAvailable` de `/proc/meminfo` (sin permisos). `loadModel` ganaría el parámetro `useMmap` y usaría `threads`, que hoy ignora.
   - **Paso 3 (ruta del GGUF):** A) `/sdcard` con mmap · B) `/sdcard` sin mmap (una lectura secuencial) · C) copia en el almacenamiento de la app con mmap. Se mide tiempo de copia (una vez), de carga y tok/s. La caché de archivos de Android falsea las cargas repetidas: la primera es la fría y se anota el orden.
   - **Paso 4 (medidas):** LFM3 con contexto 8K; prompts de 1K y de ~7,5K tokens; 128 tokens generados; 3 repeticiones (mediana); pico de RAM por prueba. Hilos: 4 por defecto, con barrido opcional 4/6/8. Se contrastan los objetivos de §5 (TTFT < 1,5 s con 1K, ≥ 10 tok/s, sin cierres a 8K).

@@ -55,8 +55,38 @@ export function requestAllFilesAccess(): void {
   Native.requestAllFilesAccess();
 }
 
-export async function loadModel(path: string, contextTokens: number, threads: number): Promise<number> {
-  return Native.loadModel(path, contextTokens, threads);
+export async function loadModel(path: string, contextTokens: number, threads: number, useMmap = true): Promise<number> {
+  return Native.loadModel(path, contextTokens, threads, useMmap);
+}
+
+/** Prueba de rendimiento (P13): JSON con los tiempos de prefill y generación. */
+export async function benchRun(handle: number, nPrompt: number, nGen: number, threads: number): Promise<string> {
+  return Native.bench(handle, nPrompt, nGen, threads);
+}
+
+/** Memoria del proceso y del sistema (JSON), o null si no está disponible. */
+export function readMemoryInfo(): string | null {
+  try {
+    return Native.memoryInfo();
+  } catch {
+    return null;
+  }
+}
+
+/** Reinicia el pico de RAM del proceso; false si el sistema no lo permite. */
+export function resetPeakMemory(): boolean {
+  try {
+    return Native.resetPeakMemory();
+  } catch {
+    return false;
+  }
+}
+
+/** Mantiene la pantalla encendida mientras dura una prueba larga. */
+export function keepScreenOn(on: boolean): void {
+  try {
+    Native.keepScreenOn(on);
+  } catch {}
 }
 
 export async function generate(

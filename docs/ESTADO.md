@@ -81,7 +81,18 @@
      a la vez) y expone `unloadLlamaModel()`; el JNI vacía la caché KV y el sampler antes de cada generación. 22 pruebas del proveedor.
      **Qué comprobar:** el segundo mensaje ya no debe tardar unos 6 s en empezar, y las respuestas siguientes deben ser independientes
      (sin restos del mensaje anterior).
-   - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
+   - **Opción 3 de P15: CI Android en verde (`b962fbb`)**, APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p15-3-prueba.apk` (+ `.sha256`), pendiente de probar
+     en el móvil (el segundo mensaje no debe tardar ≈ 6 s en empezar).
+   - **P13 implementada (2026-11-24), pendiente de CI y de ejecutarla en el móvil:** **Ajustes → Prueba de rendimiento**
+     (`src/app/benchmark.tsx`). Nativo: `bench(handle, nPrompt, nGen, threads)` (prefill y generación medidos por separado con tokens
+     sintéticos, 128 tokens generados), `useMmap` en `loadModel`, `memoryInfo`/`resetPeakMemory` (RSS y pico desde `/proc`) y `keepScreenOn`.
+     TypeScript: `src/lib/bench.ts` (matriz, medianas, veredicto contra TTFT < 1,5 s con 1K y ≥ 10 tok/s, informe en Markdown),
+     `src/lib/bench-runner.ts` y `src/store/bench.ts` (resultados persistentes y marcador «prueba en curso» para detectar cierres por memoria).
+     Decisiones: con y sin mmap, hilos 4/6/8, los cuatro modelos (Cyber y Phi con 4K, LFM3 y Qwen3 con 8K; prompts de 1024 y 7616/3712),
+     3 repeticiones, pausa de 3 s entre pruebas, botón «Copiar resultados» (`expo-clipboard`, dependencia nueva). Preajustes: **Rápida**
+     (LFM3, 4 hilos, con y sin mmap: 12 pruebas) y **Completa** (144 pruebas, larga). 35 pruebas nuevas (`tests/bench.test.ts`).
+     **Cómo ejecutarla:** instalar el APK → Ajustes → Prueba de rendimiento → «Rápida» → Empezar → al terminar, «Copiar resultados» y pegarlos al agente.
+     Con la decisión (f): primero se mide con la compilación base; después se prueba `armv8.2-a+dotprod` y se comparan.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -90,9 +101,8 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
-- **P13** · pantalla de prueba de rendimiento: **decisiones tomadas por el usuario el 2026-11-24** — (a) con y sin mmap, (b) hilos 4/6/8,
-  (c) los cuatro modelos, (d) botón «Copiar» con `expo-clipboard`, (f) compilación base ahora y `dotprod` después de medir (detalle en
-  `PLAN.md` §7). Falta que el usuario confirme que empiece la implementación.
+- **(f)** Compilar ggml-cpu con `armv8.2-a+dotprod` (decidido: «base ahora y dotprod después de medir»): pendiente de hacerlo
+  cuando haya los primeros resultados de P13.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -158,3 +168,6 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · El usuario decide P13: (a) B, (b) B, (c) C, (d) B, (f) A ahora y B después de medir; y pide la opción 3 de P15.
   Hecha: modelo cargado entre mensajes, generaciones en cola, KV y sampler vaciados en cada generación; 22 pruebas del proveedor.
   Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil; P13 espera confirmación para empezar.
+- **2026-11-24** · El usuario confirma que empiece P13. Implementada la pantalla de prueba de rendimiento (nativo: `bench`, `useMmap`,
+  memoria, pantalla encendida; TS: matriz, medianas, veredicto, informe, ejecutor y almacén persistente; `expo-clipboard`). 35 pruebas
+  nuevas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y ejecutarla en el móvil.

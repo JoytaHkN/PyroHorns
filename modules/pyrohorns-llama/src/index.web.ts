@@ -20,6 +20,20 @@ export function clearDiagnostics(): void {}
 
 export function requestAllFilesAccess(): void {}
 
+export async function benchRun(): Promise<string> {
+  throw new Error('El motor nativo solo está disponible en Android');
+}
+
+export function readMemoryInfo(): string | null {
+  return null;
+}
+
+export function resetPeakMemory(): boolean {
+  return false;
+}
+
+export function keepScreenOn(_on: boolean): void {}
+
 export async function loadModel(): Promise<number> {
   throw new Error('El motor nativo solo está disponible en Android');
 }

@@ -221,17 +221,18 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_initBackend(JNIEnv * env, 
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
-    JNIEnv * env, jobject, jstring jPath, jint contextTokens, jint) {
+    JNIEnv * env, jobject, jstring jPath, jint contextTokens, jint, jboolean useMmap) {
   const char * pathChars = env->GetStringUTFChars(jPath, nullptr);
   const std::string path(pathChars);
   env->ReleaseStringUTFChars(jPath, pathChars);
 
   try {
-    crumb("load: abrir modelo (n_ctx=" + std::to_string(contextTokens) + ")");
+    crumb("load: abrir modelo (n_ctx=" + std::to_string(contextTokens) + (useMmap == JNI_TRUE ? ", mmap)" : ", sin mmap)"));
     auto state = std::make_shared<ModelState>();
 
     llama_model_params modelParams = llama_model_default_params();
     modelParams.n_gpu_layers = 0;
+    modelParams.use_mmap = (useMmap == JNI_TRUE);  // P13: comparar leer el GGUF con y sin mmap
     state->model = llama_model_load_from_file(path.c_str(), modelParams);
     if (state->model == nullptr) {
       crumb("load: el modelo no se pudo abrir");
@@ -376,6 +377,77 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
     crumb("gen: excepción C++ desconocida");
     emit(env, sink, "error", "Excepción desconocida en el motor", "{}");
   }
+}
+
+// Prueba de rendimiento (P13): prefill de `nPrompt` tokens sintéticos y generación de `nGen` tokens, medidos por separado.
+// Devuelve JSON; no contiene texto del usuario ni del modelo (S9).
+extern "C" JNIEXPORT jstring JNICALL
+Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_bench(
+    JNIEnv * env, jobject, jlong handle, jint nPrompt, jint nGen, jint threads) {
+  const std::shared_ptr<ModelState> state = getModel(handle);
+  if (state == nullptr) return env->NewStringUTF("{\"error\":\"Modelo no cargado\"}");
+
+  try {
+    if (nPrompt <= 0 || nGen <= 0 || static_cast<uint32_t>(nPrompt + nGen) > llama_n_ctx(state->ctx)) {
+      return env->NewStringUTF("{\"error\":\"El prompt y la generación no caben en el contexto\"}");
+    }
+    state->cancelled.store(false);
+    llama_set_n_threads(state->ctx, threads, threads);
+    llama_memory_clear(llama_get_memory(state->ctx), true);
+    llama_sampler_reset(state->sampler);
+
+    // Texto fijo repetido hasta tener tokens de sobra; se recorta a nPrompt.
+    const std::string unit = "El rápido zorro marrón salta sobre el perro perezoso mientras la lluvia cae despacio sobre la ciudad. ";
+    std::string text;
+    for (int i = 0; i < nPrompt / 16 + 8; ++i) text += unit;
+    const llama_vocab * vocab = llama_model_get_vocab(state->model);
+    const int32_t total = -llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), nullptr, 0, true, false);
+    if (total < nPrompt) return env->NewStringUTF("{\"error\":\"No se pudo construir el prompt de prueba\"}");
+    std::vector<llama_token> tokens(static_cast<size_t>(total));
+    if (llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), tokens.data(), total, true, false) < 0) {
+      return env->NewStringUTF("{\"error\":\"No se pudo tokenizar el prompt de prueba\"}");
+    }
+
+    std::unique_ptr<llama_batch_ext, void (*)(llama_batch_ext *)> batch(llama_batch_ext_init(state->ctx), llama_batch_ext_free);
+    batchSetTokens(batch.get(), tokens.data(), nPrompt, 0);
+    crumb("bench: prefill de " + std::to_string(nPrompt) + " tokens, " + std::to_string(threads) + " hilos");
+    const auto t0 = std::chrono::steady_clock::now();
+    if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
+      crumb("bench: llama_process falló con el prompt");
+      return env->NewStringUTF("{\"error\":\"Falló la evaluación del prompt\"}");
+    }
+    const auto t1 = std::chrono::steady_clock::now();
+    crumb("bench: prefill listo");
+
+    // Generación: no se corta en el fin de texto para que todas las pruebas generen los mismos tokens.
+    int generated = 0;
+    llama_pos pos = nPrompt;
+    while (generated < nGen && !state->cancelled.load()) {
+      const llama_token next = llama_sampler_sample(state->sampler, state->ctx, -1);
+      llama_sampler_accept(state->sampler, next);
+      batchSetTokens(batch.get(), &next, 1, pos);
+      pos++;
+      if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
+        crumb("bench: llama_process falló generando");
+        return env->NewStringUTF("{\"error\":\"Falló la generación\"}");
+      }
+      generated++;
+    }
+    const auto t2 = std::chrono::steady_clock::now();
+    const double prefillMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
+    const double genMs = std::chrono::duration<double, std::milli>(t2 - t1).count();
+    crumb("bench: fin (" + std::to_string(generated) + " tokens)");
+    crumb("idle");
+    const std::string json = "{\"promptTokens\":" + std::to_string(nPrompt) + ",\"genTokens\":" + std::to_string(generated) +
+                             ",\"prefillMs\":" + std::to_string(prefillMs) + ",\"genMs\":" + std::to_string(genMs) +
+                             ",\"cancelled\":" + (state->cancelled.load() ? "true" : "false") + "}";
+    return env->NewStringUTF(json.c_str());
+  } catch (const std::exception & e) {
+    crumb(std::string("bench: excepción C++: ") + e.what());
+  } catch (...) {
+    crumb("bench: excepción C++ desconocida");
+  }
+  return env->NewStringUTF("{\"error\":\"Excepción en el motor\"}");
 }
 
 extern "C" JNIEXPORT void JNICALL

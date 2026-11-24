@@ -16,7 +16,11 @@ declare class PyroHornsLlamaModule extends NativeModule<{ onEvent: (event: Llama
   fileSize(path: string): number;
   diagnostics(): string;
   clearDiagnostics(): void;
-  loadModel(path: string, contextTokens: number, threads: number): Promise<number>;
+  loadModel(path: string, contextTokens: number, threads: number, useMmap: boolean): Promise<number>;
+  bench(handle: number, nPrompt: number, nGen: number, threads: number): Promise<string>;
+  memoryInfo(): string;
+  resetPeakMemory(): boolean;
+  keepScreenOn(on: boolean): void;
   generate(handle: number, prompt: string, threads: number, noThink: boolean): Promise<void>;
   cancel(handle: number): Promise<void>;
   unloadModel(handle: number): Promise<void>;

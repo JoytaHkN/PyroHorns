@@ -7,9 +7,11 @@ class PyroHornsLlamaNative {
 
   external fun initBackend(crumbPath: String)
 
-  external fun loadModel(path: String, contextTokens: Int, threads: Int): Long
+  external fun loadModel(path: String, contextTokens: Int, threads: Int, useMmap: Boolean): Long
 
   external fun generate(handle: Long, prompt: String, threads: Int, noThink: Boolean, sink: LlamaEventSink)
+
+  external fun bench(handle: Long, nPrompt: Int, nGen: Int, threads: Int): String
 
   external fun cancel(handle: Long)
 

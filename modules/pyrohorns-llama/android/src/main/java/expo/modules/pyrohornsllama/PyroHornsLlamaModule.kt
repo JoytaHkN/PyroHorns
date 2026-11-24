@@ -8,12 +8,14 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.os.bundleOf
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
+import java.io.FileOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
@@ -137,8 +139,8 @@ class PyroHornsLlamaModule : Module() {
       }
     }
 
-    AsyncFunction("loadModel") Coroutine { path: String, contextTokens: Int, threads: Int ->
-      withContext(Dispatchers.IO) { native.loadModel(path, contextTokens, threads) }
+    AsyncFunction("loadModel") Coroutine { path: String, contextTokens: Int, threads: Int, useMmap: Boolean ->
+      withContext(Dispatchers.IO) { native.loadModel(path, contextTokens, threads, useMmap) }
     }
 
     AsyncFunction("generate") Coroutine { handle: Long, prompt: String, threads: Int, noThink: Boolean ->
@@ -153,6 +155,47 @@ class PyroHornsLlamaModule : Module() {
             ))
           }
         })
+      }
+    }
+
+    // Prueba de rendimiento (P13): devuelve JSON con los tiempos de prefill y generación.
+    AsyncFunction("bench") Coroutine { handle: Long, nPrompt: Int, nGen: Int, threads: Int ->
+      withContext(Dispatchers.IO) { native.bench(handle, nPrompt, nGen, threads) }
+    }
+
+    // Memoria del proceso (RSS y pico) y del sistema, leída de /proc (sin permisos).
+    Function("memoryInfo") {
+      fun readKb(file: String, key: String): Long = try {
+        File(file).useLines { lines ->
+          lines.firstOrNull { it.startsWith(key) }?.let { Regex("(\\d+)").find(it)?.value?.toLong() } ?: -1L
+        }
+      } catch (e: Exception) {
+        -1L
+      }
+      JSONObject()
+        .put("rssKb", readKb("/proc/self/status", "VmRSS:"))
+        .put("hwmKb", readKb("/proc/self/status", "VmHWM:"))
+        .put("availKb", readKb("/proc/meminfo", "MemAvailable:"))
+        .put("totalKb", readKb("/proc/meminfo", "MemTotal:"))
+        .toString()
+    }
+
+    // Reinicia el pico de RAM (VmHWM) para medirlo por prueba; devuelve false si el sistema no lo permite.
+    Function("resetPeakMemory") {
+      try {
+        FileOutputStream("/proc/self/clear_refs").use { it.write("5".toByteArray()) }
+        true
+      } catch (e: Exception) {
+        false
+      }
+    }
+
+    // Evita que la pantalla se apague durante una prueba larga.
+    Function("keepScreenOn") { on: Boolean ->
+      val activity = appContext.currentActivity
+      activity?.runOnUiThread {
+        if (on) activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
       }
     }
 
