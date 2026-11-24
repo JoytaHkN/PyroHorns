@@ -38,6 +38,9 @@ android {
           "-DLLAMA_BUILD_SERVER=OFF",
           "-DGGML_LLAMAFILE=OFF",
           "-DGGML_NATIVE=OFF",
+          // Decisión (f)-B de P13: dotprod y fp16 aceleran mucho el prefill. Falla (SIGILL) en CPUs sin esas instrucciones.
+          // Si se cambia, actualizar ENGINE_BUILD en src/lib/bench.ts.
+          "-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16",
           "-DGGML_VULKAN=OFF",
           "-DGGML_OPENMP=OFF",
           "-DBUILD_SHARED_LIBS=OFF"

@@ -28,6 +28,10 @@ export function readMemoryInfo(): string | null {
   return null;
 }
 
+export function readCpuInfo(): string | null {
+  return null;
+}
+
 export function resetPeakMemory(): boolean {
   return false;
 }

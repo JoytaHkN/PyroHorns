@@ -5,8 +5,10 @@ import {
   REPS,
   SHORT_PROMPT,
   buildGroups,
+  ENGINE_BUILD,
   countRuns,
   describeCase,
+  describeCpu,
   formatResults,
   longPromptTokens,
   median,
@@ -91,6 +93,16 @@ const text = formatResults(results, { device: 'HUAWEI Test', at: Date.UTC(2026, 
 check(text.includes('HUAWEI Test') && text.includes('| LFM3 1.7B | sí | 4 | 1024 |') && text.includes('FALLÓ'), 'informe: dispositivo, fila y fallo');
 check(text.includes('TTFT ✓') && text.includes('gen ✗') && text.includes('Errores: cancelada'), 'informe: veredicto y errores');
 check(formatResults([], { device: '', at: 0 }).includes('(sin resultados)'), 'informe vacío');
+// --- CPU y compilación ----------------------------------------------------------------------------
+const cpu = describeCpu('{"features":"fp asimd aes asimdhp asimddp i8mm bf16 sve","maxKhz":[1600000,1600000,1600000,1600000,2151000,2151000,2151000,2151000]}');
+check(cpu.includes('8 núcleos') && cpu.includes('4×1.6 GHz') && cpu.includes('4×2.2 GHz'), 'describeCpu: núcleos agrupados por frecuencia');
+check(cpu.includes('dotprod ✓') && cpu.includes('fp16 ✓') && cpu.includes('i8mm ✓') && cpu.includes('sve ✓'), 'describeCpu: extensiones presentes');
+const oldCpu = describeCpu('{"features":"fp asimd aes","maxKhz":[1800000,1800000]}');
+check(oldCpu.includes('dotprod ✗') && oldCpu.includes('fp16 ✗') && oldCpu.includes('2 núcleos'), 'describeCpu: una CPU sin dotprod ni fp16 se ve claramente');
+check(describeCpu(null) === 'CPU: desconocida' && describeCpu('x') === 'CPU: desconocida', 'describeCpu: entrada ausente o inválida');
+const withMeta = formatResults(results, { device: 'D', cpu, at: 0 });
+check(withMeta.includes(cpu) && withMeta.includes(`Compilación ggml-cpu: ${ENGINE_BUILD}`), 'el informe incluye CPU y compilación');
+check(ENGINE_BUILD === 'armv8.2-a+dotprod+fp16', 'ENGINE_BUILD coincide con la bandera de build.gradle');
 check(LOCAL_MODELS.length === 4, 'la matriz completa cubre los cuatro modelos');
 
 done();

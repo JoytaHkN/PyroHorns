@@ -11,6 +11,7 @@ import {
   THREAD_OPTIONS,
   buildGroups,
   countRuns,
+  describeCpu,
   formatResults,
   type BenchConfig,
   type MmapMode,
@@ -20,7 +21,7 @@ import { parseDiagnostics } from '@/lib/diagnostics';
 import { locateModel } from '@/lib/native';
 import { useBench } from '@/store/bench';
 import { usePalette } from '@/theme/use-palette';
-import { readDiagnostics } from '@pyrohorns/llama';
+import { readCpuInfo, readDiagnostics } from '@pyrohorns/llama';
 
 const toggle = <V,>(list: V[], v: V) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -69,7 +70,7 @@ export default function Benchmark() {
   const set = (patch: Partial<BenchConfig>) => useBench.getState().setConfig({ ...config, ...patch });
 
   const device = parseDiagnostics(readDiagnostics())?.device ?? '';
-  const report = formatResults(results, { device, at: results[results.length - 1]?.at ?? Date.now() });
+  const report = formatResults(results, { device, cpu: describeCpu(readCpuInfo()), at: results[results.length - 1]?.at ?? Date.now() });
   const mono = { fontFamily: 'JetBrainsMono_400Regular', lineHeight: 17 } as const;
 
   return (

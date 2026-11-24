@@ -111,6 +111,11 @@
      parte 0xd05); soporta **asimddp (dotprod), fp16, i8mm, bf16 y sve**. La compilación base no usa dotprod ni fp16: es la causa más probable del
      prefill lento. **Siguiente (decisión f-B, ya aprobada por el usuario):** compilar ggml-cpu con `armv8.2-a+dotprod+fp16`, añadir al informe
      la línea de CPU y de compilación, y comparar. Los datos de la tablet del usuario llegarán después (misma compilación base).
+   - **(f)-B hecho (2026-11-24), pendiente de CI y de medir:** `-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16` en `modules/pyrohorns-llama/android/build.gradle`
+     (`ENGINE_BUILD` en `src/lib/bench.ts` lo refleja) y el informe incluye ahora la línea de **CPU** (núcleos por frecuencia; dotprod/fp16/i8mm/bf16/sve) y la de
+     **compilación**. **Riesgo:** en una CPU sin dotprod/fp16 (Cortex-A53/A72/A73 y similares) la app se cae con SIGILL al generar. Este teléfono sí los tiene.
+     La tablet del usuario: **no instalar este APK ahí hasta conocer su CPU** (o hacerlo sabiendo que puede cerrarse); la línea de CPU del informe lo dirá. La
+     alternativa segura para todos los móviles son variantes con elección en tiempo de ejecución (decisión f-C, F2).
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
      elegir la más rápida.
    - Paso 4 (pendiente): medir TTFT, tok/s y RAM con 1K y 8K de contexto.
@@ -193,3 +198,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   «Rápida» en el móvil y pegar los resultados.
 - **2026-11-24** · Primeros resultados de P13 (teléfono, compilación base): prefill 17–21 tok/s (TTFT 48–59 s con 1K), generación 13,3/11,2 tok/s a 1K
   y 8,8/8,4 a 7,6K, RAM pico ≈ 1,6 GB; CPU con dotprod/fp16/i8mm. Se pasa a la decisión (f)-B (dotprod+fp16).
+- **2026-11-24** · (f)-B: ggml-cpu con `armv8.2-a+dotprod+fp16`; el informe de la prueba incluye CPU y compilación (`describeCpu`, `ENGINE_BUILD`; 6 pruebas
+  nuevas, 41 en `tests/bench.test.ts`). Typecheck, pruebas y bundle Android en verde. Pendiente: CI y medir en el teléfono.

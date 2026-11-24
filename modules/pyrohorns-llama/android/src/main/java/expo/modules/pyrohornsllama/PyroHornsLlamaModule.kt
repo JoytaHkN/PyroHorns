@@ -190,6 +190,27 @@ class PyroHornsLlamaModule : Module() {
       }
     }
 
+    // Instrucciones y frecuencias de la CPU, para interpretar las medidas (sin permisos).
+    Function("cpuInfo") {
+      val features = try {
+        File("/proc/cpuinfo").useLines { lines ->
+          lines.firstOrNull { it.startsWith("Features") }?.substringAfter(":")?.trim() ?: ""
+        }
+      } catch (e: Exception) {
+        ""
+      }
+      val freqs = JSONArray()
+      for (i in 0 until Runtime.getRuntime().availableProcessors()) {
+        val khz = try {
+          File("/sys/devices/system/cpu/cpu$i/cpufreq/cpuinfo_max_freq").readText().trim().toLong()
+        } catch (e: Exception) {
+          -1L
+        }
+        freqs.put(khz)
+      }
+      JSONObject().put("features", features).put("maxKhz", freqs).toString()
+    }
+
     // Evita que la pantalla se apague durante una prueba larga.
     Function("keepScreenOn") { on: Boolean ->
       val activity = appContext.currentActivity

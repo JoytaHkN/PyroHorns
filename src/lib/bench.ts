@@ -19,6 +19,11 @@ export const REPS = 3;
 export const SHORT_PROMPT = 1024;
 /** Pausa entre pruebas para que la temperatura del móvil no falsee las siguientes. */
 export const COOLDOWN_MS = 3000;
+/**
+ * Compilación de ggml-cpu del APK (`-DGGML_CPU_ARM_ARCH` en modules/pyrohorns-llama/android/build.gradle).
+ * Se imprime en el informe para poder comparar compilaciones; mantener sincronizado.
+ */
+export const ENGINE_BUILD = 'armv8.2-a+dotprod+fp16';
 /** Objetivos de F1.5 (`PLAN.md` §5). */
 export const TARGETS = { ttftMs: 1500, genTokPerSec: 10 } as const;
 
@@ -264,14 +269,34 @@ export function verdict(s: BenchSummary): { ttft: boolean | null; gen: boolean }
   };
 }
 
+/** Resumen de la CPU a partir de lo que devuelve el motor nativo (núcleos por frecuencia y extensiones útiles). */
+export function describeCpu(json: string | null): string {
+  if (!json) return 'CPU: desconocida';
+  try {
+    const d = JSON.parse(json) as { features?: string; maxKhz?: number[] };
+    const feats = new Set((d.features ?? '').split(/\s+/));
+    const khz = (d.maxKhz ?? []).filter((k) => k > 0);
+    const byFreq = new Map<number, number>();
+    for (const k of khz) byFreq.set(Math.round(k / 100000) / 10, (byFreq.get(Math.round(k / 100000) / 10) ?? 0) + 1);
+    const cores = [...byFreq.entries()].sort((a, b) => a[0] - b[0]).map(([ghz, n]) => `${n}×${ghz.toFixed(1)} GHz`);
+    const has = (name: string, ...flags: string[]) => `${name} ${flags.some((f) => feats.has(f)) ? '✓' : '✗'}`;
+    const ext = [has('dotprod', 'asimddp'), has('fp16', 'asimdhp', 'fphp'), has('i8mm', 'i8mm'), has('bf16', 'bf16'), has('sve', 'sve')].join(' ');
+    return `CPU: ${khz.length || '?'} núcleos${cores.length ? ` (${cores.join(', ')})` : ''} · ${ext}`;
+  } catch {
+    return 'CPU: desconocida';
+  }
+}
+
 const f1 = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '-');
 
 /** Informe en Markdown para leer en pantalla o pegar en un chat. Sin conversaciones ni claves (S9). */
-export function formatResults(results: BenchResult[], meta: { device: string; at: number }, models: LocalModel[] = LOCAL_MODELS): string {
+export function formatResults(results: BenchResult[], meta: { device: string; at: number; cpu?: string }, models: LocalModel[] = LOCAL_MODELS): string {
   const name = (id: string) => models.find((m) => m.id === id)?.name ?? id;
   const lines: string[] = [
     `# Prueba de rendimiento PyroHorns · ${new Date(meta.at).toISOString().slice(0, 16).replace('T', ' ')}`,
     `Dispositivo: ${meta.device || 'desconocido'}`,
+    meta.cpu ?? 'CPU: desconocida',
+    `Compilación ggml-cpu: ${ENGINE_BUILD}`,
     `Objetivos F1.5: TTFT < ${TARGETS.ttftMs} ms con prompt de 1K · ≥ ${TARGETS.genTokPerSec} tok/s generando`,
     `Cada fila es la mediana de hasta ${REPS} repeticiones de ${GEN_TOKENS} tokens generados.`,
     '',

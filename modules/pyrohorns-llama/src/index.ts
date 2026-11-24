@@ -73,6 +73,15 @@ export function readMemoryInfo(): string | null {
   }
 }
 
+/** Instrucciones y frecuencias de la CPU (JSON), o null si no está disponible. */
+export function readCpuInfo(): string | null {
+  try {
+    return Native.cpuInfo();
+  } catch {
+    return null;
+  }
+}
+
 /** Reinicia el pico de RAM del proceso; false si el sistema no lo permite. */
 export function resetPeakMemory(): boolean {
   try {
