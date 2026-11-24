@@ -152,6 +152,12 @@
      no es alcanzable con esta CPU; un prompt de chat real (≈ 100 tokens) tardaría ≈ 2 s. (2) La generación cumple ≥ 10 tok/s solo con LFM3 (y Qwen3 a 1K); a 7,6K de contexto Qwen3 cae a 4–5 y el 4B rinde 5.
      (3) La RAM pico subió ≈ 1 GB con dotprod (hipótesis: reempaquetado de pesos `GGML_CPU_REPACK`): el 4B llega a 5 GB. (4) Más hilos solo ayudan al prefill del teléfono.
      **Pendiente de decisión:** reformular el objetivo de TTFT (propuesta: < 2 s con un prompt de ≈ 100 tokens y prefill ≥ 50 tok/s) y arreglar el informe para que no mezcle ejecuciones (etiquetar por compilación y ejecución).
+   - **Decisiones del usuario (2026-11-24, tras los resultados con dotprod):** (1) el objetivo de TTFT **se mantiene** en < 1,5 s con 1K (≈ 700 tok/s de prefill) «para probar»;
+     la propuesta de reformularlo (< 2 s con ≈ 100 tokens) queda para después; (2) el informe **ya no mezcla ejecuciones** (cada «Empezar» tiene un `runId` y el informe resume solo la última);
+     (3) **sin control térmico**: solo el aviso del informe. **Modelo nuevo:** `NVIDIA-Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf` (6,18 GB; el GGUF declara arquitectura **gemma4**,
+     42 capas, ventana deslizante de 512, 2 cabezas KV; llama.cpp `dc33e61` la soporta) añadido a `LOCAL_MODELS` como opcional (id `nemotron-bolt-e4b`, contexto 4K, KV 172 KB/token = cota
+     superior). Se importa con el selector (copia 6,2 GB) o con «Todo el almacenamiento». Sin probar: plantilla de chat y razonamiento (`thinking: false`). **Preajuste nuevo «Resumen»:**
+     los 5 modelos, solo con mmap, 4 y 8 hilos, prompts corto y largo, 1 repetición = **20 ejecuciones** (la completa pasa a 180). Pendiente: CI y probar.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -250,3 +256,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · CI del informe con condiciones del equipo en verde (`38367c6`); APK en `APK IA/apk/`. Pendiente: medir con batería.
 - **2026-11-24** · Resultados con dotprod en teléfono (completo, 93 % → 10 % de batería) y tablet (que sí soporta dotprod): prefill ≈ 2,5× más rápido, TTFT con 1K sigue lejos de 1,5 s,
   RAM pico +1 GB. Detectado que el informe mezcla resultados de ejecuciones anteriores. Pendiente: reformular el objetivo de TTFT y separar ejecuciones.
+- **2026-11-24** · Decisiones tras los resultados con dotprod (objetivo de TTFT sin cambios, informe sin mezclar ejecuciones, sin control térmico). Modelo Nemotron 3.5 Bolt E4B
+  (gemma4) habilitado; preajuste «Resumen» (20 ejecuciones). 10 pruebas nuevas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y probar.

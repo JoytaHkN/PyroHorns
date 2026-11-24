@@ -118,9 +118,14 @@ export default function Benchmark() {
             Rápida · LFM3, 4 hilos, con y sin mmap
           </T>
         </Card>
+        <Card center onPress={running ? undefined : () => useBench.getState().setConfig(PRESETS.resumen)}>
+          <T weight="semibold" tone="ink">
+            Resumen · todos los modelos, 4 y 8 hilos, 1 repetición (20)
+          </T>
+        </Card>
         <Card center onPress={running ? undefined : () => useBench.getState().setConfig(PRESETS.completa)}>
           <T weight="semibold" tone="ink">
-            Completa · 4 modelos, 4/6/8 hilos (larga)
+            Completa · todos los modelos, 4/6/8 hilos, con y sin mmap (180)
           </T>
         </Card>
 

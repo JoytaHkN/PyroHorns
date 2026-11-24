@@ -49,6 +49,7 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
   const total = countRuns(groups);
   let done = 0;
   store().clearLog();
+  const runId = String(Date.now());
   store().setRunning(true);
   store().setProgress({ done, total, current: 'preparando' });
   store().pushLog(`Equipo al empezar: ${describeDevice(parseDeviceStatus(readDeviceStatus()))}`);
@@ -110,7 +111,7 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
           store().setInProgress(null);
           if (stopRequested && raw.cancelled) break; // la prueba cortada por el usuario no se registra
 
-          const result = toResult(c, raw, { loadMs, mem, before, after });
+          const result = toResult(c, raw, { loadMs, mem, before, after, runId });
           store().addResult(result);
           done++;
           store().pushLog(

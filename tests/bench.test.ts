@@ -6,6 +6,7 @@ import {
   SHORT_PROMPT,
   buildGroups,
   ENGINE_BUILD,
+  latestRun,
   conditionsOf,
   describeDevice,
   isHot,
@@ -37,8 +38,14 @@ check(quick.length === 2 && quick.every((g) => g.modelId === 'lfm3-1.7b'), 'ráp
 check(countRuns(quick) === 2 * 1 * 2 * REPS, `rápida: ${countRuns(quick)} ejecuciones (2 modos × 1 hilo × 2 prompts × ${REPS})`);
 
 const full = buildGroups(PRESETS.completa);
-check(full.length === 8, 'completa: 4 modelos × 2 modos de mmap = 8 cargas');
-check(countRuns(full) === 4 * 2 * 3 * 2 * REPS, 'completa: 144 ejecuciones');
+check(full.length === 10, 'completa: 5 modelos × 2 modos de mmap = 10 cargas');
+check(countRuns(full) === 5 * 2 * 3 * 2 * REPS, 'completa: 180 ejecuciones');
+
+const summary = buildGroups(PRESETS.resumen);
+check(summary.length === 5 && summary.every((g) => g.mmap === 'mmap'), 'resumen: una carga por modelo, con mmap');
+check(countRuns(summary) === 5 * 2 * 2 * 1, 'resumen: 20 ejecuciones (2 hilos × 2 prompts × 1 repetición)');
+check(summary.every((g) => g.cases.every((c) => c.reps === 1 && [4, 8].includes(c.threads))), 'resumen: 1 repetición y solo 4 y 8 hilos');
+check(summary.some((g) => g.modelId === 'nemotron-bolt-e4b' && g.ctx === 4096), 'resumen incluye Nemotron con 4K');
 
 const ctxOf = (id: string) => full.find((g) => g.modelId === id)!.ctx;
 check(ctxOf('lfm3-1.7b') === 8192 && ctxOf('qwen3-1.7b') === 8192, 'LFM3 y Qwen3 con 8K');
@@ -65,7 +72,7 @@ check(parseBenchRaw('no es json') === null, 'parseBenchRaw: entrada inválida');
 const mem = parseMemoryInfo('{"rssKb":900000,"hwmKb":1536000,"availKb":3000000,"totalKb":11000000}')!;
 check(mem.hwmKb === 1536000 && parseMemoryInfo(null) === null && parseMemoryInfo('x') === null, 'parseMemoryInfo');
 
-const c1: BenchCase = { id: 'a', modelId: 'lfm3-1.7b', mmap: 'mmap', threads: 4, ctx: 8192, promptTokens: 1024, promptLabel: 'corto', rep: 1 };
+const c1: BenchCase = { id: 'a', modelId: 'lfm3-1.7b', mmap: 'mmap', threads: 4, ctx: 8192, promptTokens: 1024, promptLabel: 'corto', rep: 1, reps: 3 };
 const r1 = toResult(c1, raw, { loadMs: 5800, mem, at: 1 });
 check(r1.ok && Math.round(r1.prefillTokPerSec) === 1024 && r1.genTokPerSec === 12.8, 'tok/s de prefill y generación');
 check(Math.round(r1.ttftMs) === Math.round(1000 + 10000 / 128) && r1.peakRssMb === 1500, 'TTFT = prefill + 1 token; RAM pico en MB');
@@ -108,7 +115,7 @@ check(describeCpu(null) === 'CPU: desconocida' && describeCpu('x') === 'CPU: des
 const withMeta = formatResults(results, { device: 'D', cpu, at: 0 });
 check(withMeta.includes(cpu) && withMeta.includes(`Compilación ggml-cpu: ${ENGINE_BUILD}`), 'el informe incluye CPU y compilación');
 check(ENGINE_BUILD === 'armv8.2-a+dotprod+fp16', 'ENGINE_BUILD coincide con la bandera de build.gradle');
-check(LOCAL_MODELS.length === 4, 'la matriz completa cubre los cuatro modelos');
+check(LOCAL_MODELS.length === 5 && LOCAL_MODELS.every((m) => PRESETS.completa.models.includes(m.id)), 'la matriz completa cubre todos los modelos');
 
 
 // --- Estado del equipo (temperatura, batería, térmico) --------------------------------------------
@@ -151,5 +158,13 @@ check(withDevice.includes('⚠ Hubo pruebas con el cargador conectado') && withD
 check(withDevice.includes('1 de 3 mediciones con el equipo caliente'), 'informe: cuenta las mediciones en caliente');
 const quiet = formatResults([withStatus({ before: at(33, 0), after: at(34, 0) })], { device: 'D', at: 0 });
 check(!quiet.includes('⚠') && quiet.includes('Equipo al empezar: desconocido'), 'informe: sin avisos cuando el equipo está normal y sin datos iniciales');
+
+// --- Ejecuciones: el informe no mezcla las anteriores ----------------------------------------------
+const oldRun = mk({ runId: '1', genTokPerSec: 5 });
+const newRun = [mk({ runId: '2', genTokPerSec: 20 }), mk({ runId: '2', rep: 2, genTokPerSec: 22 })];
+check(latestRun([oldRun, ...newRun]).length === 2 && latestRun([]).length === 0, 'latestRun: solo la última ejecución');
+const mixed = formatResults([oldRun, ...newRun], { device: 'D', at: 0 });
+check(mixed.includes('Solo se resume la última ejecución (2 mediciones; hay 3 guardadas)') && mixed.includes('| 21.0 |'), 'informe: no mezcla ejecuciones anteriores (mediana 21,0)');
+check(toResult(c1, raw, { loadMs: 0, mem: null, runId: 'r' }).runId === 'r' && toResult(c1, raw, { loadMs: 0, mem: null }).runId === '', 'toResult guarda el id de ejecución');
 
 done();

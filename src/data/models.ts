@@ -74,6 +74,22 @@ export const LOCAL_MODELS: LocalModel[] = [
     kvKBPerToken: 384,
     optional: true,
   },
+  {
+    // El GGUF declara arquitectura gemma4 (42 capas, ventana deslizante de 512, 2 cabezas KV). kvKBPerToken es una cota
+    // superior (todas las capas globales): con la ventana deslizante el uso real es menor. Plantilla y razonamiento sin probar.
+    id: 'nemotron-bolt-e4b',
+    name: 'Nemotron 3.5 Bolt E4B',
+    file: 'NVIDIA-Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf',
+    quant: 'Q4_K_M',
+    bytes: 6180446208,
+    role: 'Opcional · en prueba de rendimiento',
+    thinking: false,
+    tools: false,
+    defaultCtx: 4096,
+    deepCtx: 4096,
+    kvKBPerToken: 172,
+    optional: true,
+  },
 ];
 
 export const FALLBACK_MODEL_ID = 'lfm3-1.7b';

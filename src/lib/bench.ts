@@ -9,6 +9,8 @@ export interface BenchConfig {
   models: string[];
   mmap: MmapMode[];
   threads: number[];
+  /** Repeticiones por prueba (por defecto REPS). */
+  reps?: number;
 }
 
 export const THREAD_OPTIONS = [4, 6, 8] as const;
@@ -27,11 +29,15 @@ export const ENGINE_BUILD = 'armv8.2-a+dotprod+fp16';
 /** Objetivos de F1.5 (`PLAN.md` §5). */
 export const TARGETS = { ttftMs: 1500, genTokPerSec: 10 } as const;
 
-/** Preajustes: la prueba completa son más de 140 ejecuciones. */
-export const PRESETS: Record<'rapida' | 'completa', BenchConfig> = {
+const ALL_MODEL_IDS = ['lfm3-1.7b', 'qwen3-1.7b', 'cybersecqwen-4b', 'phi-3.5-mini', 'nemotron-bolt-e4b'];
+
+/** Preajustes: la prueba completa son 180 ejecuciones. */
+export const PRESETS: Record<'rapida' | 'resumen' | 'completa', BenchConfig> = {
   rapida: { models: ['lfm3-1.7b'], mmap: ['mmap', 'nommap'], threads: [4] },
+  /** Acotada: todos los modelos, con mmap (la diferencia con y sin mmap fue pequeña), 4 y 8 hilos y una repetición: 20 ejecuciones. */
+  resumen: { models: ALL_MODEL_IDS, mmap: ['mmap'], threads: [4, 8], reps: 1 },
   completa: {
-    models: ['lfm3-1.7b', 'qwen3-1.7b', 'cybersecqwen-4b', 'phi-3.5-mini'],
+    models: ALL_MODEL_IDS,
     mmap: ['mmap', 'nommap'],
     threads: [4, 6, 8],
   },
@@ -47,6 +53,8 @@ export interface BenchCase {
   promptTokens: number;
   promptLabel: 'corto' | 'largo';
   rep: number;
+  /** Repeticiones totales de esta prueba. */
+  reps: number;
 }
 
 /** Casos que comparten una misma carga del modelo (mismo modelo y mismo modo de mmap). */
@@ -69,6 +77,7 @@ export function buildGroups(config: BenchConfig, models: LocalModel[] = LOCAL_MO
     if (!config.models.includes(model.id)) continue;
     for (const mmap of config.mmap) {
       const ctx = model.defaultCtx;
+      const reps = config.reps ?? REPS;
       const prompts: [BenchCase['promptLabel'], number][] = [
         ['corto', SHORT_PROMPT],
         ['largo', longPromptTokens(ctx)],
@@ -76,7 +85,7 @@ export function buildGroups(config: BenchConfig, models: LocalModel[] = LOCAL_MO
       const cases: BenchCase[] = [];
       for (const threads of config.threads) {
         for (const [promptLabel, promptTokens] of prompts) {
-          for (let rep = 1; rep <= REPS; rep++) {
+          for (let rep = 1; rep <= reps; rep++) {
             cases.push({
               id: `${model.id}|${mmap}|${threads}|${promptTokens}|${rep}`,
               modelId: model.id,
@@ -86,6 +95,7 @@ export function buildGroups(config: BenchConfig, models: LocalModel[] = LOCAL_MO
               promptTokens,
               promptLabel,
               rep,
+              reps,
             });
           }
         }
@@ -100,7 +110,7 @@ export const countRuns = (groups: BenchGroup[]) => groups.reduce((n, g) => n + g
 
 export function describeCase(c: BenchCase, models: LocalModel[] = LOCAL_MODELS): string {
   const name = models.find((m) => m.id === c.modelId)?.name ?? c.modelId;
-  return `${name} · ${c.mmap === 'mmap' ? 'mmap' : 'sin mmap'} · ${c.threads} hilos · prompt ${c.promptTokens} · ${c.rep}/${REPS}`;
+  return `${name} · ${c.mmap === 'mmap' ? 'mmap' : 'sin mmap'} · ${c.threads} hilos · prompt ${c.promptTokens} · ${c.rep}/${c.reps}`;
 }
 
 // --- Medidas ------------------------------------------------------------------------------------
@@ -211,6 +221,8 @@ export interface BenchResult {
   promptLabel: BenchCase['promptLabel'];
   rep: number;
   ctx: number;
+  /** Identifica la ejecución (todas las pruebas de un «Empezar»); el informe resume solo la última. */
+  runId: string;
   ok: boolean;
   error?: string;
   loadMs: number;
@@ -234,7 +246,7 @@ const perSec = (tokens: number, ms: number) => (ms > 0 ? (tokens / ms) * 1000 : 
 export function toResult(
   c: BenchCase,
   raw: BenchRaw,
-  extra: { loadMs: number; mem: MemoryInfo | null; at?: number; before?: DeviceStatus | null; after?: DeviceStatus | null },
+  extra: { loadMs: number; mem: MemoryInfo | null; at?: number; runId?: string; before?: DeviceStatus | null; after?: DeviceStatus | null },
 ): BenchResult {
   const ok = !raw.error && !raw.cancelled && raw.genTokens > 0 && raw.prefillMs > 0;
   return {
@@ -246,6 +258,7 @@ export function toResult(
     promptLabel: c.promptLabel,
     rep: c.rep,
     ctx: c.ctx,
+    runId: extra.runId ?? '',
     ok,
     error: raw.error ?? (raw.cancelled ? 'cancelada' : undefined),
     loadMs: extra.loadMs,
@@ -392,11 +405,19 @@ export function describeCpu(json: string | null): string {
 const f1 = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '-');
 
 /** Informe en Markdown para leer en pantalla o pegar en un chat. Sin conversaciones ni claves (S9). */
+/** Resultados de la última ejecución: el almacén conserva ejecuciones anteriores y mezclarlas falsea las medianas. */
+export function latestRun(results: BenchResult[]): BenchResult[] {
+  if (results.length === 0) return [];
+  const id = results[results.length - 1]!.runId;
+  return results.filter((r) => r.runId === id);
+}
+
 export function formatResults(
-  results: BenchResult[],
+  allResults: BenchResult[],
   meta: { device: string; at: number; cpu?: string; start?: DeviceStatus | null },
   models: LocalModel[] = LOCAL_MODELS,
 ): string {
+  const results = latestRun(allResults);
   const name = (id: string) => models.find((m) => m.id === id)?.name ?? id;
   const lines: string[] = [
     `# Prueba de rendimiento PyroHorns · ${new Date(meta.at).toISOString().slice(0, 16).replace('T', ' ')}`,
@@ -406,7 +427,8 @@ export function formatResults(
     `Equipo al empezar: ${describeDevice(meta.start ?? null)}`,
     'Temperatura: la de la batería (el procesador puede estar más caliente). Térmico: el que usa Android para limitar la CPU.',
     `Objetivos F1.5: TTFT < ${TARGETS.ttftMs} ms con prompt de 1K · ≥ ${TARGETS.genTokPerSec} tok/s generando`,
-    `Cada fila es la mediana de hasta ${REPS} repeticiones de ${GEN_TOKENS} tokens generados.`,
+    `Cada fila es la mediana de hasta ${Math.max(1, ...results.map((r) => r.rep))} repeticiones de ${GEN_TOKENS} tokens generados.`,
+    allResults.length === results.length ? `Ejecución: ${results.length} mediciones.` : `Solo se resume la última ejecución (${results.length} mediciones; hay ${allResults.length} guardadas).`,
     '',
   ];
   const sums = summarize(results, models);
