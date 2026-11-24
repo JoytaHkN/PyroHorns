@@ -175,7 +175,7 @@
      (arquitectura **gemma4**) trae una plantilla **Jinja** que `llama_chat_apply_template` no reconoce, así que el modelo recibía el texto crudo y terminaba al instante (en LM Playground va bien porque usa Jinja).
      Corregido en el JNI: si la plantilla contiene `<|turn>` y `<turn|>` se usa el formato de Gemma 4 (`<|turn>user\n…<turn|>\n<|turn>model\n`, el BOS lo añade el tokenizador; `<turn|>` ya es fin de generación en
      llama.cpp `dc33e61`); si una plantilla no se reconoce, el rastro lo anota. Es un parche por arquitectura: la solución general es un motor Jinja (F2). (2) El selector de agente usaba un `ScrollView` de 480 px fijos: ahora
-     el de gesture-handler, con altura según la pantalla. Pendiente: CI y probar ambos en el móvil.
+     el de gesture-handler, con altura según la pantalla. CI Android en verde (`976e0f4`); APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-nemotron-prueba.apk` (+ `.sha256`). Pendiente: probar ambos en el móvil.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
