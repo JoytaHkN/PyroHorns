@@ -14,6 +14,7 @@ import {
 import {
   COOLDOWN_MS,
   GEN_TOKENS,
+  canLoadWithoutMmap,
   countRuns,
   describeCase,
   describeDevice,
@@ -68,6 +69,15 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
         continue;
       }
 
+      if (group.mmap === 'nommap') {
+        const availKb = parseMemoryInfo(readMemoryInfo())?.availKb ?? -1;
+        if (!canLoadWithoutMmap(model, group.ctx, availKb)) {
+          store().pushLog(`${label}: se omite, no cabe en la RAM libre (${(availKb / 1024 / 1024).toFixed(1)} GiB); sin mmap Android cerraría la app`);
+          done += group.cases.length;
+          continue;
+        }
+      }
+
       store().setInProgress(`cargar ${label} (contexto ${group.ctx})`);
       store().setProgress({ done, total, current: `cargando ${label}` });
       const loadStart = Date.now();
@@ -94,7 +104,7 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
           const what = describeCase(c);
           store().setInProgress(what);
           store().setProgress({ done, total, current: what });
-          resetPeakMemory();
+          const peakReset = resetPeakMemory();
           // Estado del equipo justo antes y después de cada prueba (P13: temperatura, batería y térmico).
           const before = parseDeviceStatus(readDeviceStatus());
 
@@ -106,7 +116,9 @@ export async function runBench(groups: BenchGroup[]): Promise<void> {
           } catch (e) {
             raw = { promptTokens: 0, genTokens: 0, prefillMs: 0, genMs: 0, cancelled: false, error: String(e) };
           }
-          const mem = parseMemoryInfo(readMemoryInfo());
+          const memNow = parseMemoryInfo(readMemoryInfo());
+          // Si el sistema no deja reiniciar el pico, el máximo del proceso arrastra pruebas anteriores: se usa la RAM actual.
+          const mem = memNow && !peakReset ? { ...memNow, hwmKb: memNow.rssKb } : memNow;
           const after = parseDeviceStatus(readDeviceStatus());
           store().setInProgress(null);
           if (stopRequested && raw.cancelled) break; // la prueba cortada por el usuario no se registra

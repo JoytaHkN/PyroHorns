@@ -166,6 +166,11 @@
      frente a 25 con 8. Phi-3.5: gen 5,2–6,3 (1K) y 2,1–3,9 (3,7K). Nemotron: prefill 30–33, gen 4,7–6,1 (1K) y 2,4–2,7 (3,7K). **Solo LFM3 (y Qwen3 a 1K) cumple ≥ 10 tok/s; ningún modelo cumple el TTFT.** 17 de 20 mediciones en caliente, sin caída visible.
      **La columna de RAM pico no es fiable en esta ejecución** (6395 MB en todos los modelos, 6720 en Nemotron): el proceso ya tenía memoria retenida de cargas anteriores (el asignador no la devuelve) y el pico se reinicia al valor actual.
      Para medir RAM hay que cerrar la app del todo antes de empezar. Propuesta pendiente: guardar la RSS base antes de cada prueba y mostrar el incremento.
+   - **Causa del «error» al cerrar la prueba (2026-11-24, informe del Diagnóstico):** cargar **Nemotron sin mmap** (6,2 GB) → `SIGNAL 6` durante la carga y «proceso matado» (RAM 3,7 GB): sin mmap el archivo entero
+     debe caber en RAM y no cabe. Corregido: la prueba **omite** las cargas sin mmap que no cumplen la regla de memoria (80 % de la RAM libre) y lo anota en el registro. También se vio que la columna
+     «RAM pico» salía **constante (6395 MB)** porque el sistema no deja reiniciar el pico del proceso: ahora, si no se puede reiniciar, se usa la RAM actual. El resumen con «máximo rendimiento
+     desactivado» (18:36, 6 y 8 hilos) dio lo mismo que antes: LFM3 prefill 63–70 y gen 18–19; Qwen3 gen 14,5 (1K) y 5–6 (7,6K); 4B, Phi y Nemotron 2–7 tok/s. Chat con Nemotron (3 mensajes): responde, plantilla aplicada.
+     Pendiente: CI y repetir con el APK nuevo.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -267,3 +272,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · Decisiones tras los resultados con dotprod (objetivo de TTFT sin cambios, informe sin mezclar ejecuciones, sin control térmico). Modelo Nemotron 3.5 Bolt E4B
   (gemma4) habilitado; preajuste «Resumen» (20 ejecuciones). 10 pruebas nuevas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y probar.
 - **2026-11-24** · Resumen con máximo rendimiento desactivado: mismos resultados que antes; RAM pico no fiable (memoria retenida del proceso); solo LFM3 y Qwen3 (1K) cumplen ≥ 10 tok/s.
+- **2026-11-24** · Informe del Diagnóstico: el cierre era Nemotron sin mmap (no cabe en RAM). La prueba omite cargas sin mmap que no caben y usa la RAM actual si no puede reiniciar el pico. 4 pruebas nuevas. Pendiente: CI.

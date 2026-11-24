@@ -6,6 +6,7 @@ import {
   SHORT_PROMPT,
   buildGroups,
   ENGINE_BUILD,
+  canLoadWithoutMmap,
   latestRun,
   conditionsOf,
   describeDevice,
@@ -166,5 +167,13 @@ check(latestRun([oldRun, ...newRun]).length === 2 && latestRun([]).length === 0,
 const mixed = formatResults([oldRun, ...newRun], { device: 'D', at: 0 });
 check(mixed.includes('Solo se resume la última ejecución (2 mediciones; hay 3 guardadas)') && mixed.includes('| 21.0 |'), 'informe: no mezcla ejecuciones anteriores (mediana 21,0)');
 check(toResult(c1, raw, { loadMs: 0, mem: null, runId: 'r' }).runId === 'r' && toResult(c1, raw, { loadMs: 0, mem: null }).runId === '', 'toResult guarda el id de ejecución');
+
+// --- Memoria: no cargar sin mmap lo que no cabe -------------------------------------------------------
+const nemo = LOCAL_MODELS.find((m) => m.id === 'nemotron-bolt-e4b')!;
+const lfm = LOCAL_MODELS.find((m) => m.id === 'lfm3-1.7b')!;
+check(!canLoadWithoutMmap(nemo, 4096, 3.9 * 1024 * 1024), 'Nemotron (6,2 GB) sin mmap no cabe con 3,9 GiB libres');
+check(canLoadWithoutMmap(lfm, 8192, 3.9 * 1024 * 1024), 'LFM3 sin mmap sí cabe con 3,9 GiB libres');
+check(canLoadWithoutMmap(nemo, 4096, 9 * 1024 * 1024), 'Nemotron sin mmap cabe con 9 GiB libres');
+check(canLoadWithoutMmap(nemo, 4096, -1), 'sin dato de memoria libre no se bloquea');
 
 done();

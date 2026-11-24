@@ -1,4 +1,4 @@
-import { LOCAL_MODELS, type LocalModel } from '@/data/models';
+import { LOCAL_MODELS, fitsInMemory, type LocalModel } from '@/data/models';
 
 /** Lógica pura de la prueba de rendimiento (P13): matriz de pruebas, medianas, veredicto e informe. */
 
@@ -107,6 +107,14 @@ export function buildGroups(config: BenchConfig, models: LocalModel[] = LOCAL_MO
 }
 
 export const countRuns = (groups: BenchGroup[]) => groups.reduce((n, g) => n + g.cases.length, 0);
+
+/**
+ * Sin mmap el archivo entero se copia a RAM: si no cabe (regla del plan, 80 % de la RAM libre) Android mata la app durante la carga
+ * (visto con Nemotron de 6,2 GB: SIGNAL 6 y «proceso matado»). Con mmap las páginas se pueden descartar y no se comprueba.
+ */
+export function canLoadWithoutMmap(model: LocalModel, ctx: number, availKb: number): boolean {
+  return availKb <= 0 || fitsInMemory(model, ctx, availKb / (1024 * 1024));
+}
 
 export function describeCase(c: BenchCase, models: LocalModel[] = LOCAL_MODELS): string {
   const name = models.find((m) => m.id === c.modelId)?.name ?? c.modelId;
