@@ -232,7 +232,8 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
 
     llama_model_params modelParams = llama_model_default_params();
     modelParams.n_gpu_layers = 0;
-    modelParams.use_mmap = (useMmap == JNI_TRUE);  // P13: comparar leer el GGUF con y sin mmap
+    // P13: comparar leer el GGUF con y sin mmap. (AUTO, el valor por defecto, equivale a mmap en CPU.)
+    modelParams.load_mode = (useMmap == JNI_TRUE) ? LLAMA_LOAD_MODE_MMAP : LLAMA_LOAD_MODE_NONE;
     state->model = llama_model_load_from_file(path.c_str(), modelParams);
     if (state->model == nullptr) {
       crumb("load: el modelo no se pudo abrir");
