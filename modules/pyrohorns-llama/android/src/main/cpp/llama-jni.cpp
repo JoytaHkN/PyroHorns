@@ -109,18 +109,29 @@ void installCrashHandler() {
   }
 }
 
+// El método se busca una vez en la interfaz (no en la clase anónima, que R8 puede renombrar) y se reutiliza.
+jmethodID g_emitMethod = nullptr;
+
 void emit(JNIEnv * env, jobject sink, const char * type, const std::string & text, const std::string & usage) {
-  jclass cls = env->GetObjectClass(sink);
-  if (cls == nullptr) return;
-  jmethodID method = env->GetMethodID(cls, "emit", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
-  if (method == nullptr) {
-    env->DeleteLocalRef(cls);
-    return;
+  if (g_emitMethod == nullptr) {
+    jclass iface = env->FindClass("expo/modules/pyrohornsllama/LlamaEventSink");
+    if (iface == nullptr) {
+      env->ExceptionClear();
+      crumb("emit: no se encontró la interfaz LlamaEventSink");
+      return;
+    }
+    g_emitMethod = env->GetMethodID(iface, "emit", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    env->DeleteLocalRef(iface);
+    if (g_emitMethod == nullptr) {
+      env->ExceptionClear();  // si no se limpia, la excepción pendiente aborta la app en la siguiente llamada JNI
+      crumb("emit: no se encontró LlamaEventSink.emit");
+      return;
+    }
   }
   jstring jType = env->NewStringUTF(type);
   jstring jText = env->NewStringUTF(text.c_str());
   jstring jUsage = env->NewStringUTF(usage.c_str());
-  env->CallVoidMethod(sink, method, jType, jText, jUsage);
+  env->CallVoidMethod(sink, g_emitMethod, jType, jText, jUsage);
   if (env->ExceptionCheck()) {  // una excepción de Java pendiente haría fallar las siguientes llamadas JNI
     env->ExceptionClear();
     crumb("emit: la app lanzó una excepción al recibir el evento");
@@ -128,7 +139,6 @@ void emit(JNIEnv * env, jobject sink, const char * type, const std::string & tex
   env->DeleteLocalRef(jUsage);
   env->DeleteLocalRef(jText);
   env->DeleteLocalRef(jType);
-  env->DeleteLocalRef(cls);
 }
 
 // Longitud del prefijo de `s` que termina en un carácter UTF-8 completo: un token puede cortar un carácter
