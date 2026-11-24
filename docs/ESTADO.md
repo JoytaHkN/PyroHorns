@@ -184,7 +184,7 @@
      para que las bibliotecas estén extraídas), 6 hilos por defecto en el chat, y el rastro del Diagnóstico muestra los dispositivos y `llama_print_system_info()` (qué variante se eligió). Esto además **resuelve la decisión (f)-C**:
      ya no hay riesgo de SIGILL en CPUs sin dotprod, así que el APK es seguro en cualquier móvil arm64. **No incluido (por riesgo/tiempo):** KleidiAI (ayuda sobre todo a Q4_0, no a Q4_K_M) y GPU Vulkan.
      CI Android en verde (`bfd4287`); el APK incluye `libggml-cpu-android_armv8.0_1 / 8.2_1 / 8.2_2 / 8.6_1 / 9.0_1 / 9.2_1 / 9.2_2.so` (28 MB); APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-variantes-prueba.apk` (+ `.sha256`). **Qué comprobar:** el chat con Nemotron y LFM3 debe ir más rápido, y Ajustes → Diagnóstico del motor debe mostrar «sistema: … MATMUL_INT8 = 1 …». Si la app no arranca o falla la carga del motor, el rastro lo dirá.
-   - **P16 (2026-11-24), implementada, pendiente de CI y de probar en el móvil.** El usuario aprobó, si ssd-llm no aportaba mejora: B → D → A → C y carga
+   - **P16 (2026-11-24), CI en verde (`edf3993`), pendiente de probar en el móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p16-prueba.apk` + `.sha256`). El usuario aprobó, si ssd-llm no aportaba mejora: B → D → A → C y carga
      al abrir el chat (opción 1). **ssd-llm (`quantumnic/ssd-llm`) analizado sin ejecutarlo y descartado:** su cargador de capas no soporta pesos `Q4_K`
      (los rellena con ceros), su propio BENCHMARKS.md estima 9,2 tok/s frente a 156,6 de llama.cpp, la prueba de 70B no está hecha y la aceleración es solo Metal.
      **Fallos corregidos:** al motor solo le llegaba el último mensaje (sin memoria), no había instrucción de sistema y la respuesta se cortaba a 512 tokens.
@@ -298,3 +298,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · Nemotron no respondía en el chat (plantilla Jinja de gemma4 no reconocida → texto crudo): formato de turnos de Gemma 4 en el JNI. Selector de agente con desplazamiento (ScrollView de gesture-handler). Pendiente: CI y móvil.
 - **2026-11-24** · Aceleración general: ggml-cpu como variantes elegidas en ejecución (BACKEND_DL + ALL_VARIANTS, con i8mm), bibliotecas extraídas (plugin), 6 hilos y rastro con la CPU elegida. Pendiente: CI y medir.
 - **2026-11-24** · ssd-llm descartado. P16: instrucción de sistema, carga anticipada, acciones bajo las respuestas y memoria de conversación. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
+- **2026-11-24** · CI de P16 en verde (`edf3993`); APK copiado a `APK IA/apk/`. Pendiente: móvil.
