@@ -3,7 +3,7 @@
 > Documento vivo para retomar el trabajo desde cualquier agente o entorno. Se actualiza al cerrar
 > cada bloque de trabajo (ver `AGENTS.md`).
 
-**Última actualización:** 2026-11-23 · Claude Code en and-code
+**Última actualización:** 2026-11-24 · Claude Code en and-code
 
 ## Dónde estamos
 - **F1** ✅ y **F1.1** ✅, cerradas: el usuario probó el APK en su móvil y todo está OK (2026-11-23).
@@ -57,7 +57,11 @@
      la app. En depuración no ocurriría. Corregido: `consumer-rules.pro` (keep de la interfaz, sus implementaciones y
      `PyroHornsLlamaNative`) y el JNI busca `emit` una sola vez en la interfaz y limpia la excepción si falla. CI Android en verde (`88369c6`) y comprobado en el dex que la
      clase que implementa la interfaz ya conserva su nombre. APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-r8-prueba.apk` (+ `.sha256`).
-     **Falta:** probar el chat en el móvil. Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
+     **Probado en el móvil (2026-11-24): ✅ el chat responde** con LFM3 (≈ 11,1 tok/s) y Qwen3 (≈ 10,5 tok/s), medidos en
+     conjunto (incluye prefill; el «Pensó 16 s / 43 s» incluye cargar el modelo en cada mensaje). Con eso el paso 2 de F1.5 queda
+     validado en el móvil. Problemas vistos en las capturas: `<think>` dentro de la burbuja, «Pensó N s» mal medido, tok/s sin
+     formato, etiqueta «simuladas» obsoleta y razonamiento con Profundo apagado → **P15** (`PLAN.md` §7), pendiente de decisión.
+     Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
      compilar ggml-cpu sin dotprod/i8mm; el modelo tardó ≈ 5,8 s en abrirse desde la carpeta de la app.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
@@ -71,6 +75,8 @@
 - **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
   bueno y las cinco decisiones abiertas (variante sin mmap, barrido de hilos, modelos a probar, salida de
   resultados, tok/s del chat). No se ha escrito código. Ya no está bloqueada por P14.
+- **P15** · pulido del chat real (`<think>` visible, «Pensó» mal medido, tok/s, etiqueta obsoleta, Profundo): opciones 1/2/3 en
+  `PLAN.md` §7; recomendación: 2 ahora y 3 antes de medir (P13). No se ha escrito código.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -125,3 +131,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · Informe de Diagnóstico del móvil (HUAWEI LMR-LX9, Android 12): el cierre era un `NoSuchMethodError` por R8
   (renombra `LlamaEventSink.emit`). Se añaden reglas `consumer-rules.pro` y el JNI resuelve `emit` en la interfaz.
   CI en verde (`88369c6`), APK en `APK IA/apk/`. Pendiente: nueva prueba en el móvil.
+- **2026-11-24** · El usuario probó el APK con la corrección de R8: el chat responde con LFM3 y Qwen3 (≈ 11 y ≈ 10,5 tok/s en
+  conjunto). Paso 2 de F1.5 validado en el móvil. Se registra P15 (pulido del chat real) en `PLAN.md` §7, pendiente de decisión.

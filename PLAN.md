@@ -231,6 +231,25 @@ Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
   - **C. A y B seleccionables (S3 ya decidido), por defecto B.** El paso 3 de F1.5 (comparar /sdcard con copia) necesita
     las dos. Recomendación del agente: C, y el permiso A solo se pide si eliges «Todo el almacenamiento».
 
+Pulido del chat real (F1.5, 2026-11-24):
+- **P15. Lo que muestran las capturas del primer chat real** (LFM3 y Qwen3 responden en el móvil: ≈ 11,1 y ≈ 10,5 tok/s en conjunto).
+  Problemas vistos, todos de la integración TypeScript, no del motor:
+  - a) El `<think>…</think>` sale dentro de la burbuja: `LlamaProvider` nunca emite `thinking_delta`, así que el razonamiento no
+    se pliega (PLAN §3 dice que va plegado y no se reenvía).
+  - b) «Pensó N s» mide hasta el primer token, que incluye **cargar el modelo en cada mensaje** (16 s con LFM3, 43 s con Qwen3
+    con su razonamiento largo). No es tiempo de pensar.
+  - c) `tok/s` se muestra sin formato (11.126495) y el motor lo calcula incluyendo el prefill.
+  - d) La etiqueta «respuestas simuladas hasta F1.5» (`chat.tsx`, `index.tsx`) ya es falsa con el motor real.
+  - e) Los dos modelos razonan aunque **Profundo esté apagado** (PLAN §3: Profundo activa el razonamiento).
+  Opciones (de la más simple a la más completa):
+  - **1. Solo mostrar bien:** separar `<think>` en el razonamiento plegado (analizador en TS con pruebas), formatear tok/s,
+    cambiar la etiqueta y que «Pensó» mida solo el razonamiento. El modelo sigue pensando aunque Profundo esté apagado.
+  - **2. 1 + respetar Profundo:** con Profundo apagado, pedir al modelo que no razone (Qwen3: `/no_think`; LFM3: según su plantilla;
+    hay que probarlo en el móvil).
+  - **3. 2 + mantener el modelo cargado entre mensajes:** quita 6–40 s por mensaje. Es trabajo de F2, pero falsea las
+    medidas de P13 si no se hace antes.
+  - Recomendación del agente: **2 ahora** y **3 antes de medir (P13)**.
+
 ## 8. Riesgos
 
 | Riesgo | Fase | Respuesta |
@@ -258,5 +277,5 @@ conversación, así que el contexto vive en el repo:
 - Los cambios solo de documentación no recompilan el APK.
 
 ## 10. Preguntas abiertas
-1. Propuestas P1–P14 (sección 7).
+1. Propuestas P1–P15 (sección 7).
 2. Revisión visual de F1 cuando tengas el primer APK.
