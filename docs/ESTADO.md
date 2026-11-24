@@ -83,7 +83,7 @@
      (sin restos del mensaje anterior).
    - **Opción 3 de P15: CI Android en verde (`b962fbb`)**, APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p15-3-prueba.apk` (+ `.sha256`), pendiente de probar
      en el móvil (el segundo mensaje no debe tardar ≈ 6 s en empezar).
-   - **P13 implementada (2026-11-24), pendiente de CI y de ejecutarla en el móvil:** **Ajustes → Prueba de rendimiento**
+   - **P13 implementada (2026-11-24), CI Android en verde (`6456a98`; el primer intento falló porque esta versión de llama.cpp usa `load_mode` y no `use_mmap`; `AUTO` equivale a mmap en CPU), pendiente de ejecutarla en el móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p13-prueba.apk` + `.sha256`; incluye también la opción 3 de P15): **Ajustes → Prueba de rendimiento**
      (`src/app/benchmark.tsx`). Nativo: `bench(handle, nPrompt, nGen, threads)` (prefill y generación medidos por separado con tokens
      sintéticos, 128 tokens generados), `useMmap` en `loadModel`, `memoryInfo`/`resetPeakMemory` (RSS y pico desde `/proc`) y `keepScreenOn`.
      TypeScript: `src/lib/bench.ts` (matriz, medianas, veredicto contra TTFT < 1,5 s con 1K y ≥ 10 tok/s, informe en Markdown),
@@ -171,3 +171,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · El usuario confirma que empiece P13. Implementada la pantalla de prueba de rendimiento (nativo: `bench`, `useMmap`,
   memoria, pantalla encendida; TS: matriz, medianas, veredicto, informe, ejecutor y almacén persistente; `expo-clipboard`). 35 pruebas
   nuevas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y ejecutarla en el móvil.
+- **2026-11-24** · CI de P13 en verde (`6456a98`) tras corregir `use_mmap` → `load_mode`; APK en `APK IA/apk/`. Pendiente: ejecutar la prueba
+  «Rápida» en el móvil y pegar los resultados.
