@@ -183,7 +183,7 @@
      ofrece `android_armv8.0_1 … android_armv8.6_1 (dotprod+fp16+i8mm) … android_armv9.x`), `ggml_backend_load_all_from_path(nativeLibraryDir)` al iniciar, plugin `plugins/with-legacy-packaging.js` (`expo.useLegacyPackaging=true`
      para que las bibliotecas estén extraídas), 6 hilos por defecto en el chat, y el rastro del Diagnóstico muestra los dispositivos y `llama_print_system_info()` (qué variante se eligió). Esto además **resuelve la decisión (f)-C**:
      ya no hay riesgo de SIGILL en CPUs sin dotprod, así que el APK es seguro en cualquier móvil arm64. **No incluido (por riesgo/tiempo):** KleidiAI (ayuda sobre todo a Q4_0, no a Q4_K_M) y GPU Vulkan.
-     **Qué comprobar:** el chat con Nemotron y LFM3 debe ir más rápido, y Ajustes → Diagnóstico del motor debe mostrar «sistema: … MATMUL_INT8 = 1 …». Si la app no arranca o falla la carga del motor, el rastro lo dirá.
+     CI Android en verde (`bfd4287`); el APK incluye `libggml-cpu-android_armv8.0_1 / 8.2_1 / 8.2_2 / 8.6_1 / 9.0_1 / 9.2_1 / 9.2_2.so` (28 MB); APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-variantes-prueba.apk` (+ `.sha256`). **Qué comprobar:** el chat con Nemotron y LFM3 debe ir más rápido, y Ajustes → Diagnóstico del motor debe mostrar «sistema: … MATMUL_INT8 = 1 …». Si la app no arranca o falla la carga del motor, el rastro lo dirá.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
