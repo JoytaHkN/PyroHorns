@@ -136,6 +136,7 @@ Objetivo: comprobar lo más arriesgado antes de construir F2.
 - **Primeros resultados (2026-11-24, teléfono HUAWEI LMR-LX9, LFM3, compilación base armv8-a):** prefill 17–21 tok/s (TTFT 48–59 s con un prompt de 1K: no cumple),
   generación 13,3 tok/s con mmap y 11,2 sin mmap a 1K (cumple) y 8,8/8,4 a 7,6K (no cumple), RAM pico ≈ 1,6 GB (sin cierres). La CPU soporta dotprod/fp16/i8mm; se
   prueba `armv8.2-a+dotprod+fp16` (decisión f-B). Detalle y tabla en `docs/ESTADO.md`.
+- **Con dotprod (2026-11-24, teléfono y tablet):** prefill ≈ 2,5× (56 tok/s en el teléfono, 43 en la tablet), generación LFM3 16–19 tok/s a 1K y 9–13 a 7,6K; TTFT con 1K 15–32 s (objetivo no alcanzable con esta CPU); RAM pico +1 GB (LFM3 2,6 GB, Qwen3 3,4 GB, 4B 5,0 GB); Qwen3 4–5 tok/s a 7,6K y el 4B 5 tok/s. Propuesta pendiente: reformular el objetivo de TTFT (< 2 s con ≈ 100 tokens). Detalle en `docs/ESTADO.md`.
 - **Objetivos iniciales** (se ajustan tras medir): primer token en < 1,5 s con un prompt de 1K · ≥ 10 tok/s · sin cierres por memoria a 8K.
 - **Salida:** decidir entre módulo propio y llama.rn.
 

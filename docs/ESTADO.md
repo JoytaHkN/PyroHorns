@@ -3,7 +3,7 @@
 > Documento vivo para retomar el trabajo desde cualquier agente o entorno. Se actualiza al cerrar
 > cada bloque de trabajo (ver `AGENTS.md`).
 
-**Última actualización:** 2026-11-24 · Claude Haiku 5.5 en and-code
+**Última actualización:** 2026-11-24 · Claude Sonnet 5.5 en and-code
 
 ## Dónde estamos
 - **F1** ✅ y **F1.1** ✅, cerradas: el usuario probó el APK en su móvil y todo está OK (2026-11-23).
@@ -137,6 +137,21 @@
      (batería ≥ 40 °C o térmico moderado o peor). El registro en vivo de cada prueba también los muestra. **Límite:** la temperatura es la de la
      batería, que va por detrás de la del procesador; el estado térmico es el indicador que de verdad limita la CPU.
      **Pendiente de decisión (no implementado):** esperar a que el equipo baje de un umbral antes de cada prueba, y/o descartar las pruebas hechas en caliente.
+   - **Resultados con dotprod (2026-11-24, informes completos en el chat del usuario; resumen):**
+     - **Teléfono LMR-LX9, 10:11 (cargando, 100 %, 20 °C), LFM3 4 hilos:** prefill **56,5 tok/s** (antes 17–21), generación **18,8** a 1K y 12,9 a 7,6K,
+       TTFT 18 s con 1K y 154 s con 7,6K; RAM pico **2646 MB** (antes 1,6 GB).
+     - **Teléfono 13:32 (sin cargador, 93 % → 10 %, 34 → 46 °C), preajuste completo:** LFM3: prefill 56,5 / 62,9 / 69,8 tok/s con 4 / 6 / 8 hilos (+24 % con 8),
+       generación 18–18,6 a 1K y 12,8–13,2 a 7,6K, sin diferencia con o sin mmap. Qwen3: prefill 52–65, generación 13–14 a 1K y **4–5 a 7,6K**, RAM 3,4 GB.
+       CyberSecQwen 4B: prefill 20–21, generación **5,2–5,5**, RAM **5,0 GB**; la prueba se cortó al 10 % de batería (7 de 12 filas del 4B). El estado térmico llegó a
+       «crítico» desde ≈ 43 °C y **el rendimiento no bajó de forma visible** (las filas en caliente son iguales a las frías). Se gastó ≈ 83 % de batería.
+     - **Tablet TGR-W09, APK base (11:00, completo con 4/6/8 hilos):** los hilos no cambian nada (LFM3 prefill 18–20, gen 11–12; Qwen3 gen 9,2–9,5 a 1K y 2,7–3,1 a 7,6K).
+     - **Tablet con dotprod (11:32):** su CPU **sí** tiene dotprod, fp16, i8mm y sve (bf16 no): LFM3 4 hilos prefill **42,8** (antes 20), gen **16,3** a 1K y 9,1 a 7,6K, RAM 2615 MB.
+       **Ese informe mezcla filas viejas:** las filas con «-» en temperatura y batería (6 y 8 hilos, Qwen3) son resultados guardados de la ejecución anterior con la compilación base,
+       porque el almacén conserva los resultados entre ejecuciones y el informe los agrupa por combinación.
+     **Lectura:** (1) dotprod da ≈ 2,5× en prefill y +35–45 % en generación, pero **el TTFT con 1K sigue en 15–32 s frente al objetivo de 1,5 s**: ese objetivo exigiría ≈ 700 tok/s de prefill y
+     no es alcanzable con esta CPU; un prompt de chat real (≈ 100 tokens) tardaría ≈ 2 s. (2) La generación cumple ≥ 10 tok/s solo con LFM3 (y Qwen3 a 1K); a 7,6K de contexto Qwen3 cae a 4–5 y el 4B rinde 5.
+     (3) La RAM pico subió ≈ 1 GB con dotprod (hipótesis: reempaquetado de pesos `GGML_CPU_REPACK`): el 4B llega a 5 GB. (4) Más hilos solo ayudan al prefill del teléfono.
+     **Pendiente de decisión:** reformular el objetivo de TTFT (propuesta: < 2 s con un prompt de ≈ 100 tokens y prefill ≥ 50 tok/s) y arreglar el informe para que no mezcle ejecuciones (etiquetar por compilación y ejecución).
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -233,3 +248,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   `parseDeviceStatus`, `conditionsOf`, avisos en el informe). 17 pruebas nuevas (58 en `tests/bench.test.ts`). Typecheck, pruebas y bundle Android en verde.
   Pendiente: CI y medir con batería.
 - **2026-11-24** · CI del informe con condiciones del equipo en verde (`38367c6`); APK en `APK IA/apk/`. Pendiente: medir con batería.
+- **2026-11-24** · Resultados con dotprod en teléfono (completo, 93 % → 10 % de batería) y tablet (que sí soporta dotprod): prefill ≈ 2,5× más rápido, TTFT con 1K sigue lejos de 1,5 s,
+  RAM pico +1 GB. Detectado que el informe mezcla resultados de ejecuciones anteriores. Pendiente: reformular el objetivo de TTFT y separar ejecuciones.
