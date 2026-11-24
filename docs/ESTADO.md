@@ -176,6 +176,14 @@
      Corregido en el JNI: si la plantilla contiene `<|turn>` y `<turn|>` se usa el formato de Gemma 4 (`<|turn>user\n…<turn|>\n<|turn>model\n`, el BOS lo añade el tokenizador; `<turn|>` ya es fin de generación en
      llama.cpp `dc33e61`); si una plantilla no se reconoce, el rastro lo anota. Es un parche por arquitectura: la solución general es un motor Jinja (F2). (2) El selector de agente usaba un `ScrollView` de 480 px fijos: ahora
      el de gesture-handler, con altura según la pantalla. CI Android en verde (`976e0f4`); APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-nemotron-prueba.apk` (+ `.sha256`). Pendiente: probar ambos en el móvil.
+   - **Nemotron responde en el chat (2026-11-24, capturas):** 6,3–6,5 tok/s (generación), selector de agente ya se desplaza. **El usuario pide acelerar todos los GGUF** porque Nemotron en LM Playground, en el mismo teléfono, va mucho más rápido.
+     **Investigación (código de LMPlayground, `andriydruk/LMPlayground`):** el LLM va **solo en CPU** (Vulkan solo para visión); su velocidad viene de compilar ggml con `GGML_BACKEND_DL=ON` + `GGML_CPU_ALL_VARIANTS=ON`
+     (una biblioteca `libggml-cpu-<variante>.so` por nivel de CPU: NEON, dotprod, fp16, **i8mm**, SVE, SME…, elegida en ejecución), KleidiAI y **6 hilos** (núcleos − 2); nosotros teníamos una sola compilación fija
+     `armv8.2-a+dotprod+fp16` (sin i8mm) y 4 hilos. **Implementado (pendiente de CI y de medir):** `-DBUILD_SHARED_LIBS=ON -DGGML_BACKEND_DL=ON -DGGML_CPU_ALL_VARIANTS=ON` (quita `GGML_CPU_ARM_ARCH`; en Android ggml
+     ofrece `android_armv8.0_1 … android_armv8.6_1 (dotprod+fp16+i8mm) … android_armv9.x`), `ggml_backend_load_all_from_path(nativeLibraryDir)` al iniciar, plugin `plugins/with-legacy-packaging.js` (`expo.useLegacyPackaging=true`
+     para que las bibliotecas estén extraídas), 6 hilos por defecto en el chat, y el rastro del Diagnóstico muestra los dispositivos y `llama_print_system_info()` (qué variante se eligió). Esto además **resuelve la decisión (f)-C**:
+     ya no hay riesgo de SIGILL en CPUs sin dotprod, así que el APK es seguro en cualquier móvil arm64. **No incluido (por riesgo/tiempo):** KleidiAI (ayuda sobre todo a Q4_0, no a Q4_K_M) y GPU Vulkan.
+     **Qué comprobar:** el chat con Nemotron y LFM3 debe ir más rápido, y Ajustes → Diagnóstico del motor debe mostrar «sistema: … MATMUL_INT8 = 1 …». Si la app no arranca o falla la carga del motor, el rastro lo dirá.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -279,3 +287,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · Resumen con máximo rendimiento desactivado: mismos resultados que antes; RAM pico no fiable (memoria retenida del proceso); solo LFM3 y Qwen3 (1K) cumplen ≥ 10 tok/s.
 - **2026-11-24** · Informe del Diagnóstico: el cierre era Nemotron sin mmap (no cabe en RAM). La prueba omite cargas sin mmap que no caben y usa la RAM actual si no puede reiniciar el pico. 4 pruebas nuevas. Pendiente: CI.
 - **2026-11-24** · Nemotron no respondía en el chat (plantilla Jinja de gemma4 no reconocida → texto crudo): formato de turnos de Gemma 4 en el JNI. Selector de agente con desplazamiento (ScrollView de gesture-handler). Pendiente: CI y móvil.
+- **2026-11-24** · Aceleración general: ggml-cpu como variantes elegidas en ejecución (BACKEND_DL + ALL_VARIANTS, con i8mm), bibliotecas extraídas (plugin), 6 hilos y rastro con la CPU elegida. Pendiente: CI y medir.

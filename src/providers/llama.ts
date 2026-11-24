@@ -27,6 +27,9 @@ export interface NativeLlamaModule {
   isAvailable(): Promise<boolean>;
 }
 
+/** Hilos de generación: 6 de 8 núcleos, como LM Playground (n.º de núcleos − 2); en las medidas 8 daba más prefill y la generación no cambiaba. */
+const DEFAULT_THREADS = 6;
+
 let nativeModule: NativeLlamaModule | null = null;
 
 /** Modelo que se queda cargado entre mensajes (P15-3). Solo hay uno a la vez (PLAN §3). */
@@ -55,7 +58,7 @@ async function ensureLoaded(native: NativeLlamaModule, opts: StreamOptions): Pro
   const key = `${opts.modelId}@${opts.contextTokens}`;
   if (loaded && loaded.key === key) return loaded.id;
   await dropLoaded(native);
-  const id = await native.loadModel(opts.modelId, opts.contextTokens, 4);
+  const id = await native.loadModel(opts.modelId, opts.contextTokens, DEFAULT_THREADS);
   loaded = { key, id };
   return id;
 }
@@ -147,7 +150,7 @@ async function* streamFromNative(
   signal.addEventListener('abort', abort, { once: true });
 
   try {
-    await native.generate(modelId, prompt, { threads: 4, noThink, onEvent: enqueue }, signal);
+    await native.generate(modelId, prompt, { threads: DEFAULT_THREADS, noThink, onEvent: enqueue }, signal);
   } catch (e) {
     errored = e;
     done = true;

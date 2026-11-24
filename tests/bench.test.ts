@@ -115,7 +115,7 @@ check(oldCpu.includes('dotprod ✗') && oldCpu.includes('fp16 ✗') && oldCpu.in
 check(describeCpu(null) === 'CPU: desconocida' && describeCpu('x') === 'CPU: desconocida', 'describeCpu: entrada ausente o inválida');
 const withMeta = formatResults(results, { device: 'D', cpu, at: 0 });
 check(withMeta.includes(cpu) && withMeta.includes(`Compilación ggml-cpu: ${ENGINE_BUILD}`), 'el informe incluye CPU y compilación');
-check(ENGINE_BUILD === 'armv8.2-a+dotprod+fp16', 'ENGINE_BUILD coincide con la bandera de build.gradle');
+check(ENGINE_BUILD.includes('variantes'), 'ENGINE_BUILD describe las variantes de CPU de build.gradle');
 check(LOCAL_MODELS.length === 5 && LOCAL_MODELS.every((m) => PRESETS.completa.models.includes(m.id)), 'la matriz completa cubre todos los modelos');
 
 

@@ -25,7 +25,7 @@ export const COOLDOWN_MS = 3000;
  * Compilación de ggml-cpu del APK (`-DGGML_CPU_ARM_ARCH` en modules/pyrohorns-llama/android/build.gradle).
  * Se imprime en el informe para poder comparar compilaciones; mantener sincronizado.
  */
-export const ENGINE_BUILD = 'armv8.2-a+dotprod+fp16';
+export const ENGINE_BUILD = 'variantes ggml-cpu (la mejor para la CPU, en ejecución)';
 /** Objetivos de F1.5 (`PLAN.md` §5). */
 export const TARGETS = { ttftMs: 1500, genTokPerSec: 10 } as const;
 

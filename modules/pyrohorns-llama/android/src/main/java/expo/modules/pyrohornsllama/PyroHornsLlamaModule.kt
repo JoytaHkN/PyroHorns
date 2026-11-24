@@ -93,7 +93,8 @@ class PyroHornsLlamaModule : Module() {
     OnCreate {
       val dir = diagnosticsDir()
       rotateSessionLog(dir)
-      native.initBackend(File(dir, "session.log").path)
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      native.initBackend(File(dir, "session.log").path, context.applicationInfo.nativeLibraryDir)
     }
 
     // Rastros del motor y motivos de cierre que registra Android (sin conversaciones ni claves, S9).

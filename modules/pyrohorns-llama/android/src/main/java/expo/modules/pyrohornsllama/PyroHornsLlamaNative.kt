@@ -5,7 +5,7 @@ class PyroHornsLlamaNative {
     System.loadLibrary("pyrohorns_llama")
   }
 
-  external fun initBackend(crumbPath: String)
+  external fun initBackend(crumbPath: String, libDir: String)
 
   external fun loadModel(path: String, contextTokens: Int, threads: Int, useMmap: Boolean): Long
 

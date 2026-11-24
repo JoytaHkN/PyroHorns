@@ -30,6 +30,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/with-legacy-packaging",
       "expo-font",
       [
         "expo-splash-screen",

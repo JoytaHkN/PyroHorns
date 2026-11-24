@@ -20,4 +20,4 @@ target_include_directories(pyrohorns_llama PRIVATE
   "${LLAMA_DIR}/ggml/include"
 )
 
-target_link_libraries(pyrohorns_llama llama android log)
+target_link_libraries(pyrohorns_llama llama ggml android log)

@@ -218,14 +218,24 @@ std::string usageJson(int64_t ttftUs, int64_t totalUs, int promptTokens, int com
 }  // namespace
 
 extern "C" JNIEXPORT void JNICALL
-Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_initBackend(JNIEnv * env, jobject, jstring jCrumbPath) {
-  std::call_once(g_backendFlag, [env, jCrumbPath] {
+Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_initBackend(JNIEnv * env, jobject, jstring jCrumbPath, jstring jLibDir) {
+  std::call_once(g_backendFlag, [env, jCrumbPath, jLibDir] {
     const char * path = env->GetStringUTFChars(jCrumbPath, nullptr);
     g_crumbFd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_APPEND, 0600);
     env->ReleaseStringUTFChars(jCrumbPath, path);
     installCrashHandler();
     crumb("start");
+    // Variantes de CPU como bibliotecas separadas: se cargan desde la carpeta de bibliotecas nativas y ggml elige la mejor.
+    const char * libDirChars = env->GetStringUTFChars(jLibDir, nullptr);
+    const std::string libDir(libDirChars);
+    env->ReleaseStringUTFChars(jLibDir, libDirChars);
+    crumb("backend: cargando variantes de CPU desde " + libDir);
+    ggml_backend_load_all_from_path(libDir.c_str());
     llama_backend_init();
+    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+      crumb(std::string("dispositivo: ") + ggml_backend_dev_name(ggml_backend_dev_get(i)));
+    }
+    crumb(std::string("sistema: ") + llama_print_system_info());
     crumb("backend ok");
   });
 }

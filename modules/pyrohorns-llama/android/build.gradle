@@ -38,12 +38,14 @@ android {
           "-DLLAMA_BUILD_SERVER=OFF",
           "-DGGML_LLAMAFILE=OFF",
           "-DGGML_NATIVE=OFF",
-          // Decisión (f)-B de P13: dotprod y fp16 aceleran mucho el prefill. Falla (SIGILL) en CPUs sin esas instrucciones.
+          // Variantes de ggml-cpu (NEON, dotprod, fp16, i8mm, SVE…) como bibliotecas separadas; el motor elige la mejor para
+          // la CPU en ejecución (como LM Playground). Sustituye a la bandera fija armv8.2-a+dotprod+fp16 y evita el SIGILL en CPUs sin esas instrucciones.
           // Si se cambia, actualizar ENGINE_BUILD en src/lib/bench.ts.
-          "-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16",
+          "-DGGML_BACKEND_DL=ON",
+          "-DGGML_CPU_ALL_VARIANTS=ON",
           "-DGGML_VULKAN=OFF",
           "-DGGML_OPENMP=OFF",
-          "-DBUILD_SHARED_LIBS=OFF"
+          "-DBUILD_SHARED_LIBS=ON"
       }
     }
   }

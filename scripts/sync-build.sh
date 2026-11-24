@@ -10,7 +10,7 @@ SRC="$(cd "$(dirname "$0")/.." && pwd)"
 DST="${PYROHORNS_BUILD:-/workspace/pyrohorns-build}"
 mkdir -p "$DST"
 
-for item in src tests scripts assets app.json app.config.js babel.config.js metro.config.js global.css tsconfig.json package.json package-lock.json; do
+for item in src tests scripts plugins assets app.json app.config.js babel.config.js metro.config.js global.css tsconfig.json package.json package-lock.json; do
   rm -rf "${DST:?}/$item"
   if [ -e "$SRC/$item" ]; then cp -r "$SRC/$item" "$DST/$item"; fi
 done
