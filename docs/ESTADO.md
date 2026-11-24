@@ -55,8 +55,9 @@
      `NoSuchMethodError: no non-static method "Lz10;.emit(...)"`. **R8 (minificación del build release) renombra
      `LlamaEventSink.emit` y la clase anónima que lo implementa**, y el JNI lo busca por nombre; la excepción pendiente aborta
      la app. En depuración no ocurriría. Corregido: `consumer-rules.pro` (keep de la interfaz, sus implementaciones y
-     `PyroHornsLlamaNative`) y el JNI busca `emit` una sola vez en la interfaz y limpia la excepción si falla. **Falta:** CI y
-     probar el chat en el móvil. Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
+     `PyroHornsLlamaNative`) y el JNI busca `emit` una sola vez en la interfaz y limpia la excepción si falla. CI Android en verde (`88369c6`) y comprobado en el dex que la
+     clase que implementa la interfaz ya conserva su nombre. APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-r8-prueba.apk` (+ `.sha256`).
+     **Falta:** probar el chat en el móvil. Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
      compilar ggml-cpu sin dotprod/i8mm; el modelo tardó ≈ 5,8 s en abrirse desde la carpeta de la app.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
@@ -123,4 +124,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   CI Android en verde (`1497dda`); APK copiado a `APK IA/apk/`. Pendiente: nueva prueba en el móvil.
 - **2026-11-24** · Informe de Diagnóstico del móvil (HUAWEI LMR-LX9, Android 12): el cierre era un `NoSuchMethodError` por R8
   (renombra `LlamaEventSink.emit`). Se añaden reglas `consumer-rules.pro` y el JNI resuelve `emit` en la interfaz.
-  Pendiente: CI y nueva prueba en el móvil.
+  CI en verde (`88369c6`), APK en `APK IA/apk/`. Pendiente: nueva prueba en el móvil.
