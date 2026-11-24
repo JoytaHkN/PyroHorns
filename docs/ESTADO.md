@@ -170,7 +170,7 @@
      debe caber en RAM y no cabe. Corregido: la prueba **omite** las cargas sin mmap que no cumplen la regla de memoria (80 % de la RAM libre) y lo anota en el registro. También se vio que la columna
      «RAM pico» salía **constante (6395 MB)** porque el sistema no deja reiniciar el pico del proceso: ahora, si no se puede reiniciar, se usa la RAM actual. El resumen con «máximo rendimiento
      desactivado» (18:36, 6 y 8 hilos) dio lo mismo que antes: LFM3 prefill 63–70 y gen 18–19; Qwen3 gen 14,5 (1K) y 5–6 (7,6K); 4B, Phi y Nemotron 2–7 tok/s. Chat con Nemotron (3 mensajes): responde, plantilla aplicada.
-     Pendiente: CI y repetir con el APK nuevo.
+     CI Android en verde (`21a95be`); APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-memoria-prueba.apk` (+ `.sha256`). Pendiente: repetir con el APK nuevo.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
