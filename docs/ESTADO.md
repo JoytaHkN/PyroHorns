@@ -161,6 +161,11 @@
    - **Nemotron 3.5 Bolt E4B (gemma4) medido en el teléfono (2026-11-24 17:13 y 17:28, dotprod, mmap):** **carga sin problemas** (41 s en frío, 32 s después; 6,2 GB); prefill **27 tok/s con 4 hilos y 34 con 8**;
      generación **5,7–5,9 tok/s** a 1K y 4,9–5,7 a 3,7K; TTFT 31–38 s con 1K; RAM pico **5,8–6,2 GB**. No cumple ningún objetivo y rinde como CyberSecQwen 4B (5,4 tok/s). El informe ya no mezcla ejecuciones
      (la primera dice «hay 99 guardadas»). El usuario cerró la prueba «por un error» (pendiente de saber cuál). Sin probar en el chat: plantilla y razonamiento.
+   - **Resumen con «máximo rendimiento» desactivado (teléfono, 2026-11-24 18:36, hilos 6 y 8, 20 mediciones, batería 85 % → 59 %):** LFM3 prefill 63 / 70 tok/s y generación 18–19 (a 1K) y 13,6–13,8 (a 7,6K):
+     **idéntico a las medidas anteriores**, así que ese ajuste del teléfono no cambió nada. Qwen3: prefill 58 / 68, gen 14,5 (1K) y 5,3–5,9 (7,6K). CyberSecQwen 4B: gen 6,5–6,8 (1K) y 4,0–4,1 (3,7K); con 6 hilos el prefill se hundió a 10,8 tok/s (TTFT 95 s)
+     frente a 25 con 8. Phi-3.5: gen 5,2–6,3 (1K) y 2,1–3,9 (3,7K). Nemotron: prefill 30–33, gen 4,7–6,1 (1K) y 2,4–2,7 (3,7K). **Solo LFM3 (y Qwen3 a 1K) cumple ≥ 10 tok/s; ningún modelo cumple el TTFT.** 17 de 20 mediciones en caliente, sin caída visible.
+     **La columna de RAM pico no es fiable en esta ejecución** (6395 MB en todos los modelos, 6720 en Nemotron): el proceso ya tenía memoria retenida de cargas anteriores (el asignador no la devuelve) y el pico se reinicia al valor actual.
+     Para medir RAM hay que cerrar la app del todo antes de empezar. Propuesta pendiente: guardar la RSS base antes de cada prueba y mostrar el incremento.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -261,3 +266,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
   RAM pico +1 GB. Detectado que el informe mezcla resultados de ejecuciones anteriores. Pendiente: reformular el objetivo de TTFT y separar ejecuciones.
 - **2026-11-24** · Decisiones tras los resultados con dotprod (objetivo de TTFT sin cambios, informe sin mezclar ejecuciones, sin control térmico). Modelo Nemotron 3.5 Bolt E4B
   (gemma4) habilitado; preajuste «Resumen» (20 ejecuciones). 10 pruebas nuevas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y probar.
+- **2026-11-24** · Resumen con máximo rendimiento desactivado: mismos resultados que antes; RAM pico no fiable (memoria retenida del proceso); solo LFM3 y Qwen3 (1K) cumplen ≥ 10 tok/s.
