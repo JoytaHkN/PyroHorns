@@ -130,7 +130,7 @@
      **compilación**. **Riesgo:** en una CPU sin dotprod/fp16 (Cortex-A53/A72/A73 y similares) la app se cae con SIGILL al generar. Este teléfono sí los tiene.
      La tablet del usuario: **no instalar este APK ahí hasta conocer su CPU** (o hacerlo sabiendo que puede cerrarse); la línea de CPU del informe lo dirá. La
      alternativa segura para todos los móviles son variantes con elección en tiempo de ejecución (decisión f-C, F2).
-   - **Informe de P13 con condiciones del equipo (2026-11-24), pendiente de CI y de medir:** antes y después de cada prueba se lee la
+   - **Informe de P13 con condiciones del equipo (2026-11-24), CI Android en verde (`38367c6`), pendiente de medir** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-equipo-prueba.apk` + `.sha256`): antes y después de cada prueba se lee la
      **temperatura de la batería**, el **porcentaje de batería**, el **estado térmico de Android** (`PowerManager`, desde Android 10; 0 normal …
      6 apagado), si hay **cargador** y si está el **ahorro de energía** (`deviceStatus()` nativo, sin permisos). El informe muestra el equipo al
      empezar, las columnas «Temp °C ini→fin», «Batería % ini→fin» y «Térmico máx», y avisos si hubo carga, ahorro de energía o pruebas en caliente
@@ -227,3 +227,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · Informe de P13 con temperatura, batería, estado térmico y ahorro de energía antes y después de cada prueba (nativo `deviceStatus`,
   `parseDeviceStatus`, `conditionsOf`, avisos en el informe). 17 pruebas nuevas (58 en `tests/bench.test.ts`). Typecheck, pruebas y bundle Android en verde.
   Pendiente: CI y medir con batería.
+- **2026-11-24** · CI del informe con condiciones del equipo en verde (`38367c6`); APK en `APK IA/apk/`. Pendiente: medir con batería.
