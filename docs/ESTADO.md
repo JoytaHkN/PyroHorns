@@ -63,13 +63,19 @@
      formato, etiqueta «simuladas» obsoleta y razonamiento con Profundo apagado → **P15** (`PLAN.md` §7), pendiente de decisión.
      Datos para P13: el prompt de 15 tokens tardó 1,06 s (≈ 14 tok/s de prefill), lento por
      compilar ggml-cpu sin dotprod/i8mm; el modelo tardó ≈ 5,8 s en abrirse desde la carpeta de la app.
-   - **P15 opción 2 decidida e implementada (2026-11-24), CI Android en verde (`d216048`), pendiente de probar en el móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p15-prueba.apk` + `.sha256`)**:** `ThinkSplitter`
+   - **P15 opción 2 decidida e implementada (2026-11-24), CI Android en verde (`d216048`); ✅ probado en el móvil (2026-11-24)** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-p15-prueba.apk` + `.sha256`)**:** `ThinkSplitter`
      (`src/lib/think-parser.ts`) separa `<think>` del texto aunque la etiqueta llegue partida y `LlamaProvider` lo emite como
      `thinking_delta` (se pliega y no se reenvía); «Pensó N s» mide solo el razonamiento (si no hay, no aparece); tok/s con un
      decimal y calculado solo sobre la generación (sin prefill) en el JNI; etiqueta «en tu dispositivo» / «respuestas simuladas»
      según el motor activo (`src/store/engine.ts`); con **Profundo apagado** y un modelo con razonamiento, el JNI añade
      `<think>\n\n</think>\n\n` tras la plantilla (lo mismo que hace Qwen3 con enable_thinking=false). **Hay que comprobar en el móvil**
      que LFM3 y Qwen3 realmente dejan de razonar con Profundo apagado y que con Profundo encendido el razonamiento sale plegado.
+     **Resultado en el móvil:** con Profundo apagado, LFM3 y Qwen3 responden sin razonar (sin «Pensó» ni `<think>`); con Profundo
+     encendido sale «Pensó 1 s · ver» plegado y la burbuja solo lleva la respuesta; tok/s con un decimal y etiqueta «en tu
+     dispositivo». Observaciones: (1) LFM3 dio **3,0 tok/s en el primer mensaje y 12,6 en el segundo** (hipótesis: caché de archivos
+     fría del mmap al cargar el modelo de nuevo; lo debe confirmar P13); Qwen3 ≈ 11,3–11,5 tok/s. (2) Qwen3 con Profundo apagado
+     respondió en **portugués** a una pregunta en español (con Profundo encendido, en español): posible efecto del bloque
+     `<think>` vacío o del muestreo (temp 0,8, top-k 40, top-p 0,9; Qwen3 recomienda 0,7/20/0,8 sin razonar); a revisar en F2/F3.
      Pendiente (opción 3, antes de P13): mantener el modelo cargado entre mensajes.
    - Pasos 3 y 4: diseño propuesto en `PLAN.md` §7 (P13), a la espera de visto bueno.
    - Paso 3 (pendiente): comparar abrir el GGUF desde /sdcard con copiarlo al almacenamiento de la app;
@@ -81,8 +87,8 @@
 
 ## Pendiente de decisión del usuario
 - **P13** · pantalla de prueba de rendimiento para los pasos 3 y 4 de F1.5 (`PLAN.md` §7): esperando visto
-  bueno y las cinco decisiones abiertas (variante sin mmap, barrido de hilos, modelos a probar, salida de
-  resultados, tok/s del chat). No se ha escrito código. Ya no está bloqueada por P14.
+  bueno y las decisiones abiertas (a) variante sin mmap, (b) barrido de hilos, (c) modelos a probar, (d) salida de
+  resultados y (f) compilación con dotprod/i8mm; la (e) tok/s del chat ya está resuelta en P15. No se ha escrito código.
 - Propuestas de diseño e interacción P1–P12 (`PLAN.md` §7).
 
 ## Prompt para retomar en otro agente
@@ -142,3 +148,6 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · P15 opción 2 (elegida por el usuario): separación de `<think>`, «Pensó» solo del razonamiento, tok/s de generación
   y formateado, etiqueta según el motor, Profundo apagado sin razonamiento (`noThink` hasta el JNI). 19 pruebas nuevas
   (`tests/think-parser.test.ts`, `tests/llama-provider.test.ts`). Typecheck, pruebas y bundle Android en verde. CI en verde (`d216048`), APK en `APK IA/apk/`. Pendiente: móvil.
+- **2026-11-24** · El usuario probó el APK de P15-2: Profundo apagado/encendido funciona como se diseñó en LFM3 y Qwen3. Se registran las
+  observaciones (3,0 → 12,6 tok/s en LFM3 entre el primer y el segundo mensaje; Qwen3 en portugués con Profundo apagado) y se
+  añade la decisión (f) (dotprod/i8mm) a P13.

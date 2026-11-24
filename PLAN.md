@@ -215,7 +215,7 @@ Rendimiento (F1.5, pasos 3 y 4):
   - **Robustez:** se guarda una marca «prueba en curso» antes de cada ejecución; si Android cierra la app por memoria, al reabrir la pantalla indica qué prueba la mató. Pausa entre pruebas por temperatura.
   - **Resultados:** tabla en pantalla y botón «Copiar resultados» (JSON/Markdown). Requiere decidir cómo: `expo-clipboard` (dependencia nueva) o escribir un archivo en el almacenamiento de la app. Sin conversaciones ni claves (S9).
   - **Pruebas:** la lógica pura (matriz de pruebas, medianas, formato, lectura de `/proc`) con pruebas de Node; el JNI se valida por compilación en CI y la medición, en el móvil.
-  - **Decisiones abiertas:** (a) ¿incluir la variante B sin mmap?; (b) ¿barrido de hilos?; (c) ¿probar también Qwen3-1.7B o solo LFM3?; (d) cómo sacar los resultados (portapapeles o archivo); (e) ¿corregir también el `tok/s` del chat para que cuente solo la generación?
+  - **Decisiones abiertas:** (a) ¿incluir la variante B sin mmap? (observado el 2026-11-24: el primer mensaje con LFM3 dio 3,0 tok/s y el segundo 12,6, probablemente por la caché de archivos fría del mmap); (b) ¿barrido de hilos?; (c) ¿probar también Qwen3-1.7B o solo LFM3?; (d) cómo sacar los resultados (portapapeles o archivo); (e) ✅ resuelta en P15 (tok/s del chat ya cuenta solo la generación); (f) ¿compilar ggml-cpu con dotprod/i8mm (más rápido, no arranca en CPUs que no los tengan) o mantener la base armv8-a?
 
 Arquitectura:
 - P12. Sustituir la "variante Compose completa" por piezas nativas solo donde React Native no llega (ventana flotante, terminal).
