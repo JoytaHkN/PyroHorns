@@ -375,3 +375,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI del asistente en verde; APK copiado con permisos de calendario y alarma comprobados. Pendiente: móvil y que el usuario elija los accesos siguientes.
 - **2026-11-25** · Registradas P21 (accesos y voz) y P22 (conexiones); comprobado que and-code/OpenCode admiten NVIDIA sin variante. Sin código; pendiente de confirmación.
 - **2026-11-25** · Prueba del asistente: tres fallos corregidos (formato sin «tipo:», aclaraciones, estado inventado). NVIDIA bloqueado para esta cuenta. Decisiones de P21 registradas.
+- **2026-11-25** · CI en verde (`d433b2a`); APK `PyroHorns-0.1.0-F1.5-asistente2-prueba.apk` copiado. Pendiente: móvil.
