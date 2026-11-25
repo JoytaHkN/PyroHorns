@@ -215,7 +215,7 @@
      sin cambios), y se quita un segundo `accept` del sampler; (C) `*cursiva*`. **Comparar:** carga de Nemotron (21–39 s antes) y primer mensaje (87–90 tokens).
    - **P18 internet (2026-11-25), CI en verde (`430c5a4`), pendiente de móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-internet-prueba.apk` + `.sha256`; incluye A, 2, B y C): el usuario eligió botón por mensaje y solo DuckDuckGo (`PLAN.md` §7). **Comprobar en el móvil si
      DuckDuckGo responde o bloquea**; el análisis de la página solo está probado con HTML de ejemplo.
-   - **S18-B (2026-11-25), elegida por el usuario e implementada:** los resultados de internet llevan la petición de no seguir instrucciones que contengan. Pendiente de CI y móvil.
+   - **S18-B (2026-11-25), elegida por el usuario e implementada:** los resultados de internet llevan la petición de no seguir instrucciones que contengan. CI en verde (`ca7ac5f`), pendiente de móvil (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-internet-b-prueba.apk` + `.sha256`).
    - **Prueba en el móvil del APK de internet (2026-11-25, capturas y Diagnóstico):** **DuckDuckGo responde** y salen las fuentes. Carga: Nemotron **14,2 s** (antes
      21–39; leer 3038 MiB: 2,6 s; quedan ≈ 11 s que no son lectura), LFM3 2,5 s (antes 3,7). `warm`: 1,0 s (LFM3) y 2,6 s (Nemotron); primer mensaje de Nemotron
      1,0 s de procesamiento (antes 3,4). Muestreo del GGUF aplicado. Generación sin cambios claros (LFM3 16–17, Nemotron 5,6–6,1 tok/s).
@@ -340,3 +340,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI de P18 en verde (`430c5a4`); APK copiado a `APK IA/apk/`. Pendiente: móvil y decidir la protección frente a instrucciones en páginas.
 - **2026-11-25** · S18-B implementada. Pendiente: CI y móvil.
 - **2026-11-25** · Internet, carga en bloques e instrucción por adelantado probados en el móvil: todo funciona; anotados fallos y propuestas.
+- **2026-11-25** · CI de S18-B en verde (`ca7ac5f`); APK copiado a `APK IA/apk/`.
