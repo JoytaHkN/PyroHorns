@@ -368,3 +368,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI de los arreglos 1, 4 y 2 en verde; APK copiado. Revisados los metadatos de 13 GGUF nuevos.
 - **2026-11-25** · P19: modelos nuevos, nube y opciones táctiles (typecheck, pruebas y bundles en verde). Pendiente: CI y móvil.
 - **2026-11-25** · Primer parche de Dory no compilaba (`graph_nodes_per_tensor`), corregido (`716a283`). Asistente (P20-1): typecheck, pruebas y bundle en verde.
+- **2026-11-25** · Compilación de Android en verde con el parche de Dory corregido (`716a283`); APK en `APK IA/apk/PyroHorns-0.1.0-F1.5-modelos-prueba.apk` (+ `.sha256`). Pendiente: probar Dory en el móvil.
