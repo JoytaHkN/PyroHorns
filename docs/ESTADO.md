@@ -326,3 +326,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Resultados de P16 en el móvil. Tabla de Nemotron bajo demanda (P17-0), reutilización de memoria por texto y títulos en las respuestas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
 - **2026-11-25** · CI de P17-0 en verde (`df37523`); APK copiado a `APK IA/apk/`. Pendiente: móvil y decidir 2, A (carga en bloques grandes) y B (muestreo recomendado).
 - **2026-11-25** · P17-0 probada: carga de Nemotron 39 → 29 s, tok/s iguales, memoria correcta. Registrada P18 (internet). Pendiente: decidir 2, A, B, cursivas y P18.
+- **2026-11-25** · A, 2, B y cursiva implementados (typecheck, pruebas y bundle en verde). Revisados los repositorios clonados y medidos tres buscadores sin clave (P18).

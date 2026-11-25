@@ -254,6 +254,10 @@ Arquitectura:
   y añade el resultado al contexto. Cuándo se busca: (A) lo decide el modelo (necesita el bucle de herramientas de F3), (B) botón por mensaje (recomendada para
   empezar), (C) botón y confirmación del texto que sale del teléfono. Fuente: Wikipedia (sin clave, solo enciclopedia), un buscador con clave propia (S5) o un
   servidor SearXNG. Coste: el texto añadido se procesa antes de responder (≈ 1000 tokens: ≈ 35 s con Nemotron y ≈ 15 s con LFM3).
+  - **Repositorios clonados revisados (2026-11-25):** LM Playground (MIT) trae `tools/WebSearchTool.kt` (DuckDuckGo sin clave) y `WebFetchTool.kt`; Agora (GPL-3, solo
+    ideas, D2) admite Brave, Kagi, Serper, Tavily, Exa, SearXNG y DuckDuckGo; `public-apis` lista Wikipedia sin clave.
+  - **Medido desde el teléfono (3 consultas con curl):** Wikipedia en español 0,6–0,7 s, resultados correctos; Exa sin clave (`mcp.exa.ai`) 0,5–0,75 s, web general;
+    DuckDuckGo devolvió HTTP 202 con página antirrobots y ningún resultado.
 
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
