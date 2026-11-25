@@ -53,13 +53,16 @@ function RemoteImage({ alt, url }: { alt: string; url: string }) {
   );
 }
 
-function Paragraph({ text }: { text: string }) {
+function Paragraph({ text, heading }: { text: string; heading?: number }) {
   const pal = usePalette();
   const parts = parseInline(text);
   const images = parts.filter((p): p is Extract<Inline, { kind: 'image' }> => p.kind === 'image');
   return (
     <View style={{ gap: 8 }}>
-      <T style={{ lineHeight: 22 }}>
+      <T
+        {...(heading ? { weight: 'bold' as const, size: heading <= 2 ? 18 : 16, accessibilityRole: 'header' as const } : {})}
+        style={{ lineHeight: heading ? 24 : 22 }}
+      >
         {parts.map((p, i) => {
           switch (p.kind) {
             case 'bold':
@@ -116,7 +119,7 @@ export function Markdown({ text }: { text: string }) {
             </T>
           </View>
         ) : (
-          <Paragraph key={i} text={b.text} />
+          <Paragraph key={i} text={b.text} {...(b.kind === 'heading' ? { heading: b.level } : {})} />
         ),
       )}
     </View>

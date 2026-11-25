@@ -30,4 +30,12 @@ check(parseInline('![x](data:image/png;base64,AAA)').every((p) => p.kind === 'te
 const html = parseInline('<script>alert(1)</script> <b>hola</b>');
 check(html.length === 1 && html[0]?.kind === 'text' && html[0].text.includes('<script>'), 'S10: el HTML se muestra como texto');
 
+const h = parseBlocks('intro\n### Contexto:\n- uno\n- dos\n\n## Fin ##');
+check(
+  h.map((x) => x.kind).join(',') === 'para,heading,para,heading' && h[1]!.text === 'Contexto:' && h[3]!.text === 'Fin',
+  'títulos con # como bloque propio',
+);
+check(parseBlocks('#etiqueta y C# no son títulos')[0]!.kind === 'para', '# sin espacio no es título');
+check(parseBlocks('```sh\n# comentario\n```')[0]!.kind === 'code', 'dentro de un bloque de código # no es título');
+
 done();

@@ -196,6 +196,13 @@
    - **Botón de copiar en los mensajes del usuario (2026-11-25), CI en verde (`f18489f`), pendiente de probar** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-copiar-prueba.apk` + `.sha256`; incluye P16).
    - **P17 (`PLAN.md` §7), pendiente de visto bueno, sin código:** dos sesiones propusieron a la vez; quedan unidas en una sola propuesta. Se añade la pieza 0 (tabla
      `per_layer_token_embd` de Nemotron bajo demanda). ssd-llm reverificado: convierte cada capa a f32 y `Q4_K` queda en ceros; sus rutas cuantizadas no se llaman.
+   - **Prueba en el móvil del APK con P16 (2026-11-25, capturas y Diagnóstico):** la memoria funciona (131/149, 201/221 y 367/408 tokens reutilizados; el modelo
+     recuerda el teléfono), botones y métricas visibles. LFM3 16,4–19 tok/s. Fallos: (1) el 3.er turno de una conversación reprocesó los 776 tokens (11,5 s);
+     hipótesis: volver a tokenizar una respuesta larga da otros tokens y la memoria híbrida no se puede recortar; (2) los `###` se veían en crudo;
+     (3) LFM3 inventó datos históricos graves; su GGUF recomienda temp 0,1, top-k 50 y penalización 1,1, y la app usa 0,8/40/0,9 (pendiente de decisión).
+     Carga de Nemotron en el chat: 39 s (referencia antes de P17-0). Android mató la app el 25-11 00:24 con 3,6 GB de RAM (estado 9).
+   - **P17-0 y arreglos (2026-11-25), pendiente de CI y de probar:** `lazy_mode = LLAMA_LAZY_MODE_ON` (el Diagnóstico anota «lazy read enabled»), prompt
+     comparado por texto con lo que hay en memoria (solo se tokeniza lo nuevo; el rastro anota «coinciden N de M») y títulos `#` en las respuestas.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -306,3 +313,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · CI de P16 en verde (`edf3993`); APK copiado a `APK IA/apk/`. Pendiente: móvil.
 - **2026-11-25** · ssd-llm y Colibrì analizados; medido el almacenamiento del teléfono (mmap por fallos de página ≈ 0,2 GB/s frente a 1,1–1,4 GB/s en bloques grandes). Propuesta P17 (Método Brasa), pendiente de decisión.
 - **2026-11-25** · Botón de copiar en mensajes del usuario (CI verde, APK copiado). Análisis de streaming desde almacenamiento: la tabla de Nemotron bajo demanda se une a P17 como pieza 0.
+- **2026-11-25** · Resultados de P16 en el móvil. Tabla de Nemotron bajo demanda (P17-0), reutilización de memoria por texto y títulos en las respuestas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.

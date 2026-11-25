@@ -1,16 +1,34 @@
-export type Block = { kind: 'code'; lang: string; text: string } | { kind: 'para'; text: string };
+export type Block =
+  | { kind: 'code'; lang: string; text: string }
+  | { kind: 'heading'; level: number; text: string }
+  | { kind: 'para'; text: string };
 
 export function parseBlocks(src: string): Block[] {
   const out: Block[] = [];
   const re = /```(\w*)\n?([\s\S]*?)(```|$)/g;
   let last = 0;
   let m: RegExpExecArray | null;
-  const pushParas = (s: string) =>
-    s
-      .split(/\n{2,}/)
-      .map((p) => p.trim())
-      .filter(Boolean)
-      .forEach((text) => out.push({ kind: 'para', text }));
+  /** Párrafos separados por líneas en blanco; las líneas «# Título» van aparte. */
+  const pushParas = (s: string) => {
+    for (const chunk of s.split(/\n{2,}/)) {
+      let lines: string[] = [];
+      const flush = () => {
+        const text = lines.join('\n').trim();
+        if (text) out.push({ kind: 'para', text });
+        lines = [];
+      };
+      for (const line of chunk.split('\n')) {
+        const h = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+        if (!h) {
+          lines.push(line);
+          continue;
+        }
+        flush();
+        out.push({ kind: 'heading', level: h[1]!.length, text: h[2]! });
+      }
+      flush();
+    }
+  };
   while ((m = re.exec(src))) {
     pushParas(src.slice(last, m.index));
     out.push({ kind: 'code', lang: m[1] ?? '', text: (m[2] ?? '').replace(/\n$/, '') });

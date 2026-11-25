@@ -245,6 +245,9 @@ Arquitectura:
     ≈ 11 KB por token. llama.cpp `dc33e61` sabe leerla bajo demanda, pero `LLAMA_LAZY_MODE_AUTO` exige más de 4 GiB: basta `modelParams.lazy_mode =
     LLAMA_LAZY_MODE_ON` (requiere mmap). Hipótesis sin medir: hasta ≈ 2,8 GiB menos de RAM y menos carga. Es compatible con la pieza 1 si la lectura en
     bloques grandes salta ese tramo del archivo.
+  - **(0) implementada el 2026-11-25** (pedida por el usuario), pendiente de medir en el móvil. Solo Gemma 4 / Nemotron tiene tabla por capas; es una parte
+    entrenada del modelo y no se puede añadir ni generar para los otros sin reentrenarlos. `token_embd` de Qwen3 1.7B (≈ 0,18 GB) y Phi-3.5 (≈ 0,06 GB) es solo de
+    consulta (tienen `output.weight` aparte), pero habría que parchear llama.cpp y el ahorro es pequeño; en LFM3 y CyberSecQwen se usa entera en cada token.
   - Orden recomendado: 0 + 1 → 2 + 3 → 4 → 5. Las piezas 2 y 3 dependen de que la reutilización de memoria de P16 funcione con LFM3, que es híbrido.
 
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):

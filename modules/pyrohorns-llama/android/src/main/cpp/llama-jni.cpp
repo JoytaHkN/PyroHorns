@@ -27,6 +27,9 @@ struct ModelState {
   std::atomic<bool> cancelled{false};
   // Tokens que hay ahora mismo en la caché KV: el siguiente mensaje solo procesa lo que añade (memoria de la conversación).
   std::vector<llama_token> cached;
+  // El texto exacto de esos tokens (prompt + respuesta). Si el prompt siguiente empieza igual, solo se tokeniza lo nuevo:
+  // volver a tokenizar la respuesta puede dar otros tokens y obligaría a procesar todo de nuevo.
+  std::string cachedText;
 
   // Libera el modelo, el contexto y el sampler: antes no se liberaba nada y cada mensaje dejaba el modelo en RAM.
   ~ModelState() {
@@ -164,6 +167,14 @@ size_t completeUtf8Prefix(const std::string & s) {
   return s.size();
 }
 
+// Del registro de llama.cpp solo interesa la confirmación de la lectura bajo demanda (nombre y tamaño de la tabla).
+void onLlamaLog(enum ggml_log_level, const char * text, void *) {
+  if (text == nullptr || std::strstr(text, "lazy read enabled") == nullptr) return;
+  std::string line(text);
+  while (!line.empty() && line.back() == '\n') line.pop_back();
+  crumb("load: " + line);
+}
+
 // shared_ptr: si se descarga mientras se genera, el modelo vive hasta que termine la generación.
 std::shared_ptr<ModelState> getModel(jlong handle) {
   std::lock_guard<std::mutex> lock(g_mutex);
@@ -230,11 +241,11 @@ std::string toString(JNIEnv * env, jobjectArray array, jsize i) {
   return out;
 }
 
-std::vector<llama_token> tokenize(const llama_vocab * vocab, const std::string & text) {
-  const int32_t n = -llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), nullptr, 0, true, true);
+std::vector<llama_token> tokenize(const llama_vocab * vocab, const std::string & text, bool addSpecial = true) {
+  const int32_t n = -llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), nullptr, 0, addSpecial, true);
   if (n <= 0) return {};
   std::vector<llama_token> tokens(static_cast<size_t>(n));
-  if (llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), tokens.data(), n, true, true) < 0) return {};
+  if (llama_tokenize(vocab, text.c_str(), static_cast<int32_t>(text.size()), tokens.data(), n, addSpecial, true) < 0) return {};
   return tokens;
 }
 
@@ -249,8 +260,12 @@ int32_t reuseCache(ModelState & state, const std::vector<llama_token> & tokens) 
     crumb("gen: la memoria no se puede recortar, se procesa todo de nuevo");
     n = 0;
   }
+  if (n > 0 && n < state.cached.size()) {
+    crumb("gen: coinciden " + std::to_string(n) + " de " + std::to_string(state.cached.size()) + " tokens en memoria");
+  }
   if (n == 0) llama_memory_clear(memory, true);
   state.cached.resize(n);
+  state.cachedText.clear();  // se repone con el prompt cuando se haya procesado
   return static_cast<int32_t>(n);
 }
 
@@ -290,6 +305,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_initBackend(JNIEnv * env, 
     env->ReleaseStringUTFChars(jLibDir, libDirChars);
     crumb("backend: cargando variantes de CPU desde " + libDir);
     ggml_backend_load_all_from_path(libDir.c_str());
+    llama_log_set(onLlamaLog, nullptr);
     llama_backend_init();
     for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
       crumb(std::string("dispositivo: ") + ggml_backend_dev_name(ggml_backend_dev_get(i)));
@@ -314,6 +330,9 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
     modelParams.n_gpu_layers = 0;
     // P13: comparar leer el GGUF con y sin mmap. (AUTO, el valor por defecto, equivale a mmap en CPU.)
     modelParams.load_mode = (useMmap == JNI_TRUE) ? LLAMA_LOAD_MODE_MMAP : LLAMA_LOAD_MODE_NONE;
+    // P17 (0): las tablas de consulta que marca la arquitectura (la tabla por capas de Gemma 4 / Nemotron, ≈ 2,8 GiB) se leen
+    // del almacenamiento fila a fila. AUTO solo lo haría con tablas de más de 4 GiB.
+    modelParams.lazy_mode = (useMmap == JNI_TRUE) ? LLAMA_LAZY_MODE_ON : LLAMA_LAZY_MODE_AUTO;
     state->model = llama_model_load_from_file(path.c_str(), modelParams);
     if (state->model == nullptr) {
       crumb("load: el modelo no se pudo abrir");
@@ -407,11 +426,28 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
       }
       turns.erase(turns.begin() + static_cast<std::ptrdiff_t>(first));
     }
+    // Camino normal de una conversación: el prompt es lo que ya está en memoria más el turno nuevo.
+    bool appendOnly = false;
+    if (!state->cachedText.empty() && prompt.size() > state->cachedText.size() &&
+        prompt.compare(0, state->cachedText.size(), state->cachedText) == 0) {
+      const std::vector<llama_token> rest = tokenize(vocab, prompt.substr(state->cachedText.size()), false);
+      if (!rest.empty() && static_cast<int32_t>(state->cached.size() + rest.size()) <= nCtx - room) {
+        tokens = state->cached;
+        tokens.insert(tokens.end(), rest.begin(), rest.end());
+        appendOnly = true;
+      }
+    }
     const int32_t nPrompt = static_cast<int32_t>(tokens.size());
     crumb("gen: plantilla aplicada (" + std::to_string(prompt.size()) + " bytes, " + std::to_string(turns.size()) + " mensajes, hilos " +
           std::to_string(threads) + (noThink == JNI_TRUE ? ", sin razonamiento)" : ")"));
 
-    const int32_t reused = reuseCache(*state, tokens);
+    int32_t reused;
+    if (appendOnly) {
+      reused = static_cast<int32_t>(state->cached.size());
+      state->cachedText.clear();
+    } else {
+      reused = reuseCache(*state, tokens);
+    }
     crumb("gen: " + std::to_string(nPrompt) + " tokens de prompt (" + std::to_string(reused) + " ya en memoria)");
 
     std::unique_ptr<llama_batch_ext, void (*)(llama_batch_ext *)> batch(llama_batch_ext_init(state->ctx), llama_batch_ext_free);
@@ -422,11 +458,13 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
     if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
       crumb("gen: llama_process falló con el prompt");
       state->cached.clear();
+      state->cachedText.clear();
       llama_memory_clear(llama_get_memory(state->ctx), true);
       emit(env, sink, "error", "Falló la evaluación del prompt", "{}");
       return;
     }
     state->cached.insert(state->cached.end(), tokens.begin() + reused, tokens.end());
+    state->cachedText = prompt;
     crumb("gen: prompt evaluado en " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count()) + " ms");
 
     int64_t ttftUs = 0;
@@ -467,6 +505,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
         break;
       }
       state->cached.push_back(next);
+      if (n > 0) state->cachedText.append(piece, static_cast<size_t>(n));
     }
     if (!pending.empty()) emit(env, sink, "token", pending, "{}");
 
@@ -501,6 +540,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_bench(
     llama_set_n_threads(state->ctx, threads, threads);
     llama_memory_clear(llama_get_memory(state->ctx), true);
     state->cached.clear();
+    state->cachedText.clear();
     llama_sampler_reset(state->sampler);
 
     // Texto fijo repetido hasta tener tokens de sobra; se recorta a nPrompt.
