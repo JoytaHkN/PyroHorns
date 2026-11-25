@@ -381,3 +381,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Prueba del asistente: tres fallos corregidos (formato sin «tipo:», aclaraciones, estado inventado). NVIDIA bloqueado para esta cuenta. Decisiones de P21 registradas.
 - **2026-11-25** · CI en verde (`d433b2a`); APK `PyroHorns-0.1.0-F1.5-asistente2-prueba.apk` copiado. Pendiente: móvil.
 - **2026-11-25** · Botón Nube implementado; NVIDIA y OpenRouter exigen clave; OpenCode Zen no se replica (uso restringido a OpenCode).
+- **2026-11-25** · CI del botón Nube en verde (`b5ff3a0`); APK `PyroHorns-0.1.0-F1.5-nube-prueba.apk` copiado.
