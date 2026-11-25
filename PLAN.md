@@ -272,6 +272,15 @@ Arquitectura:
   (2) dictado y voz (F4; el teléfono Huawei puede no tener el reconocimiento de Google); (3) asistente predeterminado de Android; después, según elija: abrir
   apps, contactos, llamadas, SMS, notificaciones, ubicación, cámara, ajustes del teléfono y control de pantalla (servicio de accesibilidad).
 
+- **P21. Decisiones del usuario (2026-11-25, tarde)** — accesos del asistente **1–6 aprobados con la opción B** (lo irreversible, con un toque), activados con un
+  comando de voz «tipo Alexa»; **7 (control de pantalla) aprobado con la opción B**, eligiendo antes las apps y con «doble seguro verbal» (por concretar). Sin código aún.
+  - **Reutilizable de and-code (MIT, `/workspace/and-code`):** `feature/wakeword` (Vosk, sin conexión; su catálogo trae inglés y japonés, falta
+    `vosk-model-small-es-0.42`, ≈ 39 MB, Apache-2.0), `VoiceInteractionService` (asistente predeterminado) y TTS.
+  - **Pendiente de decidir:** confirmación por voz además del toque; forma del seguro del 7; cómo dejar NVIDIA «predefinido» (sin incluir claves: el repo es público).
+- **P22. Conexiones con otros dispositivos** (pedido el 2026-11-25, sin código): SSH (con Linux/Termux de F5 o biblioteca), VPN (`VpnService` + WireGuard), visor VNC,
+  KDE Connect (protocolo abierto; empezar apoyándose en su app). Huawei Share / Súper Dispositivo: no encontré SDK público; solo el menú «Compartir» del sistema.
+- **Agente de respaldo en and-code:** no hace falta variante: and-code ya conecta proveedores en OpenCode y OpenCode 1.19.6 lista modelos de NVIDIA.
+
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
   almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a

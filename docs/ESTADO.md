@@ -370,3 +370,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Primer parche de Dory no compilaba (`graph_nodes_per_tensor`), corregido (`716a283`). Asistente (P20-1): typecheck, pruebas y bundle en verde.
 - **2026-11-25** · Compilación de Android en verde con el parche de Dory corregido (`716a283`); APK en `APK IA/apk/PyroHorns-0.1.0-F1.5-modelos-prueba.apk` (+ `.sha256`). Pendiente: probar Dory en el móvil.
 - **2026-11-25** · CI del asistente en verde; APK copiado con permisos de calendario y alarma comprobados. Pendiente: móvil y que el usuario elija los accesos siguientes.
+- **2026-11-25** · Registradas P21 (accesos y voz) y P22 (conexiones); comprobado que and-code/OpenCode admiten NVIDIA sin variante. Sin código; pendiente de confirmación.
