@@ -24,6 +24,7 @@ declare class PyroHornsLlamaModule extends NativeModule<{ onEvent: (event: Llama
   resetPeakMemory(): boolean;
   keepScreenOn(on: boolean): void;
   generate(handle: number, roles: string[], contents: string[], threads: number, noThink: boolean): Promise<void>;
+  warm(handle: number, roles: string[], contents: string[], threads: number): Promise<void>;
   cancel(handle: number): Promise<void>;
   unloadModel(handle: number): Promise<void>;
 }

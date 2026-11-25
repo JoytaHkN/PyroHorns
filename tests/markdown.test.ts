@@ -38,4 +38,11 @@ check(
 check(parseBlocks('#etiqueta y C# no son títulos')[0]!.kind === 'para', '# sin espacio no es título');
 check(parseBlocks('```sh\n# comentario\n```')[0]!.kind === 'code', 'dentro de un bloque de código # no es título');
 
+check(kinds('un *backend* y *web scraping*.') === 'text,italic,text,italic,text', 'cursiva con un asterisco');
+check(kinds('(*prompt*)') === 'text,italic,text' && kinds('*on-device*') === 'italic', 'cursiva junto a signos');
+for (const s of ['2 * 3 * 4', 'a*b*c', 'borra *.jpg y *.png', 'nombre*', '** sin cerrar']) {
+  check(parseInline(s).every((p) => p.kind === 'text'), `sin cursiva: ${s}`);
+}
+check(kinds('**negrita** y *cursiva*') === 'bold,text,italic', 'negrita y cursiva juntas');
+
 done();

@@ -11,6 +11,7 @@ import { check, done } from './helpers';
 interface Seen {
   noThink?: boolean;
   roles?: string;
+  warms?: string[];
   loads: string[];
   unloads: number;
   generates: number;
@@ -38,6 +39,9 @@ function fakeNative(script: () => StreamEvent[] | string[], seen: Seen, delayMs 
       options.onEvent({ type: 'usage', usage: { promptTokens: 5, completionTokens: 9, ttftMs: 100, tokPerSec: 12.34 } });
       options.onEvent({ type: 'done' });
       running--;
+    },
+    warm: async (_id, messages) => {
+      (seen.warms ??= []).push(messages.map((m) => `${m.role}:${m.content}`).join(','));
     },
     cancel: async () => {},
     unloadModel: async () => {
@@ -161,6 +165,16 @@ async function withModule(chunks: string[], delayMs = 0) {
     ['lfm3-1.7b', 'phi-3.5-mini', 'qwen3-1.7b'].map((modelId) => preloadLlamaModel({ modelId, contextTokens: 8192 })),
   );
   check(seen.loads.join(',') === 'qwen3-1.7b', 'cambios seguidos de modelo: solo se carga el último');
+
+  // P17-2: la instrucción se adelanta justo después de cargar, y solo entonces.
+  seen = await withModule(['Hola']);
+  await preloadLlamaModel({ modelId: 'lfm3-1.7b', contextTokens: 8192, system: 'instrucción' });
+  check(seen.warms?.join() === 'system:instrucción', 'carga anticipada: procesa la instrucción');
+  await preloadLlamaModel({ modelId: 'lfm3-1.7b', contextTokens: 8192, system: 'instrucción' });
+  check(seen.warms?.length === 1, 'con el modelo ya cargado no se repite');
+  seen = await withModule(['Hola']);
+  await run('lfm3-1.7b', true);
+  check(seen.warms === undefined, 'al enviar un mensaje no hay paso previo aparte');
 
   done();
 })();

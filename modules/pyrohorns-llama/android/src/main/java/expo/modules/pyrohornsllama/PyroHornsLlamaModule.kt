@@ -162,6 +162,10 @@ class PyroHornsLlamaModule : Module() {
       }
     }
 
+    AsyncFunction("warm") Coroutine { handle: Long, roles: List<String>, contents: List<String>, threads: Int ->
+      withContext(Dispatchers.IO) { native.warm(handle, roles.toTypedArray(), contents.toTypedArray(), threads) }
+    }
+
     // Prueba de rendimiento (P13): devuelve JSON con los tiempos de prefill y generación.
     AsyncFunction("bench") Coroutine { handle: Long, nPrompt: Int, nGen: Int, threads: Int ->
       withContext(Dispatchers.IO) { native.bench(handle, nPrompt, nGen, threads) }

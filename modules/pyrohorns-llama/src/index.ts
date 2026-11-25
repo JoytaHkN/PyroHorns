@@ -129,6 +129,16 @@ export async function generate(
   }
 }
 
+/** Procesa la instrucción por adelantado, antes del primer mensaje. */
+export async function warm(handle: number, messages: { role: string; content: string }[], threads: number): Promise<void> {
+  await Native.warm(
+    handle,
+    messages.map((m) => m.role),
+    messages.map((m) => m.content),
+    threads
+  );
+}
+
 export async function cancel(handle: number): Promise<void> {
   await Native.cancel(handle);
 }

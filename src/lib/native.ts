@@ -14,6 +14,7 @@ import {
   isLlamaNativeAvailable,
   loadModel as nativeLoadModel,
   unloadModel as nativeUnloadModel,
+  warm as nativeWarm,
 } from '@pyrohorns/llama';
 
 const handles = new Map<string, number>();
@@ -65,6 +66,11 @@ export const nativeLlamaModule: NativeLlamaModule = {
           break;
       }
     });
+  },
+
+  async warm(modelId, messages, threads) {
+    const handle = handles.get(modelId);
+    if (handle !== undefined) await nativeWarm(handle, messages, threads);
   },
 
   async cancel(modelId) {

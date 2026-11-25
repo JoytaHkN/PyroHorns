@@ -21,6 +21,8 @@ export interface NativeLlamaModule {
     },
     signal: AbortSignal
   ): Promise<void>;
+  /** Procesa la instrucción por adelantado (opcional). */
+  warm?(modelId: string, messages: ProviderMessage[], threads: number): Promise<void>;
   /** Cancela la generación en curso. */
   cancel(modelId: string): Promise<void>;
   /** Descarga el modelo de la RAM. */
@@ -36,8 +38,13 @@ let nativeModule: NativeLlamaModule | null = null;
 
 type LoadTarget = Pick<StreamOptions, 'modelId' | 'contextTokens'>;
 
+type PreloadTarget = LoadTarget & {
+  /** Instrucción de sistema que se procesa justo después de cargar. */
+  system?: string;
+};
+
 /** Última carga anticipada pedida: si se cambia varias veces de modelo, solo se carga el último. */
-let wanted: LoadTarget | null = null;
+let wanted: PreloadTarget | null = null;
 
 /** Modelo que se queda cargado entre mensajes (P15-3). Solo hay uno a la vez (PLAN §3). */
 let loaded: { key: string; id: string } | null = null;
@@ -85,13 +92,24 @@ async function dropLoaded(native: NativeLlamaModule) {
  * Carga el modelo antes de que haga falta (al abrir el chat o cambiar de modelo). Los errores se callan aquí:
  * si falta el archivo o no se puede abrir, el mensaje lo dirá al enviar.
  */
-export async function preloadLlamaModel(target: LoadTarget): Promise<void> {
+export async function preloadLlamaModel(target: PreloadTarget): Promise<void> {
   const native = nativeModule;
   if (!native) return;
   wanted = target;
   const release = await acquire();
   try {
-    if (wanted === target) await ensureLoaded(native, target);
+    if (wanted !== target) return;
+    const fresh = loaded?.key !== `${target.modelId}@${target.contextTokens}`;
+    const id = await ensureLoaded(native, target);
+    // Si mientras tanto llegó un mensaje u otro modelo (`wanted` cambió), no se adelanta nada.
+    if (fresh && target.system && native.warm && wanted === target) {
+      useEngine.getState().setLoading(true);
+      try {
+        await native.warm(id, [{ role: 'system', content: target.system }], DEFAULT_THREADS);
+      } finally {
+        useEngine.getState().setLoading(false);
+      }
+    }
   } catch {
     // Se reintenta al enviar.
   } finally {

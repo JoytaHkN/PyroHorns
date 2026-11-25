@@ -15,6 +15,7 @@ import { modeById } from '@/data/agents';
 import { contextTokens, modelById } from '@/data/models';
 import { conversationTokens, formatTokens } from '@/lib/context';
 import { send, stop } from '@/lib/engine';
+import { systemPrompt } from '@/lib/system-prompt';
 import { preloadLlamaModel } from '@/providers/llama';
 import { useActiveConversation, useChat } from '@/store/chat';
 import { useEngine } from '@/store/engine';
@@ -49,7 +50,7 @@ export default function ChatScreen() {
 
   // Carga anticipada: al abrir el chat y al cambiar de modelo o de contexto.
   useEffect(() => {
-    if (native) void preloadLlamaModel({ modelId: model.id, contextTokens: ctx });
+    if (native) void preloadLlamaModel({ modelId: model.id, contextTokens: ctx, system: systemPrompt(model.id) });
   }, [native, model.id, ctx]);
 
   useEffect(() => {

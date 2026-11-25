@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstring>
 #include <cstdint>
+#include <cstdlib>
 #include <exception>
 #include <memory>
 #include <mutex>
@@ -16,6 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "gguf.h"
 #include "llama.h"
 
 namespace {
@@ -175,6 +177,72 @@ void onLlamaLog(enum ggml_log_level, const char * text, void *) {
   crumb("load: " + line);
 }
 
+// Deja el GGUF en la caché del sistema leyéndolo seguido antes de mapearlo: con mmap, llama.cpp lo trae a golpe de fallos de
+// página (≈ 0,2 GB/s en el teléfono de referencia, frente a 1,1–1,4 GB/s en bloques grandes). La tabla por capas se salta,
+// porque se lee bajo demanda.
+void readAhead(const std::string & path) {
+  const auto t0 = std::chrono::steady_clock::now();
+  off_t skipFrom = 0;
+  off_t skipTo = 0;
+  gguf_init_params params{true, nullptr};
+  if (gguf_context * meta = gguf_init_from_file(path.c_str(), params)) {
+    const int64_t id = gguf_find_tensor(meta, "per_layer_token_embd.weight");
+    if (id >= 0) {
+      skipFrom = static_cast<off_t>(gguf_get_data_offset(meta) + gguf_get_tensor_offset(meta, id));
+      skipTo = skipFrom + static_cast<off_t>(gguf_get_tensor_size(meta, id));
+    }
+    gguf_free(meta);
+  }
+  const int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
+  if (fd < 0) return;  // el error lo dará la carga
+  posix_fadvise(fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+  std::vector<char> buf(8u << 20);
+  off_t offset = 0;
+  int64_t total = 0;
+  while (true) {
+    if (offset >= skipFrom && offset < skipTo) offset = skipTo;
+    size_t want = buf.size();
+    if (offset < skipFrom) want = std::min(want, static_cast<size_t>(skipFrom - offset));
+    const ssize_t n = pread(fd, buf.data(), want, offset);
+    if (n <= 0) break;
+    offset += n;
+    total += n;
+  }
+  close(fd);
+  crumb("load: " + std::to_string(total >> 20) + " MiB leídos en bloques en " +
+        std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count()) + " ms");
+}
+
+// Ajustes de muestreo que el propio GGUF recomienda (general.sampling.*); lo que no diga se queda con el valor de la app.
+float modelSetting(const llama_model * model, const char * key, float fallback) {
+  char buf[64];
+  if (llama_model_meta_val_str(model, key, buf, sizeof(buf)) <= 0) return fallback;
+  char * end = nullptr;
+  const float value = std::strtof(buf, &end);
+  return end != buf ? value : fallback;
+}
+
+llama_sampler * makeSampler(const llama_model * model) {
+  const float temp = modelSetting(model, "general.sampling.temp", 0.8f);
+  const int32_t topK = static_cast<int32_t>(modelSetting(model, "general.sampling.top_k", 40.0f));
+  const float topP = modelSetting(model, "general.sampling.top_p", 0.9f);
+  const float penalty = modelSetting(model, "general.sampling.penalty_repeat", 1.0f);
+  auto params = llama_sampler_chain_default_params();
+  params.no_perf = false;
+  llama_sampler * chain = llama_sampler_chain_init(params);
+  if (penalty != 1.0f) {
+    const int32_t nVocab = llama_vocab_n_tokens(llama_model_get_vocab(model));
+    llama_sampler_chain_add(chain, llama_sampler_init_penalties(nVocab, 64, penalty, 0.0f, 0.0f));
+  }
+  llama_sampler_chain_add(chain, llama_sampler_init_top_k(topK));
+  llama_sampler_chain_add(chain, llama_sampler_init_top_p(topP, 1));
+  llama_sampler_chain_add(chain, llama_sampler_init_temp(temp));
+  llama_sampler_chain_add(chain, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+  crumb("load: muestreo temp " + std::to_string(temp) + ", top-k " + std::to_string(topK) + ", top-p " + std::to_string(topP) +
+        ", penalización " + std::to_string(penalty));
+  return chain;
+}
+
 // shared_ptr: si se descarga mientras se genera, el modelo vive hasta que termine la generación.
 std::shared_ptr<ModelState> getModel(jlong handle) {
   std::lock_guard<std::mutex> lock(g_mutex);
@@ -197,7 +265,8 @@ std::string plainPrompt(const std::vector<ChatTurn> & turns) {
   return out;
 }
 
-std::string formatPrompt(const llama_model * model, const std::vector<ChatTurn> & turns) {
+// addAssistant: termina con el comienzo de la respuesta (false para procesar solo la instrucción por adelantado).
+std::string formatPrompt(const llama_model * model, const std::vector<ChatTurn> & turns, bool addAssistant = true) {
   const char * tmpl = llama_model_chat_template(model, nullptr);
   if (tmpl == nullptr) {
     crumb("plantilla: el modelo no trae plantilla, se usa el texto tal cual");
@@ -210,7 +279,7 @@ std::string formatPrompt(const llama_model * model, const std::vector<ChatTurn> 
     for (const auto & t : turns) {
       out += "<|turn>" + (t.role == "assistant" ? std::string("model") : t.role) + "\n" + t.content + "<turn|>\n";
     }
-    return out + "<|turn>model\n";
+    return addAssistant ? out + "<|turn>model\n" : out;
   }
   std::vector<llama_chat_message> msgs;
   size_t chars = 0;
@@ -219,14 +288,14 @@ std::string formatPrompt(const llama_model * model, const std::vector<ChatTurn> 
     chars += t.content.size() + 64;
   }
   std::vector<char> buf(chars * 2 + 512);
-  int32_t n = llama_chat_apply_template(tmpl, msgs.data(), msgs.size(), true, buf.data(), static_cast<int32_t>(buf.size()));
+  int32_t n = llama_chat_apply_template(tmpl, msgs.data(), msgs.size(), addAssistant, buf.data(), static_cast<int32_t>(buf.size()));
   if (n < 0) {
     crumb("plantilla: no reconocida por llama_chat_apply_template, se usa el texto tal cual");
     return plainPrompt(turns);
   }
   if (n > static_cast<int32_t>(buf.size())) {
     buf.resize(static_cast<size_t>(n));
-    n = llama_chat_apply_template(tmpl, msgs.data(), msgs.size(), true, buf.data(), static_cast<int32_t>(buf.size()));
+    n = llama_chat_apply_template(tmpl, msgs.data(), msgs.size(), addAssistant, buf.data(), static_cast<int32_t>(buf.size()));
     if (n < 0 || n > static_cast<int32_t>(buf.size())) return plainPrompt(turns);
   }
   return std::string(buf.data(), static_cast<size_t>(n));
@@ -325,6 +394,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
   try {
     crumb("load: abrir modelo (n_ctx=" + std::to_string(contextTokens) + (useMmap == JNI_TRUE ? ", mmap)" : ", sin mmap)"));
     auto state = std::make_shared<ModelState>();
+    if (useMmap == JNI_TRUE) readAhead(path);
 
     llama_model_params modelParams = llama_model_default_params();
     modelParams.n_gpu_layers = 0;
@@ -351,13 +421,7 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_loadModel(
     }
     crumb("load: contexto ok");
 
-    auto samplerParams = llama_sampler_chain_default_params();
-    samplerParams.no_perf = false;
-    state->sampler = llama_sampler_chain_init(samplerParams);
-    llama_sampler_chain_add(state->sampler, llama_sampler_init_top_k(40));
-    llama_sampler_chain_add(state->sampler, llama_sampler_init_top_p(0.9f, 1));
-    llama_sampler_chain_add(state->sampler, llama_sampler_init_temp(0.8f));
-    llama_sampler_chain_add(state->sampler, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
+    state->sampler = makeSampler(state->model);
 
     const jlong handle = g_nextHandle.fetch_add(1);
     {
@@ -493,7 +557,6 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
         crumb("gen: primer token");
       }
 
-      llama_sampler_accept(state->sampler, next);
       generated++;
       if (generated % 64 == 0) crumb("gen: " + std::to_string(generated) + " tokens");
       batchSetTokens(batch.get(), &next, 1, pos);
@@ -521,6 +584,45 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_generate(
   } catch (...) {
     crumb("gen: excepción C++ desconocida");
     emit(env, sink, "error", "Excepción desconocida en el motor", "{}");
+  }
+}
+
+// Procesa la instrucción antes del primer mensaje (P17-2): queda en la caché KV y el prompt siguiente solo añade lo nuevo.
+// Si falla no pasa nada: el mensaje la procesará.
+extern "C" JNIEXPORT void JNICALL
+Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_warm(
+    JNIEnv * env, jobject, jlong handle, jobjectArray jRoles, jobjectArray jContents, jint threads) {
+  const std::shared_ptr<ModelState> state = getModel(handle);
+  if (state == nullptr) return;
+  try {
+    std::vector<ChatTurn> turns;
+    const jsize count = env->GetArrayLength(jRoles);
+    for (jsize i = 0; i < count; ++i) turns.push_back({toString(env, jRoles, i), toString(env, jContents, i)});
+    const std::string prompt = formatPrompt(state->model, turns, false);
+    const std::vector<llama_token> tokens = tokenize(llama_model_get_vocab(state->model), prompt);
+    if (tokens.empty() || tokens.size() >= llama_n_ctx(state->ctx)) return;
+    llama_set_n_threads(state->ctx, threads, threads);
+    const auto t0 = std::chrono::steady_clock::now();
+    const int32_t reused = reuseCache(*state, tokens);
+    const int32_t pending = static_cast<int32_t>(tokens.size()) - reused;
+    std::unique_ptr<llama_batch_ext, void (*)(llama_batch_ext *)> batch(llama_batch_ext_init(state->ctx), llama_batch_ext_free);
+    batchSetTokens(batch.get(), tokens.data() + reused, pending, reused);
+    if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {
+      crumb("warm: llama_process falló");
+      state->cached.clear();
+      state->cachedText.clear();
+      llama_memory_clear(llama_get_memory(state->ctx), true);
+      return;
+    }
+    state->cached.insert(state->cached.end(), tokens.begin() + reused, tokens.end());
+    state->cachedText = prompt;
+    crumb("warm: instrucción procesada (" + std::to_string(pending) + " tokens) en " +
+          std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count()) + " ms");
+    crumb("idle");
+  } catch (const std::exception & e) {
+    crumb(std::string("warm: excepción C++: ") + e.what());
+  } catch (...) {
+    crumb("warm: excepción C++ desconocida");
   }
 }
 
@@ -571,7 +673,6 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_bench(
     llama_pos pos = nPrompt;
     while (generated < nGen && !state->cancelled.load()) {
       const llama_token next = llama_sampler_sample(state->sampler, state->ctx, -1);
-      llama_sampler_accept(state->sampler, next);
       batchSetTokens(batch.get(), &next, 1, pos);
       pos++;
       if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) {

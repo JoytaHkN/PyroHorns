@@ -56,6 +56,8 @@ export async function generate(
   throw new Error('El motor nativo solo está disponible en Android');
 }
 
+export async function warm(): Promise<void> {}
+
 export async function cancel(): Promise<void> {}
 
 export async function unloadModel(): Promise<void> {}

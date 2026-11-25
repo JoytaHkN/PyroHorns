@@ -48,6 +48,7 @@ export function parseBlocks(src: string): Block[] {
 export type Inline =
   | { kind: 'text'; text: string }
   | { kind: 'bold'; text: string }
+  | { kind: 'italic'; text: string }
   | { kind: 'code'; text: string }
   | { kind: 'link'; text: string; url: string }
   | { kind: 'image'; alt: string; url: string };
@@ -58,7 +59,7 @@ const IMAGE_SCHEMES = /^https?:\/\//i;
 export const isOpenableUrl = (url: string) => LINK_SCHEMES.test(url.trim());
 export const isLoadableImage = (url: string) => IMAGE_SCHEMES.test(url.trim());
 
-const TOKEN = /(!\[[^\]\n]*\]\([^)\s]+\)|\[[^\]\n]+\]\([^)\s]+\)|\*\*[^*]+\*\*|`[^`]+`|https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/g;
+const TOKEN = /(!\[[^\]\n]*\]\([^)\s]+\)|\[[^\]\n]+\]\([^)\s]+\)|\*\*[^*]+\*\*|\*[^\s*](?:[^*\n]*[^\s*])?\*|`[^`]+`|https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])/g;
 
 export function parseInline(text: string): Inline[] {
   const out: Inline[] = [];
@@ -84,6 +85,12 @@ export function parseInline(text: string): Inline[] {
       if (isOpenableUrl(url)) out.push({ kind: 'link', text: label, url });
       else pushText(tok);
     } else if (tok.startsWith('**')) out.push({ kind: 'bold', text: tok.slice(2, -2) });
+    else if (tok.startsWith('*')) {
+      // `a*b*c` o `**x` no son cursiva: los asteriscos pegados a letras, números u otro asterisco se dejan como texto.
+      const glued = /[A-Za-z0-9À-ÿ*]/;
+      if (glued.test(text[at - 1] ?? ' ') || glued.test(text[last] ?? ' ')) pushText(tok);
+      else out.push({ kind: 'italic', text: tok.slice(1, -1) });
+    }
     else if (tok.startsWith('`')) out.push({ kind: 'code', text: tok.slice(1, -1) });
     else out.push({ kind: 'link', text: tok, url: tok });
   }

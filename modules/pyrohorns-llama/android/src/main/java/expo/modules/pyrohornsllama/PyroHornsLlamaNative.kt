@@ -18,6 +18,8 @@ class PyroHornsLlamaNative {
     sink: LlamaEventSink
   )
 
+  external fun warm(handle: Long, roles: Array<String>, contents: Array<String>, threads: Int)
+
   external fun bench(handle: Long, nPrompt: Int, nGen: Int, threads: Int): String
 
   external fun cancel(handle: Long)

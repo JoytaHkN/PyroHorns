@@ -71,6 +71,12 @@ function Paragraph({ text, heading }: { text: string; heading?: number }) {
                   {p.text}
                 </Text>
               );
+            case 'italic':
+              return (
+                <Text key={i} style={{ fontStyle: 'italic' }}>
+                  {p.text}
+                </Text>
+              );
             case 'code':
               return (
                 <Text key={i} style={{ fontFamily: fonts.mono, fontSize: 13, color: pal.ink, backgroundColor: pal.surface2 }}>
