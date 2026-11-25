@@ -250,6 +250,11 @@ Arquitectura:
     consulta (tienen `output.weight` aparte), pero habría que parchear llama.cpp y el ahorro es pequeño; en LFM3 y CyberSecQwen se usa entera en cada token.
   - Orden recomendado: 0 + 1 → 2 + 3 → 4 → 5. Las piezas 2 y 3 dependen de que la reutilización de memoria de P16 funcione con LFM3, que es híbrido.
 
+- **P18. Internet para los modelos locales** — idea del usuario (2026-11-25), **pendiente de decisión**, sin código. No hace falta un servidor propio: la app consulta
+  y añade el resultado al contexto. Cuándo se busca: (A) lo decide el modelo (necesita el bucle de herramientas de F3), (B) botón por mensaje (recomendada para
+  empezar), (C) botón y confirmación del texto que sale del teléfono. Fuente: Wikipedia (sin clave, solo enciclopedia), un buscador con clave propia (S5) o un
+  servidor SearXNG. Coste: el texto añadido se procesa antes de responder (≈ 1000 tokens: ≈ 35 s con Nemotron y ≈ 15 s con LFM3).
+
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
   almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a

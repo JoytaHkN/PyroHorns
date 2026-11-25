@@ -203,6 +203,10 @@
      Carga de Nemotron en el chat: 39 s (referencia antes de P17-0). Android mató la app el 25-11 00:24 con 3,6 GB de RAM (estado 9).
    - **P17-0 y arreglos (2026-11-25), CI en verde (`df37523`), pendiente de probar en el móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-tabla-prueba.apk` + `.sha256`): `lazy_mode = LLAMA_LAZY_MODE_ON` (el Diagnóstico anota «lazy read enabled»), prompt
      comparado por texto con lo que hay en memoria (solo se tokeniza lo nuevo; el rastro anota «coinciden N de M») y títulos `#` en las respuestas.
+   - **Prueba en el móvil de P17-0 (2026-11-25, Diagnóstico y capturas):** «lazy read enabled» (2856 MiB). Carga de Nemotron **28,7 s frente a 39,2 s** (una medida de
+     cada; condiciones no idénticas). Generación 5,9–6,2 tok/s (antes 6,3): sin cambio. RAM sin medir. Memoria de conversación con Nemotron correcta en 4 turnos
+     seguidos (131/157, 219/248, 269/310, 351/408). Primer turno: 90 tokens en 3,4 s. **Sin probar:** el arreglo de reutilización con LFM3 y los títulos.
+     Fallo visto: `*cursiva*` con un asterisco se ve en crudo. Nemotron inventó datos sobre sus «predecesores» (el GGUF solo trae nombre, gemma4 y 7,5B).
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -315,3 +319,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Botón de copiar en mensajes del usuario (CI verde, APK copiado). Análisis de streaming desde almacenamiento: la tabla de Nemotron bajo demanda se une a P17 como pieza 0.
 - **2026-11-25** · Resultados de P16 en el móvil. Tabla de Nemotron bajo demanda (P17-0), reutilización de memoria por texto y títulos en las respuestas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
 - **2026-11-25** · CI de P17-0 en verde (`df37523`); APK copiado a `APK IA/apk/`. Pendiente: móvil y decidir 2, A (carga en bloques grandes) y B (muestreo recomendado).
+- **2026-11-25** · P17-0 probada: carga de Nemotron 39 → 29 s, tok/s iguales, memoria correcta. Registrada P18 (internet). Pendiente: decidir 2, A, B, cursivas y P18.
