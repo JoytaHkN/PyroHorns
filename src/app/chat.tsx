@@ -14,6 +14,7 @@ import { T } from '@/components/text';
 import { modeById } from '@/data/agents';
 import { contextTokens, modelById } from '@/data/models';
 import { conversationTokens, formatTokens } from '@/lib/context';
+import { cloudAvailable } from '@/lib/cloud';
 import { send, stop } from '@/lib/engine';
 import { systemPrompt } from '@/lib/system-prompt';
 import { preloadLlamaModel } from '@/providers/llama';
@@ -58,8 +59,9 @@ export default function ChatScreen() {
     if (messages.length) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [messages.length, last?.content.length]);
 
-  const onSend = (text: string, web = false) => {
-    void send(text, conv?.id, { web });
+  const onSend = (text: string, web = false, cloud = false) => {
+    if (cloud && !cloudAvailable) return;
+    void send(text, conv?.id, { web, cloud });
   };
 
   return (
@@ -163,7 +165,7 @@ export default function ChatScreen() {
           />
         )}
 
-        <Composer busy={busy} onSend={onSend} onStop={() => conv && stop(conv.id)} onOpenAgent={() => setPicker(true)} />
+        <Composer busy={busy} onSend={(t, w, c) => onSend(t, w, c)} onStop={() => conv && stop(conv.id)} onOpenAgent={() => setPicker(true)} />
       </KeyboardAvoidingView>
 
       <Drawer open={drawer} onClose={() => setDrawer(false)} onNew={() => select(null)} onAskDelete={setToDelete} />

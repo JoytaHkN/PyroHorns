@@ -248,7 +248,11 @@
    - **Prueba del asistente en el móvil (2026-11-25, capturas):** LFM3 escribe bloques con la primera línea «alarma» o «tarea» y sin «tipo:» (ahora se aceptan); la aclaración
      «¿qué texto?» perdía las instrucciones (corregido); el modelo inventó «ya existe una alarma a las 15:00» (corregido con una instrucción). Nemotron sin restricciones
      escribió bien el formato. Un bloque no entendido ya no se muestra como código. **Por comprobar:** si se creó el evento, la alarma y la tarea del mensaje anterior.
-   -    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
+   -    - **Nube y gratis (2026-11-25):** NVIDIA verificado: la lista de modelos es pública, pero el chat devuelve 401 sin clave. OpenRouter devuelve 401 sin clave. OpenCode Zen
+     (los modelos gratis que usa AndCode sin configurar) responde 429 «Free models work in OpenCode» fuera de OpenCode: **no se replica** (saltarlo sería eludir el servicio).
+     Hecho: botón **Nube** junto al globo (decisión 1-a) que envía el mensaje a NVIDIA (`cloud-nv-ultra`); sin clave avisa y lleva a Ajustes. Regenerar mantiene la nube.
+     Nombres comprobados en el catálogo de NVIDIA: nemotron-3-ultra, kimi-k3.1-pro, glm-5.3-flash, nemotron-3.5-lightning/super-vl/bolt-e4b (kimi-k3 no existe: no se usa).
+   - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
    - Paso 4 ✅ (medido con P13): TTFT, tok/s y RAM con 1K y 7,6K de contexto; no cumple el objetivo de TTFT ni la generación a 7,6K.
@@ -376,3 +380,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Registradas P21 (accesos y voz) y P22 (conexiones); comprobado que and-code/OpenCode admiten NVIDIA sin variante. Sin código; pendiente de confirmación.
 - **2026-11-25** · Prueba del asistente: tres fallos corregidos (formato sin «tipo:», aclaraciones, estado inventado). NVIDIA bloqueado para esta cuenta. Decisiones de P21 registradas.
 - **2026-11-25** · CI en verde (`d433b2a`); APK `PyroHorns-0.1.0-F1.5-asistente2-prueba.apk` copiado. Pendiente: móvil.
+- **2026-11-25** · Botón Nube implementado; NVIDIA y OpenRouter exigen clave; OpenCode Zen no se replica (uso restringido a OpenCode).

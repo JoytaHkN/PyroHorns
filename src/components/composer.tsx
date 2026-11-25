@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { modeById } from '@/data/agents';
 import { modelById } from '@/data/models';
+import { cloudAvailable } from '@/lib/cloud';
 import { activeModelId, useSettings } from '@/store/settings';
 import { fonts } from '@/theme/tokens';
 import { usePalette } from '@/theme/use-palette';
@@ -13,7 +14,7 @@ import { T } from './text';
 interface Props {
   busy: boolean;
   /** `web`: buscar este mensaje en internet antes de responder. */
-  onSend: (text: string, web: boolean) => void;
+  onSend: (text: string, web: boolean, cloud: boolean) => void;
   onStop: () => void;
   onOpenAgent: () => void;
 }
@@ -23,6 +24,7 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [web, setWeb] = useState(false);
+  const [cloud, setCloud] = useState(false);
   const settings = useSettings();
   const model = modelById(activeModelId(settings));
   const mode = modeById(settings.mode);
@@ -31,9 +33,10 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
 
   const submit = () => {
     if (!canSend) return;
-    onSend(text.trim(), web);
+    onSend(text.trim(), web, cloud);
     setText('');
     setWeb(false); // se elige en cada mensaje
+    setCloud(false);
   };
 
   return (

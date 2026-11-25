@@ -30,6 +30,9 @@ export interface LocalModel {
 
 export type CloudProviderId = 'nvidia' | 'openrouter';
 
+/** Modelo que usa el botón «Nube» (NVIDIA; necesita la clave del usuario). */
+export const CLOUD_DEFAULT_ID = 'cloud-nv-ultra';
+
 /** Sirve para conversar (no es un borrador ni un adaptador). */
 export const canChat = (m: LocalModel) => m.kind !== 'aux';
 

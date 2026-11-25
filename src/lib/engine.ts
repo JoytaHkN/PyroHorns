@@ -1,4 +1,4 @@
-import { contextTokens, modelById } from '@/data/models';
+import { CLOUD_DEFAULT_ID, contextTokens, modelById } from '@/data/models';
 import { CloudError } from '@/providers/cloud';
 import { MockProvider } from '@/providers/mock';
 import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
@@ -52,9 +52,9 @@ function titleFrom(text: string) {
 }
 
 /** Envía un mensaje; crea la conversación si no existe. Devuelve el id de conversación. */
-export async function send(text: string, convId?: string | null, opts: { web?: boolean } = {}): Promise<string> {
+export async function send(text: string, convId?: string | null, opts: { web?: boolean; cloud?: boolean } = {}): Promise<string> {
   const chat = useChat.getState();
-  const agent = currentAgent();
+  const agent = opts.cloud ? { ...currentAgent(), modelId: CLOUD_DEFAULT_ID } : currentAgent();
   let id = convId ?? null;
   if (!id || !chat.conversations.some((c) => c.id === id)) id = chat.newConversation(agent);
   const convId_ = id;
@@ -94,7 +94,8 @@ export async function regenerate(convId: string): Promise<void> {
   const conv = useChat.getState().conversations.find((c) => c.id === convId);
   const last = conv?.messages[conv.messages.length - 1];
   if (!last || last.role !== 'assistant' || isGenerating(convId)) return;
-  const agent = currentAgent();
+  // Una respuesta de la nube se regenera con la nube, aunque el modelo activo sea otro.
+  const agent = last.modelId && modelById(last.modelId).cloud ? { ...currentAgent(), modelId: last.modelId } : currentAgent();
   const chat = useChat.getState();
   chat.setAgent(convId, agent);
   chat.patchMessage(convId, last.id, {
