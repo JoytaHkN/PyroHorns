@@ -20,6 +20,15 @@ class PyroHornsLlamaNative {
 
   external fun warm(handle: Long, roles: Array<String>, contents: Array<String>, threads: Int)
 
+  external fun complete(
+    handle: Long,
+    roles: Array<String>,
+    contents: Array<String>,
+    threads: Int,
+    noThink: Boolean,
+    maxTokens: Int
+  ): String
+
   external fun bench(handle: Long, nPrompt: Int, nGen: Int, threads: Int): String
 
   external fun cancel(handle: Long)

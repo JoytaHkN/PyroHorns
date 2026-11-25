@@ -626,6 +626,79 @@ Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_warm(
   }
 }
 
+// Texto corto aparte de la conversación (P18: convertir un mensaje en una búsqueda). Guarda la memoria, genera con muestreo
+// voraz y la restaura, para que el chat no tenga que procesar todo de nuevo. Devuelve "" si no puede.
+extern "C" JNIEXPORT jstring JNICALL
+Java_expo_modules_pyrohornsllama_PyroHornsLlamaNative_complete(
+    JNIEnv * env, jobject, jlong handle, jobjectArray jRoles, jobjectArray jContents, jint threads, jboolean noThink,
+    jint maxTokens) {
+  const std::shared_ptr<ModelState> state = getModel(handle);
+  if (state == nullptr) return env->NewStringUTF("");
+  try {
+    std::vector<ChatTurn> turns;
+    const jsize count = env->GetArrayLength(jRoles);
+    for (jsize i = 0; i < count; ++i) turns.push_back({toString(env, jRoles, i), toString(env, jContents, i)});
+    std::string prompt = formatPrompt(state->model, turns);
+    if (noThink == JNI_TRUE) prompt += "<think>\n\n</think>\n\n";
+    const llama_vocab * vocab = llama_model_get_vocab(state->model);
+    const std::vector<llama_token> tokens = tokenize(vocab, prompt);
+    if (tokens.empty() || tokens.size() + static_cast<size_t>(maxTokens) >= llama_n_ctx(state->ctx)) return env->NewStringUTF("");
+
+    state->cancelled.store(false);
+    llama_set_n_threads(state->ctx, threads, threads);
+    const auto t0 = std::chrono::steady_clock::now();
+    std::vector<uint8_t> saved(llama_state_get_size(state->ctx));
+    const size_t used = llama_state_get_data(state->ctx, saved.data(), saved.size());
+    llama_memory_clear(llama_get_memory(state->ctx), true);
+
+    std::string out;
+    {
+      std::unique_ptr<llama_batch_ext, void (*)(llama_batch_ext *)> batch(llama_batch_ext_init(state->ctx), llama_batch_ext_free);
+      std::unique_ptr<llama_sampler, void (*)(llama_sampler *)> greedy(
+          llama_sampler_chain_init(llama_sampler_chain_default_params()), llama_sampler_free);
+      llama_sampler_chain_add(greedy.get(), llama_sampler_init_greedy());
+      batchSetTokens(batch.get(), tokens.data(), static_cast<int32_t>(tokens.size()), 0);
+      llama_pos pos = static_cast<llama_pos>(tokens.size());
+      if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) == 0) {
+        char piece[256];
+        for (int i = 0; i < maxTokens && !state->cancelled.load(); ++i) {
+          const llama_token next = llama_sampler_sample(greedy.get(), state->ctx, -1);
+          if (llama_vocab_is_eog(vocab, next)) break;
+          const int n = llama_token_to_piece(vocab, next, piece, sizeof(piece), 0, true);
+          if (n > 0) out.append(piece, static_cast<size_t>(n));
+          // Se pide una sola línea.
+          if (out.find('\n') != std::string::npos && out.find_first_not_of(" \n") < out.rfind('\n')) break;
+          batchSetTokens(batch.get(), &next, 1, pos++);
+          if (llama_process(state->ctx, LLAMA_PROCESS_TYPE_DECODE, batch.get()) != 0) break;
+        }
+      }
+    }
+
+    llama_memory_clear(llama_get_memory(state->ctx), true);
+    if (used == 0 || llama_state_set_data(state->ctx, saved.data(), used) == 0) {
+      crumb("complete: no se pudo restaurar la memoria, el chat la procesará de nuevo");
+      llama_memory_clear(llama_get_memory(state->ctx), true);
+      state->cached.clear();
+      state->cachedText.clear();
+    }
+    crumb("complete: " + std::to_string(tokens.size()) + " tokens de entrada, " +
+          std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count()) +
+          " ms, memoria guardada " + std::to_string(used >> 10) + " KiB");
+    crumb("idle");
+    out.resize(completeUtf8Prefix(out));
+    return env->NewStringUTF(out.c_str());
+  } catch (const std::exception & e) {
+    crumb(std::string("complete: excepción C++: ") + e.what());
+  } catch (...) {
+    crumb("complete: excepción C++ desconocida");
+  }
+  // La memoria pudo quedar a medias.
+  llama_memory_clear(llama_get_memory(state->ctx), true);
+  state->cached.clear();
+  state->cachedText.clear();
+  return env->NewStringUTF("");
+}
+
 // Prueba de rendimiento (P13): prefill de `nPrompt` tokens sintéticos y generación de `nGen` tokens, medidos por separado.
 // Devuelve JSON; no contiene texto del usuario ni del modelo (S9).
 extern "C" JNIEXPORT jstring JNICALL

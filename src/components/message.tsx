@@ -170,8 +170,8 @@ function Sources({ m }: { m: Message }) {
   if (!sources?.length) return null;
   return (
     <View style={{ gap: 2, marginLeft: 8 }}>
-      <T size={11} tone="muted" weight="semibold">
-        Fuentes (DuckDuckGo)
+      <T size={11} tone="muted" weight="semibold" selectable>
+        {m.web?.query ? `Se buscó en DuckDuckGo: «${m.web.query}»` : 'Fuentes (DuckDuckGo)'}
       </T>
       {sources.map((s, i) => (
         <T

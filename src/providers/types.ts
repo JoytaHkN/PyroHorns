@@ -44,4 +44,6 @@ export type StreamEvent =
 export interface ChatProvider {
   id: string;
   stream(messages: ProviderMessage[], opts: StreamOptions): AsyncIterable<StreamEvent>;
+  /** Texto corto aparte de la conversación (opcional). */
+  complete?(messages: ProviderMessage[], opts: StreamOptions): Promise<string>;
 }

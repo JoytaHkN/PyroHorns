@@ -1,12 +1,13 @@
 import { contextTokens, modelById } from '@/data/models';
 import { MockProvider } from '@/providers/mock';
 import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
-import type { ChatProvider } from '@/providers/types';
+import type { ChatProvider, StreamOptions } from '@/providers/types';
 import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
-import { uid, useChat, type AgentSnapshot } from '@/store/chat';
+import { uid, useChat, type AgentSnapshot, type Message } from '@/store/chat';
 import { buildContext, estimateTokens } from './context';
 import { errorSummary, log } from './log';
+import { cleanQuery, needsRewrite, queryMessages } from './search-query';
 import { systemPrompt } from './system-prompt';
 import { SearchError, searchDuckDuckGo, webContext } from './web-search';
 
@@ -92,7 +93,7 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
   /** Inicio del razonamiento: «Pensó N s» mide solo el razonamiento (no la carga del modelo ni el prefill). */
   let thinkStart: number | null = null;
   try {
-    await searchIfAsked(convId_, aiId, ctrl.signal);
+    await searchIfAsked(convId_, aiId, { ...agent, contextTokens: ctx, signal: ctrl.signal });
     const system = systemPrompt(agent.modelId);
     const messages = useChat.getState().conversations.find((c) => c.id === convId_)!.messages;
     const history = [
@@ -145,18 +146,32 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
 }
 
 /** Si el mensaje pidió internet y aún no hay resultados, busca y los guarda (al regenerar se reutilizan). */
-async function searchIfAsked(convId: string, aiId: string, signal: AbortSignal): Promise<void> {
+async function searchIfAsked(convId: string, aiId: string, opts: StreamOptions & { signal: AbortSignal }): Promise<void> {
   const messages = useChat.getState().conversations.find((c) => c.id === convId)!.messages;
   const question = messages[messages.findIndex((m) => m.id === aiId) - 1];
   if (!question || question.role !== 'user' || !question.web || question.web.context) return;
   useEngine.getState().setSearching(true);
   try {
-    const results = await searchDuckDuckGo(question.content, signal);
+    const query = await searchQuery(messages.slice(0, messages.indexOf(question)), question.content, opts);
+    const results = await searchDuckDuckGo(query, opts.signal);
     const chat = useChat.getState();
     chat.patchMessage(convId, question.id, { web: { context: webContext(results, new Date()) } });
-    chat.patchMessage(convId, aiId, { web: { sources: results.map(({ title, url }) => ({ title, url })) } });
+    chat.patchMessage(convId, aiId, { web: { query, sources: results.map(({ title, url }) => ({ title, url })) } });
   } finally {
     useEngine.getState().setSearching(false);
+  }
+}
+
+/** La consulta que sale hacia el buscador: el mensaje, o un resumen que hace el modelo del teléfono. */
+async function searchQuery(before: Message[], text: string, opts: StreamOptions & { signal: AbortSignal }): Promise<string> {
+  const previous = [...before].reverse().find((m) => m.role === 'user')?.content;
+  if (!provider.complete || !needsRewrite(text, previous)) return text;
+  try {
+    return cleanQuery(await provider.complete(queryMessages(text, previous), opts)) ?? text;
+  } catch (e) {
+    if (opts.signal.aborted) throw e;
+    log.warn('web.query_failed'); // sin el mensaje ni la consulta (S9)
+    return text;
   }
 }
 

@@ -176,5 +176,21 @@ async function withModule(chunks: string[], delayMs = 0) {
   await run('lfm3-1.7b', true);
   check(seen.warms === undefined, 'al enviar un mensaje no hay paso previo aparte');
 
+  // P18: texto aparte sin razonamiento, reutilizando el modelo cargado.
+  seen = newSeen();
+  const base = fakeNative(() => ['x'], seen);
+  let asked: { noThink: boolean; maxTokens: number } | undefined;
+  setNativeLlamaModule({
+    ...base,
+    complete: async (_id, _messages, o) => {
+      asked = o;
+      return 'consulta';
+    },
+  });
+  const out = await LlamaProvider.complete!([{ role: 'user', content: 'x' }], { modelId: 'lfm3-1.7b', mode: 'general', deep: true, contextTokens: 8192 });
+  await run('lfm3-1.7b', true);
+  check(out === 'consulta' && asked?.noThink === true && asked.maxTokens === 32, 'complete: corto y sin razonar');
+  check(seen.loads.length === 1, 'complete y el mensaje comparten el modelo cargado');
+
   done();
 })();

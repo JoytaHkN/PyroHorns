@@ -58,6 +58,10 @@ export async function generate(
 
 export async function warm(): Promise<void> {}
 
+export async function complete(): Promise<string> {
+  return '';
+}
+
 export async function cancel(): Promise<void> {}
 
 export async function unloadModel(): Promise<void> {}

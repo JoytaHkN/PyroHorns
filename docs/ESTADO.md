@@ -222,6 +222,15 @@
      **Fallos:** Nemotron dice que no puede buscar en internet aun con resultados (la instrucción dice «sin nube»); un mensaje largo con erratas como consulta dio
      enlaces inútiles (google.com, traductor); LFM3 leyó mal los resultados (p. ej. Allende «detenido»); las fórmulas `$…$` se ven en crudo; los bloques de código no
      tienen botón de copiar. Propuestas pendientes de visto bueno.
+   - **Arreglos 1, 4 y 2 aprobados (2026-11-25), pendientes de CI y móvil:** (1) los resultados dicen que sí tiene acceso y la instrucción de sistema menciona el
+     botón del globo; (4) «Copiar código» en cada bloque; (2) los mensajes de más de 8 palabras o que remiten al anterior se convierten en una consulta corta con el
+     modelo cargado (`complete` nativo: guarda la memoria del chat, genera hasta 32 tokens y la restaura; rastro «complete: …»), y se muestra «Se buscó en
+     DuckDuckGo: «…»». **Comprobar en el móvil** que restaurar la memoria no cierra la app con LFM3 y Nemotron y que el turno siguiente la reutiliza.
+     Quedan 3 (fórmulas) y 5 (los 11 s de carga).
+   - **Modelos de NVIDIA para el móvil (investigación del 2026-11-25, a petición del usuario, sin integrar):** el GGUF de Nemotron 3.5 Bolt E4B es el oficial
+     (6,18 GB, español incluido, temp 1,0 / top-p 0,95, OpenMDW-1.1); tiene borrador DFlash oficial (`…E4B-4GB-DFlash`) y el llama.cpp vendimizado trae `dflash`.
+     Nemotron 3 Nano 4B (2,84 GB) solo declara inglés y código. Voz: Nemotron 3.5 ASR Streaming 0,6B (español, NeMo-Speech.cpp; sin Android oficial) y Magpie TTS
+     364M (español; sin indicios de uso en móvil). Imagen: SANA no figura en stable-diffusion.cpp (que sí admite SD 1.5 / SD-Turbo, no de NVIDIA).
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -341,3 +350,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · S18-B implementada. Pendiente: CI y móvil.
 - **2026-11-25** · Internet, carga en bloques e instrucción por adelantado probados en el móvil: todo funciona; anotados fallos y propuestas.
 - **2026-11-25** · CI de S18-B en verde (`ca7ac5f`); APK copiado a `APK IA/apk/`.
+- **2026-11-25** · Arreglos 1, 4 y 2 implementados (typecheck, pruebas y bundle en verde); investigados los modelos de NVIDIA para el móvil. Pendiente: CI y móvil.

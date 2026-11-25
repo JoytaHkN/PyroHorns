@@ -1,3 +1,5 @@
+import * as Clipboard from 'expo-clipboard';
+import { useToast } from 'heroui-native';
 import { useState } from 'react';
 import { Image, Linking, Pressable, Text, View } from 'react-native';
 import { log } from '@/lib/log';
@@ -108,22 +110,46 @@ function Paragraph({ text, heading }: { text: string; heading?: number }) {
   );
 }
 
-export function Markdown({ text }: { text: string }) {
+function CodeBlock({ lang, text }: { lang: string; text: string }) {
   const pal = usePalette();
+  const { toast } = useToast();
+  const copy = () =>
+    void Clipboard.setStringAsync(text).then(
+      () => toast.show('Código copiado'),
+      () => toast.show('No se pudo copiar'),
+    );
+  return (
+    <View style={{ backgroundColor: pal.termBg, borderRadius: 12, padding: 12 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <T size={11} weight="mono" style={{ color: pal.termDim }}>
+          {lang || 'código'}
+        </T>
+        <Pressable
+          onPress={copy}
+          accessibilityRole="button"
+          accessibilityLabel="Copiar código"
+          hitSlop={10}
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, opacity: pressed ? 0.6 : 1 })}
+        >
+          <Icon name="copy" size={14} color={pal.termFg} />
+          <T size={12} style={{ color: pal.termFg }}>
+            Copiar código
+          </T>
+        </Pressable>
+      </View>
+      <T weight="mono" size={13} style={{ color: pal.termFg, lineHeight: 19 }} selectable>
+        {text}
+      </T>
+    </View>
+  );
+}
+
+export function Markdown({ text }: { text: string }) {
   return (
     <View style={{ gap: 8 }}>
       {parseBlocks(text).map((b, i) =>
         b.kind === 'code' ? (
-          <View key={i} style={{ backgroundColor: pal.termBg, borderRadius: 12, padding: 12 }}>
-            {b.lang ? (
-              <T size={11} weight="mono" style={{ color: pal.termDim, marginBottom: 4 }}>
-                {b.lang}
-              </T>
-            ) : null}
-            <T weight="mono" size={13} style={{ color: pal.termFg, lineHeight: 19 }} selectable>
-              {b.text}
-            </T>
-          </View>
+          <CodeBlock key={i} lang={b.lang} text={b.text} />
         ) : (
           <Paragraph key={i} text={b.text} {...(b.kind === 'heading' ? { heading: b.level } : {})} />
         ),

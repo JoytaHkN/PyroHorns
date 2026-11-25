@@ -139,6 +139,24 @@ export async function warm(handle: number, messages: { role: string; content: st
   );
 }
 
+/** Texto corto aparte de la conversación; no altera su memoria. */
+export async function complete(
+  handle: number,
+  messages: { role: string; content: string }[],
+  threads: number,
+  noThink: boolean,
+  maxTokens: number
+): Promise<string> {
+  return Native.complete(
+    handle,
+    messages.map((m) => m.role),
+    messages.map((m) => m.content),
+    threads,
+    noThink,
+    maxTokens
+  );
+}
+
 export async function cancel(handle: number): Promise<void> {
   await Native.cancel(handle);
 }

@@ -31,6 +31,8 @@ export interface WebSource {
 export interface WebInfo {
   /** Solo usuario: resultados que se anteponen a la pregunta. Ausente si la búsqueda aún no se hizo o falló. */
   context?: string;
+  /** Solo IA: lo que se envió al buscador. */
+  query?: string;
   /** Solo IA: páginas consultadas. */
   sources?: WebSource[];
 }

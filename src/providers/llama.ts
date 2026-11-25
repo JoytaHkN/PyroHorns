@@ -23,6 +23,12 @@ export interface NativeLlamaModule {
   ): Promise<void>;
   /** Procesa la instrucción por adelantado (opcional). */
   warm?(modelId: string, messages: ProviderMessage[], threads: number): Promise<void>;
+  /** Texto corto aparte de la conversación (opcional); conserva la memoria del chat. */
+  complete?(
+    modelId: string,
+    messages: ProviderMessage[],
+    options: { threads: number; noThink: boolean; maxTokens: number },
+  ): Promise<string>;
   /** Cancela la generación en curso. */
   cancel(modelId: string): Promise<void>;
   /** Descarga el modelo de la RAM. */
@@ -141,6 +147,26 @@ export function isNativeLlamaAvailable(): boolean {
  */
 export const LlamaProvider: ChatProvider = {
   id: 'llama',
+  async complete(messages: ProviderMessage[], opts: StreamOptions): Promise<string> {
+    const native = nativeModule;
+    if (!native?.complete) return '';
+    wanted = null;
+    const release = await acquire();
+    try {
+      const modelId = await ensureLoaded(native, opts);
+      if (opts.signal?.aborted) throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+      const abort = () => void native.cancel(modelId).catch(() => {});
+      opts.signal?.addEventListener('abort', abort, { once: true });
+      try {
+        const noThink = LOCAL_MODELS.find((m) => m.id === opts.modelId)?.thinking ?? false;
+        return await native.complete(modelId, messages, { threads: DEFAULT_THREADS, noThink, maxTokens: 32 });
+      } finally {
+        opts.signal?.removeEventListener('abort', abort);
+      }
+    } finally {
+      release();
+    }
+  },
   async *stream(messages: ProviderMessage[], opts: StreamOptions): AsyncIterable<StreamEvent> {
     if (!nativeModule) {
       yield* MockProvider.stream(messages, opts);

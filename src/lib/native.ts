@@ -8,6 +8,7 @@ import { useSettings } from '@/store/settings';
 import type { Usage } from '@/types/chat';
 import {
   cancel as nativeCancel,
+  complete as nativeComplete,
   fileSize,
   generate as nativeGenerate,
   hasAllFilesAccess,
@@ -71,6 +72,12 @@ export const nativeLlamaModule: NativeLlamaModule = {
   async warm(modelId, messages, threads) {
     const handle = handles.get(modelId);
     if (handle !== undefined) await nativeWarm(handle, messages, threads);
+  },
+
+  async complete(modelId, messages, options) {
+    const handle = handles.get(modelId);
+    if (handle === undefined) return '';
+    return nativeComplete(handle, messages, options.threads, options.noThink, options.maxTokens);
   },
 
   async cancel(modelId) {

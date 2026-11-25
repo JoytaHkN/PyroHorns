@@ -2,7 +2,8 @@ import { modelForMode } from '@/data/agents';
 import { estimateRamGiB, fitsInMemory, modelById } from '@/data/models';
 import { migrate } from '@/db/schema';
 import { SqlChatRepo } from '@/db/sql-repo';
-import { regenerate, send, stop } from '@/lib/engine';
+import { regenerate, send, setProvider, stop } from '@/lib/engine';
+import { MockProvider } from '@/providers/mock';
 import { usageLine } from '@/lib/stats';
 import { attachRepo, flushWrites, searchConversations, useChat } from '@/store/chat';
 import { activeModelId, useSettings } from '@/store/settings';
@@ -153,6 +154,17 @@ const conv = (id: string) => useChat.getState().conversations.find((c) => c.id =
   const bid = await send('otra', null, { web: true });
   const failed = conv(bid).messages[1]!;
   check(failed.status === 'error' && failed.content.includes('bloqueó') && !failed.web, 'bloqueo de DuckDuckGo visible en el chat');
+  // Un mensaje largo se convierte en una búsqueda corta antes de salir del teléfono.
+  let sent = '';
+  globalThis.fetch = (async (url: unknown) => {
+    sent = String(url);
+    return new Response('<h2 class="result__title"><a href="https://fuente.example/b">Otra</a></h2>', { status: 200 });
+  }) as typeof fetch;
+  setProvider({ ...MockProvider, complete: async () => 'Búsqueda: modelos para celular' });
+  const qid = await send('me podrias buscar en internes si ahi algun modelo como tu para el celular', null, { web: true });
+  check(conv(qid).messages[1]!.web?.query === 'modelos para celular', 'la consulta resumida se muestra con la respuesta');
+  check(sent.endsWith('?q=modelos%20para%20celular'), 'al buscador sale la consulta resumida');
+  setProvider(MockProvider);
   globalThis.fetch = realFetch;
 
   done();
