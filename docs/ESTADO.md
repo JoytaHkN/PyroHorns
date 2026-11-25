@@ -222,7 +222,7 @@
      **Fallos:** Nemotron dice que no puede buscar en internet aun con resultados (la instrucción dice «sin nube»); un mensaje largo con erratas como consulta dio
      enlaces inútiles (google.com, traductor); LFM3 leyó mal los resultados (p. ej. Allende «detenido»); las fórmulas `$…$` se ven en crudo; los bloques de código no
      tienen botón de copiar. Propuestas pendientes de visto bueno.
-   - **Arreglos 1, 4 y 2 aprobados (2026-11-25), pendientes de CI y móvil:** (1) los resultados dicen que sí tiene acceso y la instrucción de sistema menciona el
+   - **Arreglos 1, 4 y 2 aprobados (2026-11-25), CI en verde (`b1bfd51`), pendientes de móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-arreglos-prueba.apk` + `.sha256`): (1) los resultados dicen que sí tiene acceso y la instrucción de sistema menciona el
      botón del globo; (4) «Copiar código» en cada bloque; (2) los mensajes de más de 8 palabras o que remiten al anterior se convierten en una consulta corta con el
      modelo cargado (`complete` nativo: guarda la memoria del chat, genera hasta 32 tokens y la restaura; rastro «complete: …»), y se muestra «Se buscó en
      DuckDuckGo: «…»». **Comprobar en el móvil** que restaurar la memoria no cierra la app con LFM3 y Nemotron y que el turno siguiente la reutiliza.
@@ -231,6 +231,12 @@
      (6,18 GB, español incluido, temp 1,0 / top-p 0,95, OpenMDW-1.1); tiene borrador DFlash oficial (`…E4B-4GB-DFlash`) y el llama.cpp vendimizado trae `dflash`.
      Nemotron 3 Nano 4B (2,84 GB) solo declara inglés y código. Voz: Nemotron 3.5 ASR Streaming 0,6B (español, NeMo-Speech.cpp; sin Android oficial) y Magpie TTS
      364M (español; sin indicios de uso en móvil). Imagen: SANA no figura en stable-diffusion.cpp (que sí admite SD 1.5 / SD-Turbo, no de NVIDIA).
+   - **GGUF nuevos en `APK IA/` (2026-11-25, solo metadatos, sin probar; no están en `LOCAL_MODELS`, así que la app aún no puede elegirlos):**
+     candidatos: `Qwen3-VL-4B-…-Q4_K` (2,49 GB, `qwen3vl`, ChatML, muestreo 0,7/20/0,8), `MiniCPM-V-4.7-1B-AD-Q4_K_M` (0,67 GB, `qwen35`) y
+     `NVIDIA-…-E4B-Uncensored-AD` (5,06 GB, `gemma4`, tabla por capas 1,59 GB en IQ4_NL). Con reservas: los dos `Llama-3.1-Nemotron-Nano-8B-v1` (el mismo modelo
+     dos veces, 4,92 GB, declara solo inglés; con el reempaquetado podría necesitar ≈ 9–10 GB de RAM), `Cosmos3-Nano-VLM` (5,03 GB, visión/robótica), `Qwen3-VL Q6_K`
+     (3,68 GB, más lento). No sirven hoy: `Dory1.0-4B` (arquitectura `dory` no soportada por llama.cpp `dc33e61`), los dos `Qwen3.8-27B-Draft` (borradores de un
+     27B que no está) y el LoRA `Ternary-Bonsai` (adaptador sin modelo base; la app no admite LoRA). Ningún modelo de visión trae `mmproj`: solo texto.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -351,3 +357,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Internet, carga en bloques e instrucción por adelantado probados en el móvil: todo funciona; anotados fallos y propuestas.
 - **2026-11-25** · CI de S18-B en verde (`ca7ac5f`); APK copiado a `APK IA/apk/`.
 - **2026-11-25** · Arreglos 1, 4 y 2 implementados (typecheck, pruebas y bundle en verde); investigados los modelos de NVIDIA para el móvil. Pendiente: CI y móvil.
+- **2026-11-25** · CI de los arreglos 1, 4 y 2 en verde; APK copiado. Revisados los metadatos de 13 GGUF nuevos.
