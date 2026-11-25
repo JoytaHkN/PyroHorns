@@ -1,12 +1,12 @@
 import { useToast } from 'heroui-native';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, ScrollView } from 'react-native';
+import { AppState, Linking, Pressable, ScrollView, View } from 'react-native';
 import { Icon } from '@/components/icons';
 import { Card, Group, Item, PlasmaTag, ProgressBar, SectionLabel } from '@/components/list';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
 import { MODES } from '@/data/agents';
-import { LOCAL_MODELS, estimateRamGiB, sizeGB } from '@/data/models';
+import { LOCAL_MODELS, canChat, estimateRamGiB, sizeGB, type LocalModel } from '@/data/models';
 import { errorSummary } from '@/lib/log';
 import { SHARED_MODELS_DIR } from '@/lib/model-files';
 import { importGguf } from '@/lib/model-import';
@@ -58,39 +58,80 @@ export default function Models() {
 
   const modesOf = (id: string) => MODES.filter((m) => m.modelId === id).map((m) => m.label);
 
+  const SECTIONS: { title: string; note?: string; models: LocalModel[] }[] = [
+    { title: 'Chat (texto)', models: LOCAL_MODELS.filter((m) => (m.kind ?? 'chat') === 'chat') },
+    {
+      title: 'Visión',
+      note: 'Pueden ver imágenes con su complemento (mmproj), pero la app aún no admite imágenes: por ahora conversan solo con texto.',
+      models: LOCAL_MODELS.filter((m) => m.kind === 'vision'),
+    },
+    {
+      title: 'Complementos (no se usan solos)',
+      note: 'Ninguno de tus archivos genera imágenes ni video.',
+      models: LOCAL_MODELS.filter((m) => m.kind === 'aux'),
+    },
+  ];
+
+  const row = (m: LocalModel, i: number) => {
+    const modes = modesOf(m.id);
+    const usable = canChat(m);
+    return (
+      <Item
+        key={m.id}
+        first={i === 0}
+        icon="chip"
+        title={m.name}
+        subtitle={[
+          usable
+            ? `${m.quant} · ${sizeGB(m).toFixed(1)} GB · ≈ ${estimateRamGiB(m, m.defaultCtx).toFixed(1)} GB de RAM con ${m.defaultCtx / 1024}K`
+            : `${m.quant} · ${sizeGB(m).toFixed(1)} GB`,
+          m.role,
+          ...(modes.length ? [`Modos: ${modes.join(', ')}`] : []),
+        ].join('\n')}
+        {...(usable ? { onPress: () => settings.setModelOverride(m.id === active ? null : m.id) } : {})}
+        end={
+          m.id === active ? (
+            <PlasmaTag>Activo</PlasmaTag>
+          ) : (
+            <T size={13} tone="muted">
+              {available(m.file) ? 'Disponible' : m.optional ? 'Opcional · falta' : 'Falta'}
+            </T>
+          )
+        }
+      >
+        {m.mmproj ? (
+          <Pressable
+            onPress={() => void Linking.openURL(m.mmproj!.url).catch(() => toast.show('No se pudo abrir el enlace'))}
+            accessibilityRole="link"
+            style={{ paddingTop: 8 }}
+          >
+            <T size={12} tone="ink" weight="semibold">
+              Descargar complemento de visión ({m.mmproj.sizeMB} MB)
+            </T>
+            <T size={11} tone="muted">
+              {m.mmproj.note}
+            </T>
+          </Pressable>
+        ) : null}
+      </Item>
+    );
+  };
+
   return (
     <Screen>
       <BackHeader title="Modelos GGUF" />
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8, paddingBottom: 40 }}>
-        <SectionLabel>En este dispositivo</SectionLabel>
-        <Group>
-          {LOCAL_MODELS.map((m, i) => {
-            const modes = modesOf(m.id);
-            return (
-              <Item
-                key={m.id}
-                first={i === 0}
-                icon="chip"
-                title={m.name}
-                subtitle={[
-                  `${m.quant} · ${sizeGB(m).toFixed(1)} GB · ≈ ${estimateRamGiB(m, m.defaultCtx).toFixed(1)} GB de RAM con ${m.defaultCtx / 1024}K`,
-                  m.role,
-                  modes.length ? `Modos: ${modes.join(', ')}` : 'Sin modo asignado · elígelo en Avanzado',
-                ].join('\n')}
-                onPress={() => settings.setModelOverride(m.id === active ? null : m.id)}
-                end={
-                  m.id === active ? (
-                    <PlasmaTag>Activo</PlasmaTag>
-                  ) : (
-                    <T size={13} tone="muted">
-                      {available(m.file) ? 'Disponible' : m.optional ? 'Opcional · falta' : 'Falta'}
-                    </T>
-                  )
-                }
-              />
-            );
-          })}
-        </Group>
+        {SECTIONS.map((section) => (
+          <View key={section.title} style={{ gap: 8 }}>
+            <SectionLabel>{section.title}</SectionLabel>
+            {section.note ? (
+              <T size={12} tone="muted">
+                {section.note}
+              </T>
+            ) : null}
+            <Group>{section.models.map(row)}</Group>
+          </View>
+        ))}
         <T size={12} tone="muted">
           Tocar un modelo lo fija a mano (Avanzado); tocar el activo vuelve al modelo automático del modo.
         </T>
@@ -126,7 +167,7 @@ export default function Models() {
         <SectionLabel>Almacenamiento</SectionLabel>
         <Group>
           <Item icon="sliders" first title="Espacio en modelos" subtitle={`${totalGB.toFixed(1)} GB en ${LOCAL_MODELS.length} archivos`}>
-            <ProgressBar value={totalGB / 16} />
+            <ProgressBar value={totalGB / 60} />
           </Item>
         </Group>
         <T size={12} tone="muted">

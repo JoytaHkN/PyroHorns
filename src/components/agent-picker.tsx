@@ -2,7 +2,7 @@ import { Button, Dialog, Switch } from 'heroui-native';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { MODES, modeById, modelForMode } from '@/data/agents';
-import { LOCAL_MODELS, contextTokens, modelById } from '@/data/models';
+import { CLOUD_MODELS, LOCAL_MODELS, canChat, contextTokens, modelById } from '@/data/models';
 import { formatTokens } from '@/lib/context';
 import { activeModelId, useSettings } from '@/store/settings';
 import { usePalette } from '@/theme/use-palette';
@@ -89,7 +89,7 @@ export function AgentPicker({ open, onOpenChange }: { open: boolean; onOpenChang
             <SectionLabel>Avanzado · modelo</SectionLabel>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
               <Pill icon="spark" label={`Automático (${auto.name})`} on={s.modelOverride === null} onPress={() => s.setModelOverride(null)} />
-              {LOCAL_MODELS.map((m) => (
+              {LOCAL_MODELS.filter(canChat).map((m) => (
                 <Pill
                   key={m.id}
                   icon="chip"
@@ -97,6 +97,13 @@ export function AgentPicker({ open, onOpenChange }: { open: boolean; onOpenChang
                   on={s.modelOverride === m.id}
                   onPress={() => s.setModelOverride(m.id)}
                 />
+              ))}
+            </View>
+
+            <SectionLabel>En la nube (necesita clave)</SectionLabel>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {CLOUD_MODELS.map((m) => (
+                <Pill key={m.id} icon="cloud" label={m.name} on={s.modelOverride === m.id} onPress={() => s.setModelOverride(m.id)} />
               ))}
             </View>
           </ScrollView>

@@ -264,6 +264,12 @@ Arquitectura:
     solo el texto del mensaje. **Riesgo:** desde este entorno DuckDuckGo respondió HTTP 202 (antirrobots), también su API de respuestas instantáneas.
   - **Protección frente a instrucciones escondidas en una página:** el usuario eligió **B** (S18).
 
+- **P19. Pedido del 2026-11-25** — implementado (pendiente de móvil): los 12 GGUF nuevos en la app (chat, visión, complementos), enlaces de descarga de los
+  `mmproj`, parche de Dory, respuestas que se tocan y **agente en la nube** (adelanta parte de F6: NVIDIA y OpenRouter con la clave del usuario, S5-B).
+- **P20. Asistente tipo Jarvis** — preguntado por el usuario; **no estaba planeado**. Propuesta pendiente de visto bueno: (1) herramientas en la app (notas y tareas
+  propias, eventos en el calendario con permiso, alarmas con la app de reloj) con confirmación táctil; (2) dictado y voz (F4); (3) registrarse como asistente de
+  Android (se abre con el gesto del teléfono). Depende del bucle de herramientas de F3.
+
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
   almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a

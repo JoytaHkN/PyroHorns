@@ -237,6 +237,11 @@
      dos veces, 4,92 GB, declara solo inglés; con el reempaquetado podría necesitar ≈ 9–10 GB de RAM), `Cosmos3-Nano-VLM` (5,03 GB, visión/robótica), `Qwen3-VL Q6_K`
      (3,68 GB, más lento). No sirven hoy: `Dory1.0-4B` (arquitectura `dory` no soportada por llama.cpp `dc33e61`), los dos `Qwen3.8-27B-Draft` (borradores de un
      27B que no está) y el LoRA `Ternary-Bonsai` (adaptador sin modelo base; la app no admite LoRA). Ningún modelo de visión trae `mmproj`: solo texto.
+   - **P19 (2026-11-25), pendiente de CI y móvil:** 12 GGUF nuevos en `models.ts` (secciones Chat / Visión / Complementos; ninguno genera imagen ni video),
+     enlaces `mmproj` (Qwen3-VL, MiniCPM, Gemma 4; Cosmos: no encontrado; la app aún no admite imágenes), agente en la nube (`src/providers/cloud.ts`, pantalla
+     «Agente en la nube», claves en SecureStore; `nvidia/nemotron-3-ultra-550b-a55b`, `moonshotai/kimi-k3.1-pro`, `z-ai/glm-5.3-flash`,
+     `nvidia/nemotron-3-ultra-550b-a55b:free`; **sin probar con una clave real**, y las condiciones de la prueba gratuita de NVIDIA no se pudieron leer) y
+     respuestas que se tocan (bloque ```opciones o pregunta + lista). La instrucción de sistema cambió.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -358,3 +363,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI de S18-B en verde (`ca7ac5f`); APK copiado a `APK IA/apk/`.
 - **2026-11-25** · Arreglos 1, 4 y 2 implementados (typecheck, pruebas y bundle en verde); investigados los modelos de NVIDIA para el móvil. Pendiente: CI y móvil.
 - **2026-11-25** · CI de los arreglos 1, 4 y 2 en verde; APK copiado. Revisados los metadatos de 13 GGUF nuevos.
+- **2026-11-25** · P19: modelos nuevos, nube y opciones táctiles (typecheck, pruebas y bundles en verde). Pendiente: CI y móvil.

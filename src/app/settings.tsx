@@ -149,7 +149,7 @@ export default function Settings() {
 
         <SectionLabel>Servicios</SectionLabel>
         <Group>
-          <Item first icon="cloud" title="Proveedores" subtitle="Claves API, URL base y selección" onPress={soon('Proveedores online', 'F6')} />
+          <Item first icon="cloud" title="Agente en la nube" subtitle="Claves y modelos de NVIDIA y OpenRouter" onPress={() => router.push('/cloud')} />
           <Item icon="chip" title="Modelos" subtitle="Activar, desactivar y configurar" onPress={() => router.push('/models')} />
           <Item icon="sliders" title="Diagnóstico del motor" subtitle="Rastros y cierres inesperados (F1.5)" onPress={() => router.push('/diagnostico')} />
           <Item icon="chip" title="Prueba de rendimiento" subtitle="Carga, primer token, tok/s y RAM (F1.5)" onPress={() => router.push('/benchmark')} />

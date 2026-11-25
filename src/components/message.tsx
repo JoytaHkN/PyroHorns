@@ -3,7 +3,8 @@ import { useToast } from 'heroui-native';
 import { memo, useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import { modelById } from '@/data/models';
-import { regenerate } from '@/lib/engine';
+import { regenerate, send } from '@/lib/engine';
+import { extractOptions } from '@/lib/options';
 import { usageLine } from '@/lib/stats';
 import { useChat, type Message } from '@/store/chat';
 import { useEngine } from '@/store/engine';
@@ -190,10 +191,44 @@ function Sources({ m }: { m: Message }) {
   );
 }
 
+/** Respuestas posibles: al tocar una se envía como mensaje. */
+function Choices({ options, convId }: { options: string[]; convId: string }) {
+  const pal = usePalette();
+  return (
+    <View style={{ gap: 6 }}>
+      {options.map((o, i) => (
+        <Pressable
+          key={`${i}-${o}`}
+          onPress={() => void send(o, convId)}
+          accessibilityRole="button"
+          accessibilityLabel={`Responder: ${o}`}
+          style={({ pressed }) => ({
+            alignSelf: 'flex-start',
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: pal.ink,
+            backgroundColor: pressed ? pal.surface2 : pal.surface,
+            paddingHorizontal: 14,
+            paddingVertical: 9,
+          })}
+        >
+          <T size={14} weight="medium">
+            {o}
+          </T>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: boolean }) {
   const pal = usePalette();
   const live = m.status === 'thinking' || m.status === 'streaming';
   const showBody = m.status !== 'thinking' || !!m.content;
+  const { text, options } = extractOptions(m.content);
+  // Solo la última respuesta se contesta tocando; en las anteriores las opciones quedan como lista.
+  const tappable = isLast && m.status === 'done' && options.length > 0;
+  const shown = !tappable && text !== m.content ? `${text}\n\n${options.map((o) => `- ${o}`).join('\n')}` : text;
   const footer = [
     m.modelId ? modelById(m.modelId).name : null,
     m.status === 'done' && m.usage ? usageLine(m.usage) : null,
@@ -213,11 +248,12 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
               paddingVertical: 12,
             }}
           >
-            <Markdown text={m.content + (live ? ' ▍' : '')} />
+            <Markdown text={shown + (live ? ' ▍' : '')} />
           </View>
         </PlasmaGradient>
       )}
       {showBody && <Sources m={m} />}
+      {tappable ? <Choices options={options} convId={convId} /> : null}
       {!live && (
         <View style={{ gap: 2 }}>
           {m.content ? <Actions m={m} convId={convId} isLast={isLast} /> : null}

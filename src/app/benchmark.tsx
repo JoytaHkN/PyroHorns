@@ -5,7 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Card, Group, Item, PlasmaTag, SectionLabel } from '@/components/list';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
-import { LOCAL_MODELS } from '@/data/models';
+import { LOCAL_MODELS, canChat } from '@/data/models';
 import {
   PRESETS,
   THREAD_OPTIONS,
@@ -131,7 +131,7 @@ export default function Benchmark() {
 
         <SectionLabel>Modelos</SectionLabel>
         <Group>
-          {LOCAL_MODELS.map((m, i) => {
+          {LOCAL_MODELS.filter(canChat).map((m, i) => {
             const has = available.has(m.id);
             const on = config.models.includes(m.id);
             return (

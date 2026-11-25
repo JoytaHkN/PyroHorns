@@ -51,7 +51,7 @@ export default function ChatScreen() {
 
   // Carga anticipada: al abrir el chat y al cambiar de modelo o de contexto.
   useEffect(() => {
-    if (native) void preloadLlamaModel({ modelId: model.id, contextTokens: ctx, system: systemPrompt(model.id) });
+    if (native && !model.cloud) void preloadLlamaModel({ modelId: model.id, contextTokens: ctx, system: systemPrompt(model.id) });
   }, [native, model.id, ctx]);
 
   useEffect(() => {
@@ -146,7 +146,17 @@ export default function ChatScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                 <Orb size={10} active={busy || loading} />
                 <T size={12} tone="muted">
-                  {searching ? 'Buscando en internet…' : loading ? `Cargando ${model.name}…` : busy ? `${model.name} generando…` : native ? `${model.name} · en tu dispositivo` : `${model.name} · respuestas simuladas`}
+                  {searching
+                    ? 'Buscando en internet…'
+                    : model.cloud
+                      ? `${model.name}${busy ? ' generando…' : ''} · en la nube: los mensajes salen del teléfono`
+                      : loading
+                        ? `Cargando ${model.name}…`
+                        : busy
+                          ? `${model.name} generando…`
+                          : native
+                            ? `${model.name} · en tu dispositivo`
+                            : `${model.name} · respuestas simuladas`}
                 </T>
               </View>
             }

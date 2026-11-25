@@ -1,4 +1,5 @@
 import { contextTokens, modelById } from '@/data/models';
+import { CloudError } from '@/providers/cloud';
 import { MockProvider } from '@/providers/mock';
 import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
 import type { ChatProvider, StreamOptions } from '@/providers/types';
@@ -19,6 +20,19 @@ export const setProvider = (p: ChatProvider) => {
 };
 export function activateNativeLlama() {
   if (isNativeLlamaAvailable()) provider = LlamaProvider;
+}
+
+/** Agente en la nube (se registra en Android; sin él, los modelos en la nube avisan). */
+let cloudProvider: ChatProvider | null = null;
+export const setCloudProvider = (p: ChatProvider | null) => {
+  cloudProvider = p;
+};
+
+/** Quién responde: el motor del teléfono o el de la nube, según el modelo. */
+function engineFor(modelId: string): ChatProvider {
+  if (!modelById(modelId).cloud) return provider;
+  if (!cloudProvider) throw new CloudError('Los modelos en la nube solo funcionan en la app de Android.');
+  return cloudProvider;
 }
 
 const controllers = new Map<string, AbortController>();
@@ -103,7 +117,7 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
         { contextTokens: ctx - estimateTokens(system) },
       ),
     ];
-    for await (const ev of provider.stream(history, { ...agent, contextTokens: ctx, signal: ctrl.signal })) {
+    for await (const ev of engineFor(agent.modelId).stream(history, { ...agent, contextTokens: ctx, signal: ctrl.signal })) {
       switch (ev.type) {
         case 'thinking_delta':
           if (thinkStart === null) thinkStart = Date.now();
@@ -138,7 +152,7 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
       status: aborted ? 'stopped' : 'error',
       content: aborted
         ? m.content
-        : `${m.content}${m.content ? '\n\n' : ''}⚠️ ${e instanceof SearchError ? e.message : errorSummary(e)}`,
+        : `${m.content}${m.content ? '\n\n' : ''}⚠️ ${e instanceof SearchError || e instanceof CloudError ? e.message : errorSummary(e)}`,
     }));
   } finally {
     controllers.delete(convId_);
@@ -165,7 +179,8 @@ async function searchIfAsked(convId: string, aiId: string, opts: StreamOptions &
 /** La consulta que sale hacia el buscador: el mensaje, o un resumen que hace el modelo del teléfono. */
 async function searchQuery(before: Message[], text: string, opts: StreamOptions & { signal: AbortSignal }): Promise<string> {
   const previous = [...before].reverse().find((m) => m.role === 'user')?.content;
-  if (!provider.complete || !needsRewrite(text, previous)) return text;
+  const model = modelById(opts.modelId);
+  if (model.cloud || model.noRewrite || !provider.complete || !needsRewrite(text, previous)) return text;
   try {
     return cleanQuery(await provider.complete(queryMessages(text, previous), opts)) ?? text;
   } catch (e) {

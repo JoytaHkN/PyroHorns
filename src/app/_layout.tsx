@@ -17,6 +17,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Uniwind } from 'uniwind';
 import { RestoreScreen } from '@/components/restore-screen';
 import { useBoot } from '@/store/boot';
+import { registerCloud } from '@/lib/cloud';
 import { registerNativeLlama } from '@/lib/native';
 import { flushWrites } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -47,6 +48,7 @@ export default function RootLayout() {
   // Registra el motor nativo (F1.5); si no está, el chat sigue con MockProvider.
   useEffect(() => {
     void registerNativeLlama();
+    registerCloud();
   }, []);
 
   // Al pasar a segundo plano se escribe lo pendiente del streaming.
