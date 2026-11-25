@@ -142,7 +142,6 @@ struct llama_model_dory : public llama_model_base {
     std::vector<int> cache_layer;
     uint32_t n_layer_physical() const override { return n_input + n_recurrent + n_output; }
     int layer_physical(int il) const override { return physical.at(il); }
-    uint32_t graph_nodes_per_tensor() const override { return 32*n_loops; }
     llama_rope_params get_rope_params(const llama_cparams & cparams, int il) const override;
     struct scales {
         ggml_tensor * alpha = nullptr;
