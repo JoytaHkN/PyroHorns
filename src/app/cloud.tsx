@@ -4,15 +4,16 @@ import { Linking, ScrollView, View } from 'react-native';
 import { Group, Item, PlasmaTag, SectionLabel } from '@/components/list';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
-import { CLOUD_MODELS, type CloudProviderId } from '@/data/models';
+import { CLOUD_COMPANIES } from '@/data/cloud-catalog';
+import { activeModelId, useSettings } from '@/store/settings';
+import type { CloudProviderId } from '@/data/models';
 import { cloudAvailable, deleteCloudKey, getCloudKey, saveCloudKey } from '@/lib/cloud';
 import { errorSummary } from '@/lib/log';
 import { CLOUD_PROVIDERS } from '@/providers/cloud';
-import { activeModelId, useSettings } from '@/store/settings';
 
 /** Clave de un proveedor: se guarda en el almacén seguro (S5-B) y nunca se vuelve a mostrar. */
 function ProviderKey({ id }: { id: CloudProviderId }) {
-  const provider = CLOUD_PROVIDERS[id];
+  const provider = CLOUD_PROVIDERS[id]!;
   const { toast } = useToast();
   const [saved, setSaved] = useState(false);
   const [key, setKey] = useState('');
@@ -76,24 +77,16 @@ export default function Cloud() {
           Lee sus condiciones: algunos servicios gratuitos pueden guardar o usar lo que envías.
         </T>
         {cloudAvailable ? null : <T size={13}>Disponible solo en la app de Android.</T>}
-        <ProviderKey id="nvidia" />
-        <ProviderKey id="openrouter" />
-        <SectionLabel>Modelo</SectionLabel>
-        <Group>
-          {CLOUD_MODELS.map((m, i) => (
-            <Item
-              key={m.id}
-              first={i === 0}
-              icon="cloud"
-              title={m.name}
-              subtitle={m.role}
-              onPress={() => settings.setModelOverride(m.id === active ? null : m.id)}
-              end={m.id === active ? <PlasmaTag>Activo</PlasmaTag> : undefined}
-            />
-          ))}
-        </Group>
+        {CLOUD_COMPANIES.filter((c) => !c.keyless).map((c) => (
+          <View key={c.id} style={{ gap: 4 }}>
+            <ProviderKey id={c.id} />
+            <T size={12} tone="muted">
+              {c.free}
+            </T>
+          </View>
+        ))}
         <T size={12} tone="muted">
-          Tocar un modelo lo usa en el chat; tocarlo otra vez vuelve al modelo del teléfono.
+          Los modelos se eligen en Agente, en el selector del cuadro de texto. Pollinations no necesita clave.
         </T>
       </ScrollView>
     </Screen>

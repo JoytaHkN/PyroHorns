@@ -387,3 +387,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI del botón Nube en verde (`b5ff3a0`); APK `PyroHorns-0.1.0-F1.5-nube-prueba.apk` copiado.
 - **2026-11-25** · Nemotron 3 Nano 4B descargado y añadido al catálogo local (tests en verde). Pendiente: CI y móvil.
 - **2026-11-25** · CI de Nemotron Nano 4B en verde (`0bfab7d`); APK `PyroHorns-0.1.0-F1.5-nano4b-prueba.apk` copiado.
+- **2026-11-25** · P23: catálogo de 29 empresas y 191 modelos de la nube, selector agrupado, pantalla de claves para todas. Solo Pollinations funciona sin clave; el resto espera claves del usuario.

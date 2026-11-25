@@ -3,15 +3,16 @@
  * Usa la clave del propio usuario (S5-B). Los mensajes de la conversación salen del teléfono hacia el proveedor.
  * Ni la clave ni el contenido se escriben en registros ni en mensajes de error (S9).
  */
+import { CLOUD_COMPANIES } from '@/data/cloud-catalog';
 import { modelById, type CloudProviderId } from '@/data/models';
 import { estimateTokens } from '@/lib/context';
 import { ThinkSplitter } from '@/lib/think-parser';
 import type { ChatProvider, ProviderMessage, StreamEvent, StreamOptions } from './types';
 
-export const CLOUD_PROVIDERS: Record<CloudProviderId, { name: string; baseUrl: string; keyPage: string }> = {
-  nvidia: { name: 'NVIDIA', baseUrl: 'https://integrate.api.nvidia.com/v1', keyPage: 'https://build.nvidia.com' },
-  openrouter: { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', keyPage: 'https://openrouter.ai/keys' },
-};
+/** Ruta de chat, nombre y si necesita clave, por empresa. */
+export const CLOUD_PROVIDERS: Record<string, { name: string; chatUrl: string; keyPage: string; keyless: boolean }> = Object.fromEntries(
+  CLOUD_COMPANIES.map((c) => [c.id, { name: c.name, chatUrl: c.chatUrl, keyPage: c.keyPage, keyless: c.keyless }]),
+);
 
 export class CloudError extends Error {
   override name = 'CloudError';
@@ -45,16 +46,21 @@ export function createCloudProvider(fetcher: CloudFetch, getKey: (p: CloudProvid
       const cloud = modelById(opts.modelId).cloud;
       if (!cloud) throw new CloudError('Este modelo no es de la nube.');
       const provider = CLOUD_PROVIDERS[cloud.provider];
-      const key = await getKey(cloud.provider);
-      if (!key) throw new CloudError(`Falta la clave de ${provider.name}. Añádela en Ajustes → Agente en la nube.`);
+      if (!provider) throw new CloudError('Esta empresa no está en el catálogo de la nube.');
+      const key = provider.keyless ? null : await getKey(cloud.provider);
+      if (!provider.keyless && !key) throw new CloudError(`Falta la clave de ${provider.name}. Añádela en Ajustes → Agente en la nube.`);
 
       const abortError = () => Object.assign(new Error('Aborted'), { name: 'AbortError' });
       const started = Date.now();
       let res;
       try {
-        res = await fetcher(`${provider.baseUrl}/chat/completions`, {
+        res = await fetcher(provider.chatUrl, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+          headers: {
+            ...(key ? { Authorization: `Bearer ${key}` } : {}),
+            'Content-Type': 'application/json',
+            Accept: 'text/event-stream',
+          },
           body: JSON.stringify({
             model: cloud.apiModel,
             messages: messages.map(({ role, content }) => ({ role, content })),

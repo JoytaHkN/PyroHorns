@@ -285,6 +285,12 @@ Arquitectura:
   KDE Connect (protocolo abierto; empezar apoyándose en su app). Huawei Share / Súper Dispositivo: no encontré SDK público; solo el menú «Compartir» del sistema.
 - **Agente de respaldo en and-code:** no hace falta variante: and-code ya conecta proveedores en OpenCode y OpenCode 1.19.6 lista modelos de NVIDIA.
 
+- **P23. Catálogo de la nube** (pedido el 2026-11-25): 29 empresas y 191 modelos, generados por `scripts/build-cloud-catalog.py` desde el registro público de OpenCode
+  (`models.dev`). **Sin clave verificado en vivo:** solo Pollinations (`text.pollinations.ai/openai/chat/completions`, 1 respuesta cada 45 s por IP). **Con clave:**
+  las demás; todas sus rutas de chat existen (401 sin clave). **Modelos verificados en vivo:** NVIDIA y OpenRouter (listas públicas). **OpenCode Zen** solo funciona
+  con cuenta de OpenCode (429 sin ella); no se replica. ChatGPT, Claude y Grok: piden clave; no hay acceso gratuito sin ella. El selector agrupa por empresa:
+  primero «sin clave», luego «con clave».
+
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
   almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a

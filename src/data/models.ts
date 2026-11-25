@@ -1,3 +1,4 @@
+import { CLOUD_COMPANIES } from './cloud-catalog';
 /** Modelos GGUF de la carpeta del proyecto. Ver PLAN.md → sección 3. */
 export interface LocalModel {
   id: string;
@@ -28,10 +29,11 @@ export interface LocalModel {
   cloud?: { provider: CloudProviderId; apiModel: string };
 }
 
-export type CloudProviderId = 'nvidia' | 'openrouter';
+/** Identificador de empresa (ver cloud-catalog.ts). */
+export type CloudProviderId = string;
 
 /** Modelo que usa el botón «Nube» (NVIDIA; necesita la clave del usuario). */
-export const CLOUD_DEFAULT_ID = 'cloud-nv-ultra';
+export const CLOUD_DEFAULT_ID = 'nvidia:nvidia/nemotron-3-ultra-550b-a55b';
 
 /** Sirve para conversar (no es un borrador ni un adaptador). */
 export const canChat = (m: LocalModel) => m.kind !== 'aux';
@@ -281,28 +283,23 @@ export const LOCAL_MODELS: LocalModel[] = [
   }),
 ];
 
-const cloud = (id: string, name: string, provider: CloudProviderId, apiModel: string, role: string): LocalModel => ({
-  id,
-  name,
-  file: '',
-  quant: '',
-  bytes: 0,
-  role,
-  thinking: true,
-  tools: false,
-  defaultCtx: 32768,
-  deepCtx: 65536,
-  kvKBPerToken: 0,
-  cloud: { provider, apiModel },
-});
-
-/** Agentes en la nube (F6 adelantada a petición del usuario). Nombres comprobados en los catálogos el 2026-11-25. */
-export const CLOUD_MODELS: LocalModel[] = [
-  cloud('cloud-nv-ultra', 'Nemotron 3 Ultra', 'nvidia', 'nvidia/nemotron-3-ultra-550b-a55b', 'NVIDIA · programación y planificación'),
-  cloud('cloud-nv-kimi', 'Kimi K3.1 Pro', 'nvidia', 'moonshotai/kimi-k3.1-pro', 'NVIDIA · programación'),
-  cloud('cloud-nv-glm', 'GLM 5.3 Flash', 'nvidia', 'z-ai/glm-5.3-flash', 'NVIDIA · más rápido'),
-  cloud('cloud-or-ultra', 'Nemotron 3 Ultra (OpenRouter)', 'openrouter', 'nvidia/nemotron-3-ultra-550b-a55b:free', 'OpenRouter · gratis, 50 al día'),
-];
+/** Agentes en la nube: uno por modelo de cada empresa del catálogo (cloud-catalog.ts, generado). */
+export const CLOUD_MODELS: LocalModel[] = CLOUD_COMPANIES.flatMap((c) =>
+  c.models.map((m) => ({
+    id: `${c.id}:${m.apiModel}`,
+    name: m.name,
+    file: '',
+    quant: '',
+    bytes: 0,
+    role: c.name,
+    thinking: true,
+    tools: false,
+    defaultCtx: 32768,
+    deepCtx: 65536,
+    kvKBPerToken: 0,
+    cloud: { provider: c.id, apiModel: m.apiModel },
+  })),
+);
 
 export const FALLBACK_MODEL_ID = 'lfm3-1.7b';
 

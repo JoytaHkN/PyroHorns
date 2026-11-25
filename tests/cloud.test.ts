@@ -12,13 +12,13 @@ const sse = (chunks: string[]) =>
     },
   });
 const delta = (d: object) => `data: ${JSON.stringify({ choices: [{ delta: d }] })}\n\n`;
-const opts = { modelId: 'cloud-nv-ultra', mode: 'general' as const, deep: false, contextTokens: 32768 };
+const opts = { modelId: 'nvidia:nvidia/nemotron-3-ultra-550b-a55b', mode: 'general' as const, deep: false, contextTokens: 32768 };
 
-async function run(fetcher: CloudFetch, key: string | null = 'clave-secreta') {
+async function run(fetcher: CloudFetch, key: string | null = 'clave-secreta', modelId = opts.modelId) {
   const events: StreamEvent[] = [];
   const provider = createCloudProvider(fetcher, async () => key);
   try {
-    for await (const ev of provider.stream([{ role: 'user', content: 'hola' }], opts)) events.push(ev);
+    for await (const ev of provider.stream([{ role: 'user', content: 'hola' }], { ...opts, modelId })) events.push(ev);
     return { events, error: null };
   } catch (e) {
     return { events, error: e as Error };
@@ -37,7 +37,7 @@ async function run(fetcher: CloudFetch, key: string | null = 'clave-secreta') {
   check(text === 'Hola mundo' && ok.events.some((e) => e.type === 'thinking_delta'), 'respuesta en streaming y razonamiento aparte');
   check(ok.events.at(-1)?.type === 'done' && ok.events.some((e) => e.type === 'usage'), 'métricas y fin');
   check(
-    seen!.url === 'https://integrate.api.nvidia.com/v1/chat/completions' && seen!.auth === 'Bearer clave-secreta' && seen!.body.model === modelById('cloud-nv-ultra').cloud!.apiModel,
+    seen!.url === 'https://integrate.api.nvidia.com/v1/chat/completions' && seen!.auth === 'Bearer clave-secreta' && seen!.body.model === modelById('nvidia:nvidia/nemotron-3-ultra-550b-a55b').cloud!.apiModel,
     'dirección, clave y modelo',
   );
   const noKey = await run(async () => {
@@ -52,6 +52,19 @@ async function run(fetcher: CloudFetch, key: string | null = 'clave-secreta') {
     throw new Error('Bearer clave-secreta');
   });
   check(offline.error instanceof CloudError && !offline.error.message.includes('clave-secreta'), 'S9: el error no lleva la clave');
+
+  // Pollinations no pide clave: sin cabecera de autorización y con su ruta propia.
+  let keyless: { url: string; auth: string | undefined } | undefined;
+  const free = await run(
+    async (url, init) => {
+      keyless = { url, auth: init.headers.Authorization };
+      return { ok: true, status: 200, body: sse([delta({ content: 'hola' }), 'data: [DONE]\n\n']) };
+    },
+    null,
+    'pollinations:openai',
+  );
+  check(free.error === null && keyless?.url === 'https://text.pollinations.ai/openai/chat/completions' && keyless?.auth === undefined, 'sin clave: Pollinations responde sin cabecera de autorización');
+  check(modelById('nvidia:nvidia/nemotron-3-ultra-550b-a55b').cloud?.provider === 'nvidia', 'el catálogo asigna cada modelo a su empresa');
 
   const block = extractOptions('¿Qué prefieres?\n```opciones\nUna web\n- Una app\n```');
   check(block.text === '¿Qué prefieres?' && block.options.join('|') === 'Una web|Una app', 'bloque de opciones');
