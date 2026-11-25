@@ -266,6 +266,19 @@ export const LOCAL_MODELS: LocalModel[] = [
     kind: 'aux',
     kvKBPerToken: 0,
   }),
+  extra({
+    // NVIDIA Nemotron 3 Nano 4B (oficial, híbrido nemotron_h): solo 4 capas de atención, así que su caché es pequeña (≈16 KB por token).
+    id: 'nemotron-nano-4b',
+    name: 'Nemotron 3 Nano 4B',
+    file: 'NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf',
+    quant: 'Q4_K_M',
+    bytes: 2837072864,
+    role: 'NVIDIA · edge · razona · solo inglés y código',
+    thinking: true,
+    defaultCtx: 8192,
+    deepCtx: 16384,
+    kvKBPerToken: 16,
+  }),
 ];
 
 const cloud = (id: string, name: string, provider: CloudProviderId, apiModel: string, role: string): LocalModel => ({

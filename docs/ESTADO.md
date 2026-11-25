@@ -252,6 +252,9 @@
      (los modelos gratis que usa AndCode sin configurar) responde 429 «Free models work in OpenCode» fuera de OpenCode: **no se replica** (saltarlo sería eludir el servicio).
      Hecho: botón **Nube** junto al globo (decisión 1-a) que envía el mensaje a NVIDIA (`cloud-nv-ultra`); sin clave avisa y lleva a Ajustes. Regenerar mantiene la nube.
      Nombres comprobados en el catálogo de NVIDIA: nemotron-3-ultra, kimi-k3.1-pro, glm-5.3-flash, nemotron-3.5-lightning/super-vl/bolt-e4b (kimi-k3 no existe: no se usa).
+   - **Nemotron 3 Nano 4B añadido (2026-11-25, pedido por el usuario):** GGUF oficial descargado en `APK IA/NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf`
+     (2.837.072.864 bytes, verificado). Arquitectura `nemotron_h` (soportada por el motor), 4 capas de atención (caché ≈ 16 KB/token), plantilla ChatML con
+     razonamiento por defecto. Catálogo: `nemotron-nano-4b`, opcional, 8K / 16K. **Sin probar en el móvil**: comprobar la carga y las respuestas.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -382,3 +385,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI en verde (`d433b2a`); APK `PyroHorns-0.1.0-F1.5-asistente2-prueba.apk` copiado. Pendiente: móvil.
 - **2026-11-25** · Botón Nube implementado; NVIDIA y OpenRouter exigen clave; OpenCode Zen no se replica (uso restringido a OpenCode).
 - **2026-11-25** · CI del botón Nube en verde (`b5ff3a0`); APK `PyroHorns-0.1.0-F1.5-nube-prueba.apk` copiado.
+- **2026-11-25** · Nemotron 3 Nano 4B descargado y añadido al catálogo local (tests en verde). Pendiente: CI y móvil.
