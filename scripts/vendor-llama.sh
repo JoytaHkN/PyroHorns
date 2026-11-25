@@ -21,4 +21,6 @@ cp "$SRC/CMakeLists.txt" "$SRC/LICENSE" "$SRC/AUTHORS" "$DST/"
 for dir in cmake common ggml include src vendor; do
   cp -r "$SRC/$dir" "$DST/$dir"
 done
+# Soporte de la arquitectura `dory` (ggml-org/llama.cpp#30306, aún sin aceptar), adaptado a este commit. Solo src/ y common/.
+patch -p1 -d "$DST" < "$ROOT/modules/pyrohorns-llama/cpp/patches/dory.patch"
 echo "llama.cpp $COMMIT vendimizado en $DST"

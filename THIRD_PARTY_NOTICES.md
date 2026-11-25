@@ -32,3 +32,6 @@ De Agora (GPL-3.0) no se copia nada.
 ## Herramientas de desarrollo (no van dentro de la app)
 
 TypeScript (Apache-2.0), esbuild (MIT), Babel (MIT).
+
+llama.cpp lleva además `modules/pyrohorns-llama/cpp/patches/dory.patch`: soporte de la arquitectura Dory tomado de la propuesta
+ggml-org/llama.cpp#30306 (MIT), aún no aceptada en el proyecto original, adaptado a la versión vendimizada.
