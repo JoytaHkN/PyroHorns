@@ -3,7 +3,7 @@
 > Documento vivo para retomar el trabajo desde cualquier agente o entorno. Se actualiza al cerrar
 > cada bloque de trabajo (ver `AGENTS.md`).
 
-**Última actualización:** 2026-11-24 · Claude Sonnet 5.5 en and-code
+**Última actualización:** 2026-11-25 · Claude Opus 5.5 en and-code
 
 ## Dónde estamos
 - **F1** ✅ y **F1.1** ✅, cerradas: el usuario probó el APK en su móvil y todo está OK (2026-11-23).
@@ -203,6 +203,8 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
+- **P17 — Método Brasa** (`PLAN.md` §7): aprobar el orden (1 → 2 + 3 → 4 → 5), elegir la seguridad de la memoria guardada (A sin cifrar / B cifrada /
+  C no guardar) y si se descarga LFM2.5-8B-A1B (≈ 5 GB) para probar un MoE. Medidas del almacenamiento del teléfono en la misma entrada.
 - **Medir con `dotprod` (f-B):** el APK `PyroHorns-0.1.0-F1.5-p13-dotprod-prueba.apk` está en CI (`6f481b0`); falta la prueba Rápida en el teléfono con batería.
   La tablet solo si se confirma que tiene dotprod y fp16 (la línea de CPU del informe lo dirá).
 - **Control térmico de P13 (no implementado):** (1) esperar a que el equipo baje de un umbral antes de cada prueba (propuesta: 35 °C);
@@ -299,3 +301,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · Aceleración general: ggml-cpu como variantes elegidas en ejecución (BACKEND_DL + ALL_VARIANTS, con i8mm), bibliotecas extraídas (plugin), 6 hilos y rastro con la CPU elegida. Pendiente: CI y medir.
 - **2026-11-24** · ssd-llm descartado. P16: instrucción de sistema, carga anticipada, acciones bajo las respuestas y memoria de conversación. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
 - **2026-11-24** · CI de P16 en verde (`edf3993`); APK copiado a `APK IA/apk/`. Pendiente: móvil.
+- **2026-11-25** · ssd-llm y Colibrì analizados; medido el almacenamiento del teléfono (mmap por fallos de página ≈ 0,2 GB/s frente a 1,1–1,4 GB/s en bloques grandes). Propuesta P17 (Método Brasa), pendiente de decisión.

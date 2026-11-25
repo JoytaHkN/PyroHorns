@@ -229,6 +229,20 @@ Arquitectura:
 
 - **P16. Chat como LM Playground** — **aprobada por el usuario el 2026-11-24** e implementada (pendiente de móvil): instrucción de sistema breve, tope de 2048 tokens, carga del modelo al abrir el chat, compartir/copiar/👍/👎/⋮ y memoria de la conversación con reutilización de la caché KV. ssd-llm (streaming de capas desde SSD) descartado tras leer su código.
 
+- **P17. Método Brasa: velocidad sin depender solo de la RAM** — propuesta del agente (2026-11-25), **pendiente de decisión**.
+  - **Medido en el teléfono (LMR-LX9, 12 GB de RAM):** el almacenamiento lee a 1,1–1,4 GB/s en bloques grandes, pero solo a 0,19–0,24 GB/s por fallos de
+    página de mmap, que es como carga hoy llama.cpp (`MADV_WILLNEED` no ayuda: 0,21; `MADV_SEQUENTIAL` sí: 1,37). Coincide con las cargas reales (LFM3 6,8 s y
+    Nemotron 38 s ≈ 0,16 GB/s). Al generar, la RAM entrega ≈ 20 GB/s (P13), unas 15 veces más que el almacenamiento.
+  - **Conclusión sobre ssd-llm y Colibrì:** traer pesos del almacenamiento no acelera modelos que caben en RAM; solo sirve para MoE que no caben. En un
+    OnePlus 13 con 8 GB, Qwen3-30B-A3B cae de 20,2 a 0,18 tok/s; SmallThinker-21B-A3B, diseñado para ello (router antes de la atención), mantiene 15,5.
+  - **Piezas:** (1) carga en bloques grandes (Nemotron ≈ 6–8 s, estimado); (2) memoria KV de cada conversación guardada en el almacenamiento (seguridad a
+    elegir: A sin cifrar, B cifrada, C no guardar); (3) procesar el mensaje mientras se escribe; (4) decodificación especulativa (n-gramas y modelo borrador;
+    `common/speculative.cpp` ya está en el llama.cpp vendimizado) y caché KV en q8_0 para chats largos; (5) MoE: LFM2.5-8B-A1B en RAM y después un MoE
+    diseñado para leer del almacenamiento (p. ej. SmallThinker-21B-A3B) con precarga de expertos.
+  - **El motor ya tiene:** arquitecturas `lfm2moe`, `smallthinker` y `qwen3moe`; `tensor_buft_overrides`, `use_extra_bufts`, `type_k` y
+    `llama_state_seq_save_file`. Q4_K se reempaqueta en ARM, así que los expertos que se lean del almacenamiento deben quedar fuera del reempaquetado.
+  - Orden recomendado: 1 → 2 + 3 → 4 → 5. Las piezas 2 y 3 dependen de que la reutilización de memoria de P16 funcione con LFM3, que es híbrido.
+
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
   almacenamiento de la app». Causa: el APK declara `READ/WRITE_EXTERNAL_STORAGE`, pero con targetSdk 35 no dan acceso a
