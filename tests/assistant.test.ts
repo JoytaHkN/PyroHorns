@@ -31,6 +31,12 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   const bare = extractActions(block('alarma\nhora: 20:00\netiqueta: Furo celular'));
   check(bare.actions[0]?.type === 'alarm' && bare.invalid === 0, 'tipo como primera línea, sin «tipo:»');
   check(extractActions(block('borrar\nfoo: 1')).invalid === 1, 'un bloque no entendido se cuenta para avisar');
+  const nota = extractActions('Vale.\n```nota\ntexto: Llamar a Ramírez\nfecha: 2026-11-25 17:18\n```');
+  check(nota.actions[0]?.type === 'note' && nota.text === 'Vale.', 'la etiqueta del bloque (nota) cuenta como tipo');
+  const twice = extractActions('alarma\nhora: 18:00\netiqueta: despertar\n\nalarma\nhora: 18:00\netiqueta: despertar');
+  check(twice.actions.length === 1 && twice.actions[0]?.type === 'alarm' && twice.text === '', 'sin ``` y repetida: una sola acción');
+  check(extractActions('Nota: la reunión es el martes').actions.length === 0, 'una frase normal no se convierte en acción');
+  check(extractActions('```python\nprint(1)\n```').text.includes('print(1)'), 'código normal no se toca');
   check(wantsAction('creame una larma') && wantsAction('pon una alarma'), 'typo «larma» también se reconoce');
   check(assistContext(new Date()).includes('no inventes'), 'el modelo no inventa lo que ya tiene el usuario');
 

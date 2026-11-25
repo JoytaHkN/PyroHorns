@@ -388,3 +388,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Nemotron 3 Nano 4B descargado y añadido al catálogo local (tests en verde). Pendiente: CI y móvil.
 - **2026-11-25** · CI de Nemotron Nano 4B en verde (`0bfab7d`); APK `PyroHorns-0.1.0-F1.5-nano4b-prueba.apk` copiado.
 - **2026-11-25** · P23: catálogo de 29 empresas y 191 modelos de la nube, selector agrupado, pantalla de claves para todas. Solo Pollinations funciona sin clave; el resto espera claves del usuario.
+- **2026-11-25** · Prueba del asistente y de la nube: el bloque con etiqueta distinta de «accion» (```nota) y el bloque sin ``` (Nemotron Nano) ya se ejecutan; las acciones repetidas cuentan una vez. LFM3 mezcla su razonamiento en la respuesta (pendiente). OpenRouter sin clave avisa bien.
+- **2026-11-25** · Asistente: bloques con cualquier etiqueta (nota) y sin cercar (Nemotron Nano) ya se ejecutan; repetidas cuentan una vez. LFM3 mezcla su razonamiento en la respuesta (pendiente). OpenRouter sin clave avisa bien.

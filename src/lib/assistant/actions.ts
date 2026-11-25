@@ -108,23 +108,44 @@ function toAction(f: Record<string, string>): Action | null {
   }
 }
 
-const BLOCK = /```(?:acci[oó]n|action)[ \t]*\n([\s\S]*?)(```|$)/gi;
+const TYPE_WORDS = ['nota', 'tarea', 'completar', 'listar', 'evento', 'alarma', 'temporizador'];
+/** Bloque con cualquier etiqueta: ```accion, ```nota… (los modelos pequeños no siempre usan «accion»). */
+const FENCE = /```([\w-]*)[ \t]*\n([\s\S]*?)(```|$)/g;
+/** Acción sin ``` : una palabra de tipo en su línea seguida de líneas «clave: valor» (Nemotron Nano lo hace así). */
+const BARE = /(^|\n)[ \t]*(nota|tarea|completar|listar|evento|alarma|temporizador)[ \t]*\n((?:[ \t]*[-*]?[ \t]*[\p{L}_]+[ \t]*:[^\n]*(?:\n|$))+)/giu;
 const MAX_ACTIONS = 5;
 
-/** Separa los bloques de acción del texto. Un bloque sin cerrar (aún llegando) se oculta pero no se ejecuta. */
+/**
+ * Separa las acciones del texto. Un bloque sin cerrar (aún llegando) se oculta y no se ejecuta.
+ * Repetidas idénticas cuentan una vez. `invalid` cuenta bloques de acción que no se entendieron.
+ */
 export function extractActions(content: string): { text: string; actions: Action[]; invalid: number } {
   const actions: Action[] = [];
   let invalid = 0;
-  const text = content
-    .replace(BLOCK, (_all, body: string, closed: string) => {
-      if (!closed) return ''; // aún llegando: se oculta y no se ejecuta
-      const action = toAction(fields(body));
-      if (action && actions.length < MAX_ACTIONS) actions.push(action);
-      else if (!action) invalid++;
-      return '';
-    })
-    .trim();
-  return { text, actions, invalid };
+  const push = (action: Action) => {
+    const key = JSON.stringify(action);
+    if (actions.length < MAX_ACTIONS && !actions.some((a) => JSON.stringify(a) === key)) actions.push(action);
+  };
+  let text = content.replace(FENCE, (all, lang: string, body: string, closed: string) => {
+    const l = fold(lang);
+    const isAction = l === 'accion' || l === 'action' || TYPE_WORDS.includes(l) || /^\s*tipo\s*:/im.test(body);
+    if (!isAction) return all; // código normal: se queda como está
+    if (!closed) return ''; // aún llegando
+    const f = fields(body);
+    if (TYPE_WORDS.includes(l) && !f.tipo) f.tipo = l;
+    const action = toAction(f);
+    if (action) push(action);
+    else invalid++;
+    return '';
+  });
+  text = text.replace(BARE, (all, lead: string, type: string, body: string) => {
+    const f = fields(`tipo: ${type}\n${body}`);
+    const action = toAction(f);
+    if (!action) return all; // no es una acción: texto normal
+    push(action);
+    return lead;
+  });
+  return { text: text.trim(), actions, invalid };
 }
 
 export function when(ms: number): string {
