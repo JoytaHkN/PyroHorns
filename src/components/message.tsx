@@ -14,23 +14,35 @@ import { Orb } from './orb';
 import { PlasmaGradient } from './plasma';
 import { T } from './text';
 
+/** Copia un texto al portapapeles y avisa. */
+function useCopy() {
+  const { toast } = useToast();
+  return (text: string, done: string) =>
+    void Clipboard.setStringAsync(text).then(
+      () => toast.show(done),
+      () => toast.show('No se pudo copiar'),
+    );
+}
+
 function UserBubble({ m }: { m: Message }) {
   const pal = usePalette();
+  const copy = useCopy();
   return (
-    <View
-      style={{
-        alignSelf: 'flex-end',
-        maxWidth: '85%',
-        backgroundColor: pal.surface2,
-        borderRadius: 20,
-        borderBottomRightRadius: 6,
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-      }}
-    >
-      <T selectable style={{ lineHeight: 22 }}>
-        {m.content}
-      </T>
+    <View style={{ alignSelf: 'flex-end', alignItems: 'flex-end', maxWidth: '85%', gap: 2 }}>
+      <View
+        style={{
+          backgroundColor: pal.surface2,
+          borderRadius: 20,
+          borderBottomRightRadius: 6,
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+        }}
+      >
+        <T selectable style={{ lineHeight: 22 }}>
+          {m.content}
+        </T>
+      </View>
+      <Action icon="copy" label="Copiar mensaje" onPress={() => copy(m.content, 'Mensaje copiado')} />
     </View>
   );
 }
@@ -99,7 +111,7 @@ function MenuItem({ icon, label, onPress }: { icon: IconName; label: string; onP
 /** Compartir, copiar, 👍, 👎 y ⋮ bajo cada respuesta terminada. */
 function Actions({ m, convId, isLast }: { m: Message; convId: string; isLast: boolean }) {
   const pal = usePalette();
-  const { toast } = useToast();
+  const copy = useCopy();
   const [menu, setMenu] = useState(false);
   const rate = (value: 'up' | 'down') =>
     useChat.getState().patchMessage(convId, m.id, { feedback: m.feedback === value ? null : value });
@@ -107,16 +119,7 @@ function Actions({ m, convId, isLast }: { m: Message; convId: string; isLast: bo
     <View style={{ gap: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Action icon="share" label="Compartir respuesta" onPress={() => void Share.share({ message: m.content }).catch(() => {})} />
-        <Action
-          icon="copy"
-          label="Copiar respuesta"
-          onPress={() =>
-            void Clipboard.setStringAsync(m.content).then(
-              () => toast.show('Respuesta copiada'),
-              () => toast.show('No se pudo copiar'),
-            )
-          }
-        />
+        <Action icon="copy" label="Copiar respuesta" onPress={() => copy(m.content, 'Respuesta copiada')} />
         <Action icon="thumbUp" label="Me gusta" on={m.feedback === 'up'} onPress={() => rate('up')} />
         <Action icon="thumbDown" label="No me gusta" on={m.feedback === 'down'} onPress={() => rate('down')} />
         <Action icon="more" label="Más opciones" on={menu} onPress={() => setMenu((v) => !v)} />
