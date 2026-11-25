@@ -241,7 +241,11 @@ Arquitectura:
     diseñado para leer del almacenamiento (p. ej. SmallThinker-21B-A3B) con precarga de expertos.
   - **El motor ya tiene:** arquitecturas `lfm2moe`, `smallthinker` y `qwen3moe`; `tensor_buft_overrides`, `use_extra_bufts`, `type_k` y
     `llama_state_seq_save_file`. Q4_K se reempaqueta en ARM, así que los expertos que se lean del almacenamiento deben quedar fuera del reempaquetado.
-  - Orden recomendado: 1 → 2 + 3 → 4 → 5. Las piezas 2 y 3 dependen de que la reutilización de memoria de P16 funcione con LFM3, que es híbrido.
+  - **(0) Tabla de Nemotron bajo demanda** (añadida el 2026-11-25 por otra sesión): `per_layer_token_embd` ocupa 2851 MiB de los 6,16 GB y solo se usan
+    ≈ 11 KB por token. llama.cpp `dc33e61` sabe leerla bajo demanda, pero `LLAMA_LAZY_MODE_AUTO` exige más de 4 GiB: basta `modelParams.lazy_mode =
+    LLAMA_LAZY_MODE_ON` (requiere mmap). Hipótesis sin medir: hasta ≈ 2,8 GiB menos de RAM y menos carga. Es compatible con la pieza 1 si la lectura en
+    bloques grandes salta ese tramo del archivo.
+  - Orden recomendado: 0 + 1 → 2 + 3 → 4 → 5. Las piezas 2 y 3 dependen de que la reutilización de memoria de P16 funcione con LFM3, que es híbrido.
 
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
