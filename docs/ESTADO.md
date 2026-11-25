@@ -193,6 +193,11 @@
      «N tokens · N s · N tok/s»; (C) historial completo y reutilización de la caché KV (el rastro dice «N ya en memoria»; si el modelo no permite recortarla, se
      procesa todo). Semilla del muestreo aleatoria para que Regenerar cambie la respuesta.
      **Qué comprobar:** recuerda lo dicho antes; respuestas cortas; los botones; el segundo mensaje de una conversación y el Diagnóstico («ya en memoria» en LFM3 y Nemotron).
+   - **Botón de copiar en los mensajes del usuario (2026-11-25), CI en verde (`f18489f`), pendiente de probar** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-copiar-prueba.apk` + `.sha256`; incluye P16).
+   - **Propuesta P17 (2026-11-25), pendiente de visto bueno, sin código:** (1) leer bajo demanda la tabla `per_layer_token_embd` de Nemotron (2851 MiB de un GGUF de 6,16 GB; ≈ 11 KB por token):
+     llama.cpp `dc33e61` ya lo soporta, pero `LLAMA_LAZY_MODE_AUTO` solo lo activa con tablas de más de 4 GiB → `modelParams.lazy_mode = LLAMA_LAZY_MODE_ON` (hipótesis: menos RAM y carga más rápida;
+     medir antes y después); (2) procesar la instrucción de sistema durante la carga anticipada. Después, según resultados: guardar la caché KV por chat en disco, LFM3 por defecto y
+     decodificación especulativa. ssd-llm reverificado: convierte cada capa a f32 y `Q4_K` queda en ceros; sus rutas cuantizadas no se llaman.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -302,3 +307,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-24** · ssd-llm descartado. P16: instrucción de sistema, carga anticipada, acciones bajo las respuestas y memoria de conversación. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
 - **2026-11-24** · CI de P16 en verde (`edf3993`); APK copiado a `APK IA/apk/`. Pendiente: móvil.
 - **2026-11-25** · ssd-llm y Colibrì analizados; medido el almacenamiento del teléfono (mmap por fallos de página ≈ 0,2 GB/s frente a 1,1–1,4 GB/s en bloques grandes). Propuesta P17 (Método Brasa), pendiente de decisión.
+- **2026-11-25** · Botón de copiar en mensajes del usuario (CI verde, APK copiado). Análisis de streaming desde almacenamiento: registrada la propuesta P17.
