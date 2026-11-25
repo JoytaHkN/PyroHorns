@@ -1,7 +1,7 @@
 # PLAN — PyroHorns
 
 > **Versión 2.4** · 2026-11-24
-> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S17 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
+> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S18 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
 ## 1. Decisiones tomadas
@@ -90,6 +90,7 @@ Solo se aplican estas medidas. Ninguna otra.
 | S15 | **B** | Los botones de aprobación ignoran los toques cuando otra app los tapa | F3 |
 | S16 | **A → B** | Clave de firma en los secretos de GitHub; compilación reproducible antes de entrar en F-Droid. Las versiones de prueba se firman con una clave de prelanzamiento generada en el móvil (`APK IA/firma-prelanzamiento/`, fuera del repo). La **v1** usará una clave nueva creada en el PC: habrá que desinstalar la versión de prueba antes de instalarla | F1.1 / antes de F-Droid |
 | S17 | **B** | Dependabot propone actualizaciones (npm, Gradle, Actions) y se revisan | F1.1 |
+| S18 | **B** | Búsqueda en internet: se pide al modelo que trate los resultados como información y no siga instrucciones que vengan en ellos (elegido por el usuario el 2026-11-25; reduce el riesgo, no lo elimina) | F1.5 |
 
 **Dudas resueltas (2026-11-23)**
 1. **Copias frente a cifrado → opción b.** Las claves del almacén seguro no salen del móvil, así que en la copia viaja la clave de la base de datos protegida con una **contraseña de copia** que tú defines en Ajustes. Solo se pide al restaurar (en otro móvil o tras reinstalar). Detalle técnico:
@@ -261,7 +262,7 @@ Arquitectura:
   - **Implementación:** `src/lib/web-search.ts` (página sin JavaScript de DuckDuckGo, 4 resultados, plazo de 10 s, sin intentar esquivar bloqueos), botón de globo
     en el cuadro de texto que se apaga al enviar, resultados guardados con la pregunta (`web`, esquema v3) y fuentes pulsables bajo la respuesta. Del teléfono sale
     solo el texto del mensaje. **Riesgo:** desde este entorno DuckDuckGo respondió HTTP 202 (antirrobots), también su API de respuestas instantáneas.
-  - **No incluido, a elegir:** protección frente a instrucciones escondidas en una página (A ninguna, como ahora / B pedir al modelo que las ignore).
+  - **Protección frente a instrucciones escondidas en una página:** el usuario eligió **B** (S18).
 
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el
