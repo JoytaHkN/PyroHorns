@@ -201,7 +201,7 @@
      hipótesis: volver a tokenizar una respuesta larga da otros tokens y la memoria híbrida no se puede recortar; (2) los `###` se veían en crudo;
      (3) LFM3 inventó datos históricos graves; su GGUF recomienda temp 0,1, top-k 50 y penalización 1,1, y la app usa 0,8/40/0,9 (pendiente de decisión).
      Carga de Nemotron en el chat: 39 s (referencia antes de P17-0). Android mató la app el 25-11 00:24 con 3,6 GB de RAM (estado 9).
-   - **P17-0 y arreglos (2026-11-25), pendiente de CI y de probar:** `lazy_mode = LLAMA_LAZY_MODE_ON` (el Diagnóstico anota «lazy read enabled»), prompt
+   - **P17-0 y arreglos (2026-11-25), CI en verde (`df37523`), pendiente de probar en el móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-tabla-prueba.apk` + `.sha256`): `lazy_mode = LLAMA_LAZY_MODE_ON` (el Diagnóstico anota «lazy read enabled»), prompt
      comparado por texto con lo que hay en memoria (solo se tokeniza lo nuevo; el rastro anota «coinciden N de M») y títulos `#` en las respuestas.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
@@ -314,3 +314,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · ssd-llm y Colibrì analizados; medido el almacenamiento del teléfono (mmap por fallos de página ≈ 0,2 GB/s frente a 1,1–1,4 GB/s en bloques grandes). Propuesta P17 (Método Brasa), pendiente de decisión.
 - **2026-11-25** · Botón de copiar en mensajes del usuario (CI verde, APK copiado). Análisis de streaming desde almacenamiento: la tabla de Nemotron bajo demanda se une a P17 como pieza 0.
 - **2026-11-25** · Resultados de P16 en el móvil. Tabla de Nemotron bajo demanda (P17-0), reutilización de memoria por texto y títulos en las respuestas. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.
+- **2026-11-25** · CI de P17-0 en verde (`df37523`); APK copiado a `APK IA/apk/`. Pendiente: móvil y decidir 2, A (carga en bloques grandes) y B (muestreo recomendado).
