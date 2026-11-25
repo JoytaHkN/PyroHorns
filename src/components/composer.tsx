@@ -1,6 +1,6 @@
 import { useToast } from 'heroui-native';
 import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Platform, Pressable, TextInput, View } from 'react-native';
 import { modeById } from '@/data/agents';
 import { modelById } from '@/data/models';
 import { activeModelId, useSettings } from '@/store/settings';
@@ -12,7 +12,8 @@ import { T } from './text';
 
 interface Props {
   busy: boolean;
-  onSend: (text: string) => void;
+  /** `web`: buscar este mensaje en internet antes de responder. */
+  onSend: (text: string, web: boolean) => void;
   onStop: () => void;
   onOpenAgent: () => void;
 }
@@ -21,6 +22,7 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
   const pal = usePalette();
   const { toast } = useToast();
   const [text, setText] = useState('');
+  const [web, setWeb] = useState(false);
   const settings = useSettings();
   const model = modelById(activeModelId(settings));
   const mode = modeById(settings.mode);
@@ -29,8 +31,9 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
 
   const submit = () => {
     if (!canSend) return;
-    onSend(text.trim());
+    onSend(text.trim(), web);
     setText('');
+    setWeb(false); // se elige en cada mensaje
   };
 
   return (
@@ -49,7 +52,7 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
       <TextInput
         value={text}
         onChangeText={setText}
-        placeholder="Pregunta lo que quieras…"
+        placeholder={web ? 'Buscar en DuckDuckGo y preguntar…' : 'Pregunta lo que quieras…'}
         placeholderTextColor={pal.muted}
         multiline
         onSubmitEditing={submit}
@@ -118,6 +121,26 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
             </View>
           )}
         </Pressable>
+        {/* En el visor web el navegador impide la consulta (CORS). */}
+        {Platform.OS !== 'web' ? (
+          <Pressable
+            onPress={() => setWeb((v) => !v)}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: web }}
+            accessibilityLabel="Buscar en internet con DuckDuckGo"
+            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+          >
+            {web ? (
+              <PlasmaGradient style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="globe" size={18} color="#1A0B05" />
+              </PlasmaGradient>
+            ) : (
+              <View style={{ width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: pal.surface2 }}>
+                <Icon name="globe" size={18} color={pal.muted} />
+              </View>
+            )}
+          </Pressable>
+        ) : null}
         <View style={{ flex: 1 }} />
         <Pressable
           accessibilityRole="button"

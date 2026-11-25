@@ -1,5 +1,5 @@
 import type { ModeId } from '@/data/agents';
-import type { ChatData, Conversation, Message, MessageStatus, Project, ToolCall, Usage } from '@/types/chat';
+import type { ChatData, Conversation, Message, MessageStatus, Project, ToolCall, Usage, WebInfo } from '@/types/chat';
 import { fold, settleStatus, type ChatRepo, type ConversationMeta } from './repo';
 import type { SqlDb } from './sql';
 
@@ -26,6 +26,7 @@ interface MessageRow {
   usage: string | null;
   tool_calls: string | null;
   feedback: string | null;
+  web: string | null;
   created_at: number;
 }
 
@@ -54,6 +55,8 @@ function toMessage(r: MessageRow): Message {
   const calls = parseJson<ToolCall[]>(r.tool_calls);
   if (calls?.length) m.toolCalls = calls;
   if (r.feedback === 'up' || r.feedback === 'down') m.feedback = r.feedback;
+  const web = parseJson<WebInfo>(r.web);
+  if (web) m.web = web;
   return settleStatus(m);
 }
 
@@ -119,8 +122,8 @@ export class SqlChatRepo implements ChatRepo {
   async insertMessage(conversationId: string, m: Message): Promise<void> {
     await this.db.transaction(async () => {
       await this.db.run(
-        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, web, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           m.id,
           conversationId,
@@ -133,6 +136,7 @@ export class SqlChatRepo implements ChatRepo {
           m.usage ? JSON.stringify(m.usage) : null,
           m.toolCalls?.length ? JSON.stringify(m.toolCalls) : null,
           m.feedback ?? null,
+          m.web ? JSON.stringify(m.web) : null,
           m.createdAt,
         ],
       );
@@ -142,7 +146,7 @@ export class SqlChatRepo implements ChatRepo {
 
   async updateMessage(m: Message): Promise<void> {
     await this.db.run(
-      `UPDATE messages SET content = ?, thinking = ?, status = ?, think_ms = ?, model_id = ?, usage = ?, tool_calls = ?, feedback = ?
+      `UPDATE messages SET content = ?, thinking = ?, status = ?, think_ms = ?, model_id = ?, usage = ?, tool_calls = ?, feedback = ?, web = ?
        WHERE id = ?`,
       [
         m.content,
@@ -153,6 +157,7 @@ export class SqlChatRepo implements ChatRepo {
         m.usage ? JSON.stringify(m.usage) : null,
         m.toolCalls?.length ? JSON.stringify(m.toolCalls) : null,
         m.feedback ?? null,
+        m.web ? JSON.stringify(m.web) : null,
         m.id,
       ],
     );

@@ -21,6 +21,20 @@ export interface ToolCall {
   args: string;
 }
 
+/** Página que se usó en una búsqueda. */
+export interface WebSource {
+  title: string;
+  url: string;
+}
+
+/** Internet en un mensaje: en el del usuario, lo que se encontró para el modelo; en la respuesta, las fuentes. */
+export interface WebInfo {
+  /** Solo usuario: resultados que se anteponen a la pregunta. Ausente si la búsqueda aún no se hizo o falló. */
+  context?: string;
+  /** Solo IA: páginas consultadas. */
+  sources?: WebSource[];
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -37,6 +51,8 @@ export interface Message {
   toolCalls?: ToolCall[];
   /** Solo IA: valoración del usuario. Se guarda solo en el dispositivo. */
   feedback?: 'up' | 'down' | null;
+  /** Presente en el mensaje del usuario si pidió buscar en internet, y en la respuesta que usó la búsqueda. */
+  web?: WebInfo;
 }
 
 /** Agente con el que se creó o continuó la conversación. */

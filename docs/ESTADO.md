@@ -213,6 +213,8 @@
      mapearlo, saltando la tabla por capas (rastro «MiB leídos en bloques en N ms»); (2) `warm`: la instrucción se procesa tras la carga anticipada (rastro
      «warm: …»); (B) muestreo según `general.sampling.*` (LFM3 temp 0,1 / top-k 50 / penalización 1,1; CyberSecQwen 0,7/20/0,8; Nemotron 1,0/64/0,95; Qwen3 y Phi
      sin cambios), y se quita un segundo `accept` del sampler; (C) `*cursiva*`. **Comparar:** carga de Nemotron (21–39 s antes) y primer mensaje (87–90 tokens).
+   - **P18 internet (2026-11-25), pendiente de CI y móvil:** el usuario eligió botón por mensaje y solo DuckDuckGo (`PLAN.md` §7). **Comprobar en el móvil si
+     DuckDuckGo responde o bloquea**; el análisis de la página solo está probado con HTML de ejemplo.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -327,3 +329,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · CI de P17-0 en verde (`df37523`); APK copiado a `APK IA/apk/`. Pendiente: móvil y decidir 2, A (carga en bloques grandes) y B (muestreo recomendado).
 - **2026-11-25** · P17-0 probada: carga de Nemotron 39 → 29 s, tok/s iguales, memoria correcta. Registrada P18 (internet). Pendiente: decidir 2, A, B, cursivas y P18.
 - **2026-11-25** · A, 2, B y cursiva implementados (typecheck, pruebas y bundle en verde). Revisados los repositorios clonados y medidos tres buscadores sin clave (P18).
+- **2026-11-25** · P18: botón de internet con DuckDuckGo. Typecheck, pruebas y bundle Android en verde. Pendiente: CI y móvil.

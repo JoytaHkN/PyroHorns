@@ -9,7 +9,8 @@ import { useChat, type Message } from '@/store/chat';
 import { useEngine } from '@/store/engine';
 import { usePalette } from '@/theme/use-palette';
 import { Icon, type IconName } from './icons';
-import { Markdown } from './markdown';
+import { Markdown, openUrl } from './markdown';
+import { isOpenableUrl } from './markdown-parse';
 import { Orb } from './orb';
 import { PlasmaGradient } from './plasma';
 import { T } from './text';
@@ -53,9 +54,10 @@ function Thinking({ m }: { m: Message }) {
   const [open, setOpen] = useState(false);
   const live = m.status === 'thinking';
   const loading = useEngine((s) => s.loading) && live;
+  const searching = useEngine((s) => s.searching) && live;
   const hasText = !!m.thinking?.trim();
   if (!live && !m.thinkMs && !hasText) return null;
-  const label = loading ? 'Cargando modelo…' : live ? 'Pensando…' : `Pensó ${Math.max(1, Math.round((m.thinkMs ?? 0) / 1000))} s`;
+  const label = searching ? 'Buscando en internet…' : loading ? 'Cargando modelo…' : live ? 'Pensando…' : `Pensó ${Math.max(1, Math.round((m.thinkMs ?? 0) / 1000))} s`;
   return (
     <View style={{ gap: 6 }}>
       <Pressable
@@ -160,6 +162,34 @@ function Actions({ m, convId, isLast }: { m: Message; convId: string; isLast: bo
   );
 }
 
+const hostOf = (url: string) => url.replace(/^https?:\/\/(www\.)?/i, '').split(/[/?#]/)[0];
+
+/** Páginas que devolvió la búsqueda, en el mismo orden que las citas [n]. */
+function Sources({ m }: { m: Message }) {
+  const sources = m.web?.sources;
+  if (!sources?.length) return null;
+  return (
+    <View style={{ gap: 2, marginLeft: 8 }}>
+      <T size={11} tone="muted" weight="semibold">
+        Fuentes (DuckDuckGo)
+      </T>
+      {sources.map((s, i) => (
+        <T
+          key={`${i}-${s.url}`}
+          size={12}
+          tone="muted"
+          numberOfLines={1}
+          accessibilityRole="link"
+          onPress={() => isOpenableUrl(s.url) && openUrl(s.url)}
+          style={{ textDecorationLine: 'underline', lineHeight: 20 }}
+        >
+          [{i + 1}] {hostOf(s.url)} · {s.title}
+        </T>
+      ))}
+    </View>
+  );
+}
+
 function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: boolean }) {
   const pal = usePalette();
   const live = m.status === 'thinking' || m.status === 'streaming';
@@ -187,6 +217,7 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
           </View>
         </PlasmaGradient>
       )}
+      {showBody && <Sources m={m} />}
       {!live && (
         <View style={{ gap: 2 }}>
           {m.content ? <Actions m={m} convId={convId} isLast={isLast} /> : null}

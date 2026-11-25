@@ -2,11 +2,13 @@ import { contextTokens, modelById } from '@/data/models';
 import { MockProvider } from '@/providers/mock';
 import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
 import type { ChatProvider } from '@/providers/types';
+import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
 import { uid, useChat, type AgentSnapshot } from '@/store/chat';
 import { buildContext, estimateTokens } from './context';
 import { errorSummary, log } from './log';
 import { systemPrompt } from './system-prompt';
+import { SearchError, searchDuckDuckGo, webContext } from './web-search';
 
 /** F1.5/F2: usa el módulo nativo si está disponible, si no el mock. */
 export { setNativeLlamaModule };
@@ -33,7 +35,7 @@ function titleFrom(text: string) {
 }
 
 /** Envía un mensaje; crea la conversación si no existe. Devuelve el id de conversación. */
-export async function send(text: string, convId?: string | null): Promise<string> {
+export async function send(text: string, convId?: string | null, opts: { web?: boolean } = {}): Promise<string> {
   const chat = useChat.getState();
   const agent = currentAgent();
   let id = convId ?? null;
@@ -43,7 +45,7 @@ export async function send(text: string, convId?: string | null): Promise<string
   if (conv.messages.length === 0) chat.rename(convId_, titleFrom(text));
   chat.setAgent(convId_, agent);
 
-  chat.addMessage(convId_, { id: uid(), role: 'user', content: text, createdAt: Date.now() });
+  chat.addMessage(convId_, { id: uid(), role: 'user', content: text, createdAt: Date.now(), ...(opts.web ? { web: {} } : {}) });
   const aiId = uid();
   chat.addMessage(convId_, {
     id: aiId,
@@ -83,16 +85,6 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
   const chat = useChat.getState();
   const started = Date.now();
   const ctx = contextTokens(modelById(agent.modelId), agent.deep);
-  const system = systemPrompt(agent.modelId);
-  const messages = useChat.getState().conversations.find((c) => c.id === convId_)!.messages;
-  const history = [
-    { role: 'system' as const, content: system },
-    ...buildContext(
-      messages.slice(0, messages.findIndex((m) => m.id === aiId)),
-      { contextTokens: ctx - estimateTokens(system) },
-    ),
-  ];
-
   const patch = (p: Parameters<typeof chat.patchMessage>[2]) => chat.patchMessage(convId_, aiId, p);
   const ctrl = new AbortController();
   controllers.set(convId_, ctrl);
@@ -100,6 +92,16 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
   /** Inicio del razonamiento: «Pensó N s» mide solo el razonamiento (no la carga del modelo ni el prefill). */
   let thinkStart: number | null = null;
   try {
+    await searchIfAsked(convId_, aiId, ctrl.signal);
+    const system = systemPrompt(agent.modelId);
+    const messages = useChat.getState().conversations.find((c) => c.id === convId_)!.messages;
+    const history = [
+      { role: 'system' as const, content: system },
+      ...buildContext(
+        messages.slice(0, messages.findIndex((m) => m.id === aiId)),
+        { contextTokens: ctx - estimateTokens(system) },
+      ),
+    ];
     for await (const ev of provider.stream(history, { ...agent, contextTokens: ctx, signal: ctrl.signal })) {
       switch (ev.type) {
         case 'thinking_delta':
@@ -133,10 +135,28 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
     if (!aborted) log.error('engine.stream', e, { model: agent.modelId });
     patch((m) => ({
       status: aborted ? 'stopped' : 'error',
-      content: aborted ? m.content : `${m.content}${m.content ? '\n\n' : ''}⚠️ ${errorSummary(e)}`,
+      content: aborted
+        ? m.content
+        : `${m.content}${m.content ? '\n\n' : ''}⚠️ ${e instanceof SearchError ? e.message : errorSummary(e)}`,
     }));
   } finally {
     controllers.delete(convId_);
+  }
+}
+
+/** Si el mensaje pidió internet y aún no hay resultados, busca y los guarda (al regenerar se reutilizan). */
+async function searchIfAsked(convId: string, aiId: string, signal: AbortSignal): Promise<void> {
+  const messages = useChat.getState().conversations.find((c) => c.id === convId)!.messages;
+  const question = messages[messages.findIndex((m) => m.id === aiId) - 1];
+  if (!question || question.role !== 'user' || !question.web || question.web.context) return;
+  useEngine.getState().setSearching(true);
+  try {
+    const results = await searchDuckDuckGo(question.content, signal);
+    const chat = useChat.getState();
+    chat.patchMessage(convId, question.id, { web: { context: webContext(results, new Date()) } });
+    chat.patchMessage(convId, aiId, { web: { sources: results.map(({ title, url }) => ({ title, url })) } });
+  } finally {
+    useEngine.getState().setSearching(false);
   }
 }
 

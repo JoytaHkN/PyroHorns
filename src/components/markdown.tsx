@@ -7,7 +7,7 @@ import { Icon } from './icons';
 import { parseBlocks, parseInline, type Inline } from './markdown-parse';
 import { T } from './text';
 
-const openUrl = (url: string) => {
+export const openUrl = (url: string) => {
   Linking.openURL(url).catch((e: unknown) => log.warn('link.open_failed', { error: String(e).slice(0, 80) }));
 };
 

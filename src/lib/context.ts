@@ -4,6 +4,10 @@ import type { Message } from '@/types/chat';
 /** ~4 caracteres por token + 4 de formato por mensaje. Aproximación hasta tener el tokenizer real (F1.5). */
 export const estimateTokens = (text: string) => Math.ceil(text.length / 4) + 4;
 
+/** Lo que el modelo recibe de un mensaje: la pregunta, precedida de los resultados de internet si los hubo. */
+export const modelText = (m: Message) =>
+  m.role === 'user' && m.web?.context ? `${m.web.context}\n\nPregunta: ${m.content}` : m.content;
+
 export interface ContextOptions {
   /** Tamaño total del contexto del modelo, en tokens. */
   contextTokens: number;
@@ -27,10 +31,11 @@ export function buildContext(messages: Message[], opts: ContextOptions): Provide
   let used = 0;
   for (let i = usable.length - 1; i >= 0; i--) {
     const m = usable[i]!;
-    const cost = estimateTokens(m.content);
+    const content = modelText(m);
+    const cost = estimateTokens(content);
     const isLast = out.length === 0;
     if (!isLast && used + cost > budget) break;
-    out.push({ role: m.role, content: m.content });
+    out.push({ role: m.role, content });
     used += cost;
   }
   return out.reverse();
@@ -38,7 +43,7 @@ export function buildContext(messages: Message[], opts: ContextOptions): Provide
 
 /** Tokens estimados de una conversación (para el contador de la barra superior). */
 export const conversationTokens = (messages: Message[]) =>
-  messages.reduce((n, m) => n + (m.content ? estimateTokens(m.content) : 0), 0);
+  messages.reduce((n, m) => n + (m.content ? estimateTokens(modelText(m)) : 0), 0);
 
 /** 950 → "950", 4300 → "4.3K"; los contextos (múltiplos de 1024) salen exactos: 8192 → "8K". */
 export const formatTokens = (n: number) => {

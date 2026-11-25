@@ -128,5 +128,32 @@ const conv = (id: string) => useChat.getState().conversations.find((c) => c.id =
   check(after.conversations.length === 0 && left?.n === 0, 'borrar conversación (y sus mensajes en cascada)');
   check(useChat.getState().activeId === null, 'sin conversación activa tras borrar');
 
+  // Internet: los resultados acompañan a la pregunta y las fuentes a la respuesta.
+  const realFetch = globalThis.fetch;
+  let searches = 0;
+  globalThis.fetch = (async () => {
+    searches++;
+    return new Response(
+      '<h2 class="result__title"><a href="https://fuente.example/a">Fuente</a></h2><a class="result__snippet">dato</a>',
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  const wid = await send('¿Qué pasó hoy?', null, { web: true });
+  await flushWrites();
+  const found = (await new SqlChatRepo(db, fts).loadAll()).conversations.find((x) => x.id === wid)!;
+  check(!!found.messages[0]!.web?.context?.includes('Fuente — dato'), 'los resultados se guardan con la pregunta');
+  check(found.messages[1]!.web?.sources?.[0]?.url === 'https://fuente.example/a', 'las fuentes se guardan con la respuesta');
+  await regenerate(wid);
+  check(searches === 1 && conv(wid).messages[1]!.web?.sources?.length === 1, 'regenerar reutiliza la búsqueda');
+  await send('sin internet', wid);
+  check(searches === 1, 'sin el botón no se busca');
+
+  // Bloqueo: se informa y no se responde como si hubiera buscado.
+  globalThis.fetch = (async () => new Response('<div class="anomaly"></div>', { status: 202 })) as typeof fetch;
+  const bid = await send('otra', null, { web: true });
+  const failed = conv(bid).messages[1]!;
+  check(failed.status === 'error' && failed.content.includes('bloqueó') && !failed.web, 'bloqueo de DuckDuckGo visible en el chat');
+  globalThis.fetch = realFetch;
+
   done();
 })();

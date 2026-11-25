@@ -33,6 +33,7 @@ export default function ChatScreen() {
   const conv = useActiveConversation();
   const native = useEngine((s) => s.native);
   const loading = useEngine((s) => s.loading);
+  const searching = useEngine((s) => s.searching);
   const select = useChat((s) => s.select);
   const remove = useChat((s) => s.remove);
   const settings = useSettings();
@@ -57,8 +58,8 @@ export default function ChatScreen() {
     if (messages.length) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [messages.length, last?.content.length]);
 
-  const onSend = (text: string) => {
-    void send(text, conv?.id);
+  const onSend = (text: string, web = false) => {
+    void send(text, conv?.id, { web });
   };
 
   return (
@@ -145,7 +146,7 @@ export default function ChatScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
                 <Orb size={10} active={busy || loading} />
                 <T size={12} tone="muted">
-                  {loading ? `Cargando ${model.name}…` : busy ? `${model.name} generando…` : native ? `${model.name} · en tu dispositivo` : `${model.name} · respuestas simuladas`}
+                  {searching ? 'Buscando en internet…' : loading ? `Cargando ${model.name}…` : busy ? `${model.name} generando…` : native ? `${model.name} · en tu dispositivo` : `${model.name} · respuestas simuladas`}
                 </T>
               </View>
             }

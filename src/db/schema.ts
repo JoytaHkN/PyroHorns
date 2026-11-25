@@ -43,6 +43,10 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE messages ADD COLUMN feedback TEXT;
   `,
+  // v3: búsqueda en internet (resultados y fuentes)
+  `
+  ALTER TABLE messages ADD COLUMN web TEXT;
+  `,
 ];
 
 /** Búsqueda de texto completo. Se crea aparte para poder seguir sin ella si el motor no trae FTS5. */
