@@ -28,6 +28,11 @@ const block = (body: string) => '```accion\n' + body + '\n```';
     check(extractActions(block(bad)).actions.length === 0, `se ignora: ${bad.split('\n').join(' / ')}`);
   }
   check(extractActions('```accion\ntipo: nota\ntexto: a medias').actions.length === 0, 'bloque sin cerrar: no se ejecuta');
+  const bare = extractActions(block('alarma\nhora: 20:00\netiqueta: Furo celular'));
+  check(bare.actions[0]?.type === 'alarm' && bare.invalid === 0, 'tipo como primera línea, sin «tipo:»');
+  check(extractActions(block('borrar\nfoo: 1')).invalid === 1, 'un bloque no entendido se cuenta para avisar');
+  check(wantsAction('creame una larma') && wantsAction('pon una alarma'), 'typo «larma» también se reconoce');
+  check(assistContext(new Date()).includes('no inventes'), 'el modelo no inventa lo que ya tiene el usuario');
 
   const db = nodeDb();
   const { fts } = await migrate(db);

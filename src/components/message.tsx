@@ -286,7 +286,8 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
   const live = m.status === 'thinking' || m.status === 'streaming';
   const showBody = m.status !== 'thinking' || !!m.content;
   // Los bloques de acción del asistente no se muestran como código: salen como tarjetas.
-  const visible = m.toolCalls?.some((c) => c.status) || live ? extractActions(m.content).text : m.content;
+  const parsedActions = extractActions(m.content);
+  const visible = parsedActions.text;
   const { text, options } = extractOptions(visible);
   // Solo la última respuesta se contesta tocando; en las anteriores las opciones quedan como lista.
   const tappable = isLast && m.status === 'done' && options.length > 0;
@@ -315,6 +316,11 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
         </PlasmaGradient>
       )}
       {showBody && <Sources m={m} />}
+      {!live && parsedActions.invalid > 0 ? (
+        <T size={12} tone="muted">
+          No entendí una acción de la respuesta. Puedes pedirla otra vez, por ejemplo «anota la tarea…».
+        </T>
+      ) : null}
       <AssistantActions m={m} convId={convId} />
       {tappable ? <Choices options={options} convId={convId} /> : null}
       {!live && (

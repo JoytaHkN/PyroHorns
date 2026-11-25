@@ -13,7 +13,7 @@ export type Action =
   | { type: 'timer'; seconds: number; label: string };
 
 const INTENT =
-  /(an[oó]ta|ap[uú]nta|recu[eé]rda|recordatorio|ag[eé]nda|calendario|\bevento\b|reuni[oó]n|\bcita\b|\balarma|despi[eé]rta|temporizador|av[ií]same|\btareas?\b|\bpendientes?\b|\bnotas?\b)/i;
+  /(an[oó]ta|ap[uú]nta|recu[eé]rda|recordatorio|ag[eé]nda|calendario|\bevento\b|reuni[oó]n|\bcita\b|\b\w?larma|despi[eé]rta|temporizador|av[ií]same|\btareas?\b|\bpendientes?\b|\bnotas?\b)/i;
 
 export const wantsAction = (text: string) => INTENT.test(text);
 
@@ -33,6 +33,7 @@ export function assistContext(now: Date): string {
     'Tipos: nota (texto) · tarea (texto; fecha opcional AAAA-MM-DD HH:MM) · completar (texto de la tarea) · listar (que: tareas o notas) · ' +
       'evento (titulo, inicio, duracion en minutos) · alarma (hora: HH:MM, etiqueta) · temporizador (minutos, etiqueta).',
     'Si falta un dato necesario, pregúntalo y no pongas bloque.',
+    'No sabes qué tareas, notas, eventos ni alarmas ya tiene el usuario: si pregunta por ellos, dile que todavía no puedes consultarlos y no inventes.',
   ].join('\n');
 }
 
@@ -66,6 +67,8 @@ function fields(body: string): Record<string, string> {
   for (const line of trimmed.split('\n')) {
     const m = line.match(/^\s*[-*]?\s*([\p{L}_]+)\s*:\s*(.*?)\s*$/u);
     if (m) out[fold(m[1]!)] = m[2]!.replace(/^["']|["',]+$/g, '');
+    // Un modelo pequeño pone el tipo como primera línea sin «tipo:» (p. ej. «alarma»).
+    else if (!Object.keys(out).length && line.trim()) out.tipo = fold(line.replace(/[*`]/g, '').trim());
   }
   return out;
 }
@@ -109,16 +112,19 @@ const BLOCK = /```(?:acci[oó]n|action)[ \t]*\n([\s\S]*?)(```|$)/gi;
 const MAX_ACTIONS = 5;
 
 /** Separa los bloques de acción del texto. Un bloque sin cerrar (aún llegando) se oculta pero no se ejecuta. */
-export function extractActions(content: string): { text: string; actions: Action[] } {
+export function extractActions(content: string): { text: string; actions: Action[]; invalid: number } {
   const actions: Action[] = [];
+  let invalid = 0;
   const text = content
     .replace(BLOCK, (_all, body: string, closed: string) => {
-      const action = closed ? toAction(fields(body)) : null;
+      if (!closed) return ''; // aún llegando: se oculta y no se ejecuta
+      const action = toAction(fields(body));
       if (action && actions.length < MAX_ACTIONS) actions.push(action);
+      else if (!action) invalid++;
       return '';
     })
     .trim();
-  return { text, actions };
+  return { text, actions, invalid };
 }
 
 export function when(ms: number): string {

@@ -62,7 +62,12 @@ export async function send(text: string, convId?: string | null, opts: { web?: b
   if (conv.messages.length === 0) chat.rename(convId_, titleFrom(text));
   chat.setAgent(convId_, agent);
 
-  const assist = useSettings.getState().assistant !== 'off' && wantsAction(text) ? assistContext(new Date()) : undefined;
+  // Una aclaración («¿qué texto?») sigue a una petición del asistente: la respuesta corta también lleva las instrucciones.
+  const lastReply = [...conv.messages].reverse().find((m) => m.role === 'assistant');
+  const lastAsk = [...conv.messages].reverse().find((m) => m.role === 'user');
+  const followUp = !!lastReply?.content.includes('?') && !!lastAsk?.assist;
+  const assist =
+    useSettings.getState().assistant !== 'off' && (wantsAction(text) || followUp) ? assistContext(new Date()) : undefined;
   chat.addMessage(convId_, {
     id: uid(),
     role: 'user',

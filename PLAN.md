@@ -272,7 +272,11 @@ Arquitectura:
   (2) dictado y voz (F4; el teléfono Huawei puede no tener el reconocimiento de Google); (3) asistente predeterminado de Android; después, según elija: abrir
   apps, contactos, llamadas, SMS, notificaciones, ubicación, cámara, ajustes del teléfono y control de pantalla (servicio de accesibilidad).
 
-- **P21. Decisiones del usuario (2026-11-25, tarde)** — accesos del asistente **1–6 aprobados con la opción B** (lo irreversible, con un toque), activados con un
+- **P21 — decisiones tomadas el 2026-11-25 (tarde):** (1) botón «Nube» junto al globo (opción a); (2) confirmación también por voz: **sí**; (3) control de pantalla con
+  dos frases habladas **y huella** (opción ii); (4) orden de trabajo aprobado. **Bloqueo:** la cuenta del usuario en NVIDIA muestra «API Access Unavailable: contact
+  support to verify your account» (`build.nvidia.com`); no hay acceso a la API gratuita hasta que NVIDIA verifique la cuenta. Alternativa: OpenRouter (Nemotron 3 Ultra
+  gratis, 50 consultas al día sin créditos).
+- **P21 (detalle previo).** — accesos del asistente **1–6 aprobados con la opción B** (lo irreversible, con un toque), activados con un
   comando de voz «tipo Alexa»; **7 (control de pantalla) aprobado con la opción B**, eligiendo antes las apps y con «doble seguro verbal» (por concretar). Sin código aún.
   - **Reutilizable de and-code (MIT, `/workspace/and-code`):** `feature/wakeword` (Vosk, sin conexión; su catálogo trae inglés y japonés, falta
     `vosk-model-small-es-0.42`, ≈ 39 MB, Apache-2.0), `VoiceInteractionService` (asistente predeterminado) y TTS.

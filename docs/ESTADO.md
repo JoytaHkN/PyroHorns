@@ -245,7 +245,10 @@
    - **P20 punto 1 (2026-11-25), CI en verde (`1fdcd19`), pendiente de móvil** (APK: `APK IA/apk/PyroHorns-0.1.0-F1.5-asistente-prueba.apk` + `.sha256`; incluye P19 y Dory): `src/lib/assistant/` (instrucciones solo cuando el mensaje pide anotar/agendar; bloques ```accion),
      tabla `items` (esquema v4), pantalla «Notas y tareas», modo Automático/Toque/Apagado en Ajustes, y nativo para calendario (permiso al primer evento, aviso 10 min
      antes) y reloj. **Comprobar en el móvil** si LFM3 y los demás respetan el formato, y que exista un calendario con escritura.
-   - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
+   - **Prueba del asistente en el móvil (2026-11-25, capturas):** LFM3 escribe bloques con la primera línea «alarma» o «tarea» y sin «tipo:» (ahora se aceptan); la aclaración
+     «¿qué texto?» perdía las instrucciones (corregido); el modelo inventó «ya existe una alarma a las 15:00» (corregido con una instrucción). Nemotron sin restricciones
+     escribió bien el formato. Un bloque no entendido ya no se muestra como código. **Por comprobar:** si se creó el evento, la alarma y la tarea del mensaje anterior.
+   -    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
    - Paso 4 ✅ (medido con P13): TTFT, tok/s y RAM con 1K y 7,6K de contexto; no cumple el objetivo de TTFT ni la generación a 7,6K.
@@ -371,3 +374,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Compilación de Android en verde con el parche de Dory corregido (`716a283`); APK en `APK IA/apk/PyroHorns-0.1.0-F1.5-modelos-prueba.apk` (+ `.sha256`). Pendiente: probar Dory en el móvil.
 - **2026-11-25** · CI del asistente en verde; APK copiado con permisos de calendario y alarma comprobados. Pendiente: móvil y que el usuario elija los accesos siguientes.
 - **2026-11-25** · Registradas P21 (accesos y voz) y P22 (conexiones); comprobado que and-code/OpenCode admiten NVIDIA sin variante. Sin código; pendiente de confirmación.
+- **2026-11-25** · Prueba del asistente: tres fallos corregidos (formato sin «tipo:», aclaraciones, estado inventado). NVIDIA bloqueado para esta cuenta. Decisiones de P21 registradas.
