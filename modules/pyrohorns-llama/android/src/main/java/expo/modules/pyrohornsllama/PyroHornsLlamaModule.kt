@@ -6,6 +6,7 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.provider.AlarmClock
+import android.provider.ContactsContract
 import android.provider.CalendarContract
 import expo.modules.interfaces.permissions.Permissions
 import expo.modules.kotlin.Promise
@@ -187,6 +188,74 @@ class PyroHornsLlamaModule : Module() {
         promise.resolve(mapOf("granted" to true))
       } else {
         Permissions.askForPermissionsWithPermissionsManager(appContext.permissions, promise, *wanted)
+      }
+    }
+
+    AsyncFunction("requestContactsPermission") { promise: Promise ->
+      val context = appCtx()
+      val wanted = arrayOf(Manifest.permission.READ_CONTACTS)
+      if (context.checkSelfPermission(wanted[0]) == PackageManager.PERMISSION_GRANTED) {
+        promise.resolve(mapOf("granted" to true))
+      } else {
+        Permissions.askForPermissionsWithPermissionsManager(appContext.permissions, promise, *wanted)
+      }
+    }
+
+    // Contactos cuyo nombre contiene el texto, con sus teléfonos y correos (JSON). Máximo cinco.
+    AsyncFunction("searchContacts") { name: String ->
+      val context = appCtx()
+      check(context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+        "Sin permiso de contactos."
+      }
+      val out = JSONArray()
+      val uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_FILTER_URI, Uri.encode(name))
+      context.contentResolver.query(
+        uri,
+        arrayOf(ContactsContract.Contacts._ID, ContactsContract.Contacts.DISPLAY_NAME_PRIMARY),
+        null,
+        null,
+        null
+      )?.use { cursor ->
+        while (cursor.moveToNext() && out.length() < 5) {
+          val id = cursor.getString(0)
+          val displayName = cursor.getString(1) ?: ""
+          val phones = JSONArray()
+          val emails = JSONArray()
+          context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER),
+            "${ContactsContract.CommonDataKinds.Phone.CONTACT_ID} = ?",
+            arrayOf(id),
+            null
+          )?.use { p -> while (p.moveToNext()) phones.put(p.getString(0)) }
+          context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Email.ADDRESS),
+            "${ContactsContract.CommonDataKinds.Email.CONTACT_ID} = ?",
+            arrayOf(id),
+            null
+          )?.use { e -> while (e.moveToNext()) emails.put(e.getString(0)) }
+          out.put(JSONObject().put("name", displayName).put("phones", phones).put("emails", emails))
+        }
+      }
+      out.toString()
+    }
+
+    // Abre el marcador con el número; no llama: el usuario pulsa llamar.
+    AsyncFunction("dialNumber") { number: String ->
+      appCtx().startActivity(
+        Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      )
+    }
+
+    // Abre el chat de WhatsApp con el número; el usuario envía el mensaje.
+    AsyncFunction("openWhatsApp") { number: String ->
+      val digits = number.filter { it.isDigit() }
+      check(digits.isNotEmpty()) { "El número no tiene dígitos." }
+      try {
+        appCtx().startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$digits")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+      } catch (e: ActivityNotFoundException) {
+        throw IllegalStateException("No hay WhatsApp ni navegador para abrir el chat.", e)
       }
     }
 

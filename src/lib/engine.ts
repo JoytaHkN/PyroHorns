@@ -1,4 +1,5 @@
 import { CLOUD_DEFAULT_ID, contextTokens, modelById } from '@/data/models';
+import { parseRoute, rewriteCommand } from './assistant/intents';
 import { CloudError } from '@/providers/cloud';
 import { MockProvider } from '@/providers/mock';
 import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
@@ -52,7 +53,11 @@ function titleFrom(text: string) {
 }
 
 /** Envía un mensaje; crea la conversación si no existe. Devuelve el id de conversación. */
-export async function send(text: string, convId?: string | null, opts: { web?: boolean; cloud?: boolean } = {}): Promise<string> {
+export async function send(input: string, convId?: string | null, opts: { web?: boolean; cloud?: boolean } = {}): Promise<string> {
+  // «@llamar Ana» y similares: el menú del cuadro de texto se traduce antes de todo.
+  const command = rewriteCommand(input);
+  const text = command.text;
+  const web = !!opts.web || command.web;
   const chat = useChat.getState();
   const agent = opts.cloud ? { ...currentAgent(), modelId: CLOUD_DEFAULT_ID } : currentAgent();
   let id = convId ?? null;
@@ -73,9 +78,33 @@ export async function send(text: string, convId?: string | null, opts: { web?: b
     role: 'user',
     content: text,
     createdAt: Date.now(),
-    ...(opts.web ? { web: {} } : {}),
+    ...(web ? { web: {} } : {}),
     ...(assist ? { assist } : {}),
   });
+
+  // Planilla de intenciones: lo que la app puede hacer sin el modelo se resuelve aquí (evita respuestas inventadas).
+  const mode = useSettings.getState().assistant;
+  const route = mode !== 'off' && !web && !opts.cloud ? parseRoute(text, new Date()) : null;
+  if (route?.kind === 'question') {
+    chat.addMessage(convId_, { id: uid(), role: 'assistant', content: route.text, createdAt: Date.now(), status: 'done', modelId: agent.modelId });
+    return convId_;
+  }
+  if (route?.kind === 'action') {
+    const aiId = uid();
+    const callId = uid();
+    chat.addMessage(convId_, {
+      id: aiId,
+      role: 'assistant',
+      content: '',
+      createdAt: Date.now(),
+      status: 'done',
+      modelId: agent.modelId,
+      toolCalls: [{ id: callId, name: route.action.type, args: JSON.stringify(route.action), status: 'pending' }],
+    });
+    if (mode === 'auto') await confirmAction(convId_, aiId, callId);
+    return convId_;
+  }
+
   const aiId = uid();
   chat.addMessage(convId_, {
     id: aiId,

@@ -157,6 +157,24 @@ export async function complete(
   );
 }
 
+/** Asistente: contactos, marcador y WhatsApp. */
+export async function requestContactsPermission(): Promise<boolean> {
+  return (await Native.requestContactsPermission()).granted;
+}
+
+/** Contactos (JSON): [{ name, phones, emails }]. */
+export async function searchContacts(name: string): Promise<string> {
+  return Native.searchContacts(name);
+}
+
+export async function dialNumber(number: string): Promise<void> {
+  await Native.dialNumber(number);
+}
+
+export async function openWhatsApp(number: string): Promise<void> {
+  await Native.openWhatsApp(number);
+}
+
 /** Asistente: calendario y reloj de Android. */
 export async function requestCalendarPermission(): Promise<boolean> {
   return (await Native.requestCalendarPermission()).granted;

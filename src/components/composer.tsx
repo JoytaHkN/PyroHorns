@@ -4,6 +4,7 @@ import { Platform, Pressable, TextInput, View } from 'react-native';
 import { modeById } from '@/data/agents';
 import { modelById } from '@/data/models';
 import { cloudAvailable } from '@/lib/cloud';
+import { COMMANDS } from '@/lib/assistant/intents';
 import { activeModelId, useSettings } from '@/store/settings';
 import { fonts } from '@/theme/tokens';
 import { usePalette } from '@/theme/use-palette';
@@ -30,6 +31,10 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
   const mode = modeById(settings.mode);
   const deep = settings.deep;
   const canSend = text.trim().length > 0 && !busy;
+  // «@» abre el menú de comandos; al elegir uno se escribe «@comando » y lo que sigue es su argumento.
+  const at = text.match(/(?:^|\s)@(\p{L}*)$/u);
+  const suggestions = at ? COMMANDS.filter((c) => c.id.startsWith(at[1]!.toLowerCase())) : [];
+  const pickCommand = (id: string) => setText(text.replace(/@\p{L}*$/u, `@${id} `));
 
   const submit = () => {
     if (!canSend) return;
@@ -79,6 +84,22 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
         } as object}
         accessibilityLabel="Mensaje"
       />
+      {suggestions.length > 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {suggestions.map((c) => (
+            <Pressable
+              key={c.id}
+              onPress={() => pickCommand(c.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Comando ${c.id}: ${c.hint}`}
+              style={({ pressed }) => ({ borderRadius: 999, borderWidth: 1, borderColor: pal.line, backgroundColor: pressed ? pal.surface2 : pal.surface2, paddingHorizontal: 12, paddingVertical: 6 })}
+            >
+              <T size={13} weight="semibold">{`@${c.id}`}</T>
+              <T size={11} tone="muted">{c.hint}</T>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <Pressable
           onPress={onOpenAgent}

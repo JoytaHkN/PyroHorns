@@ -3,7 +3,19 @@ import { uid, useChat } from '@/store/chat';
 import type { AgendaItem } from '@/types/chat';
 import { when, type Action } from './actions';
 
+export interface PhoneContact {
+  name: string;
+  phones: string[];
+  emails: string[];
+}
+
 export interface Device {
+  /** Busca un contacto por nombre (pide el permiso si falta). */
+  contact(name: string): Promise<PhoneContact | null>;
+  /** Abre el marcador con el número; el usuario pulsa llamar. */
+  dial(number: string): Promise<void>;
+  /** Abre el chat de WhatsApp con el número; el usuario envía. */
+  whatsapp(number: string): Promise<void>;
   /** Pide el permiso de calendario si falta y crea el evento; devuelve su id. */
   addEvent(title: string, start: number, end: number): Promise<string>;
   deleteEvent(id: string): Promise<void>;
@@ -52,8 +64,31 @@ export async function runAction(a: Action): Promise<{ result: string; ref?: stri
       if (!items.length) return { result: a.what === 'notes' ? 'No tienes notas.' : 'No tienes tareas pendientes.' };
       return { result: items.map((i) => `• ${i.text}${i.due ? ` (${when(i.due)})` : ''}`).join('\n') };
     }
-    case 'event':
-      return { result: 'Evento creado en tu calendario', ref: await phone().addEvent(a.title, a.start, a.start + a.minutes * 60_000) };
+    case 'event': {
+      let title = a.title;
+      if (a.guest) {
+        const c = await phone().contact(a.guest);
+        if (c?.emails[0]) title = `${a.title} (${c.name}: ${c.emails[0]})`;
+      }
+      return { result: 'Evento creado en tu calendario', ref: await phone().addEvent(title, a.start, a.start + a.minutes * 60_000) };
+    }
+    case 'call': {
+      const c = await phone().contact(a.name);
+      const number = c?.phones[0];
+      if (!c || !number) throw new Error(`No encontré a ${a.name} con número en tus contactos.`);
+      if (a.channel === 'whatsapp') {
+        await phone().whatsapp(number);
+        return { result: `WhatsApp abierto con ${c.name}: envía tú el mensaje.` };
+      }
+      await phone().dial(number);
+      return { result: `Marcador abierto con ${c.name} (${number}): pulsa llamar.` };
+    }
+    case 'email': {
+      const c = await phone().contact(a.name);
+      if (!c) throw new Error(`No encontré a ${a.name} en tus contactos.`);
+      if (!c.emails.length) return { result: `${c.name} no tiene correo guardado.` };
+      return { result: `${c.name}: ${c.emails.join(', ')}` };
+    }
     case 'alarm':
       await phone().setAlarm(a.hour, a.minute, a.label);
       return { result: 'Alarma puesta en la app Reloj' };

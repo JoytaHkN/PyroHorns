@@ -45,6 +45,9 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   attachRepo(new SqlChatRepo(db, fts));
   const events: string[] = [];
   setDevice({
+    contact: async () => null,
+    dial: async () => {},
+    whatsapp: async () => {},
     addEvent: async (title) => {
       events.push(title);
       return `ev${events.length}`;
@@ -69,7 +72,7 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   // Automático: se hace y se puede deshacer.
   useSettings.getState().setAssistant('auto');
   answer = 'Hecho.\n' + block('tipo: tarea\ntexto: comprar pan') + '\n' + block('tipo: evento\ntitulo: Dentista\ninicio: 2026-11-26 17:00') + '\n' + block('tipo: temporizador\nminutos: 5');
-  const a = await send('anota comprar pan y agenda el dentista');
+  const a = await send('tengo que hacer tareas hoy: comprar pan y agendar el dentista');
   check(calls(a).map((c) => c.status).join() === 'done,done,error' && events.join() === 'Dentista', 'automático: hace las acciones y anota el error');
   check(useChat.getState().items.some((i) => i.text === 'comprar pan'), 'la tarea queda guardada');
   await flushWrites();
@@ -85,7 +88,7 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   // Con un toque.
   useSettings.getState().setAssistant('tap');
   answer = block('tipo: completar\ntexto: PAN');
-  const b = await send('marca la tarea del pan');
+  const b = await send('tengo que hacer tareas: marca la del pan');
   check(calls(b)[0]!.status === 'pending' && !useChat.getState().items[0]!.done, 'espera el toque');
   await confirmAction(b, msgId(b), calls(b)[0]!.id);
   check(useChat.getState().items[0]!.done === true, 'al tocar se hace');

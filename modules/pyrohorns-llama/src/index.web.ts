@@ -66,6 +66,22 @@ const onlyAndroid = (): never => {
   throw new Error('Solo disponible en Android');
 };
 
+export async function requestContactsPermission(): Promise<boolean> {
+  return false;
+}
+
+export async function searchContacts(_name: string): Promise<string> {
+  return '[]';
+}
+
+export async function dialNumber(_number: string): Promise<void> {
+  onlyAndroid();
+}
+
+export async function openWhatsApp(_number: string): Promise<void> {
+  onlyAndroid();
+}
+
 export async function requestCalendarPermission(): Promise<boolean> {
   return false;
 }

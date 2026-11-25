@@ -285,6 +285,11 @@ Arquitectura:
   KDE Connect (protocolo abierto; empezar apoyándose en su app). Huawei Share / Súper Dispositivo: no encontré SDK público; solo el menú «Compartir» del sistema.
 - **Agente de respaldo en and-code:** no hace falta variante: and-code ya conecta proveedores en OpenCode y OpenCode 1.19.6 lista modelos de NVIDIA.
 
+- **P24. Planilla de intenciones y menú «@»** (pedido el 2026-11-25, tarde): `src/lib/assistant/intents.ts`. Frases de todos los días («llama», «marca», «agenda»,
+  «correo de», «pon una alarma», «temporizador», «anota», «tarea») con sinónimos; lo que la app puede hacer se resuelve sin el modelo, lo demás va al modelo.
+  Llamar abre el marcador y WhatsApp abre el chat (el usuario pulsa); buscar contactos usa el permiso de contactos. El menú «@» muestra los comandos y
+  traduce «@llamar Ana» a «llama a Ana». **Pendiente:** voz «Hey JJ» o doble toque (requiere reconocimiento de voz y modelo Vosk en español) y la
+  investigación de cómo lo hacen Alexa, Google y los modelos con herramientas (planilla de intenciones con ranuras; esquemas JSON de herramientas).
 - **P23. Catálogo de la nube** (pedido el 2026-11-25): 29 empresas y 191 modelos, generados por `scripts/build-cloud-catalog.py` desde el registro público de OpenCode
   (`models.dev`). **Sin clave verificado en vivo:** solo Pollinations (`text.pollinations.ai/openai/chat/completions`, 1 respuesta cada 45 s por IP). **Con clave:**
   las demás; todas sus rutas de chat existen (401 sin clave). **Modelos verificados en vivo:** NVIDIA y OpenRouter (listas públicas). **OpenCode Zen** solo funciona

@@ -8,7 +8,9 @@ export type Action =
   | { type: 'task'; text: string; due?: number }
   | { type: 'complete'; text: string }
   | { type: 'list'; what: 'tasks' | 'notes' }
-  | { type: 'event'; title: string; start: number; minutes: number }
+  | { type: 'event'; title: string; start: number; minutes: number; guest?: string }
+  | { type: 'call'; name: string; channel: 'phone' | 'whatsapp' }
+  | { type: 'email'; name: string }
   | { type: 'alarm'; hour: number; minute: number; label: string }
   | { type: 'timer'; seconds: number; label: string };
 
@@ -34,6 +36,7 @@ export function assistContext(now: Date): string {
       'evento (titulo, inicio, duracion en minutos) · alarma (hora: HH:MM, etiqueta) · temporizador (minutos, etiqueta).',
     'Si falta un dato necesario, pregúntalo y no pongas bloque.',
     'No sabes qué tareas, notas, eventos ni alarmas ya tiene el usuario: si pregunta por ellos, dile que todavía no puedes consultarlos y no inventes.',
+    'Nunca digas que llamaste, buscaste, agendaste o pusiste algo si no escribiste el bloque de acción: sin bloque, la app no hizo nada.',
   ].join('\n');
 }
 
@@ -157,6 +160,10 @@ export function describeAction(a: Action): string {
   switch (a.type) {
     case 'note':
       return `Nota: ${a.text}`;
+    case 'call':
+      return `Llamar a ${a.name}${a.channel === 'whatsapp' ? ' por WhatsApp' : ''}`;
+    case 'email':
+      return `Correo de ${a.name}`;
     case 'task':
       return `Tarea: ${a.text}${a.due ? ` · ${when(a.due)}` : ''}`;
     case 'complete':
@@ -164,7 +171,7 @@ export function describeAction(a: Action): string {
     case 'list':
       return a.what === 'notes' ? 'Ver notas' : 'Ver tareas pendientes';
     case 'event':
-      return `Evento: ${a.title} · ${when(a.start)} (${a.minutes} min)`;
+      return `Evento: ${a.title} · ${when(a.start)} (${a.minutes} min)${a.guest ? ` · con ${a.guest}` : ''}`;
     case 'alarm':
       return `Alarma ${pad(a.hour)}:${pad(a.minute)}${a.label ? ` · ${a.label}` : ''}`;
     case 'timer':
