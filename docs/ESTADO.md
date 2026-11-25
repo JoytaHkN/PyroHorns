@@ -207,6 +207,12 @@
      cada; condiciones no idénticas). Generación 5,9–6,2 tok/s (antes 6,3): sin cambio. RAM sin medir. Memoria de conversación con Nemotron correcta en 4 turnos
      seguidos (131/157, 219/248, 269/310, 351/408). Primer turno: 90 tokens en 3,4 s. **Sin probar:** el arreglo de reutilización con LFM3 y los títulos.
      Fallo visto: `*cursiva*` con un asterisco se ve en crudo. Nemotron inventó datos sobre sus «predecesores» (el GGUF solo trae nombre, gemma4 y 7,5B).
+   - **Pruebas del 2026-11-25 (LFM3):** el arreglo de memoria funciona (840 de 959 tokens reutilizados). Nemotron cargó en 21 s en frío (antes 28,7 y 39,2: varía).
+     LFM3 se alargó hasta el tope de 2048 tokens (148 s) y escribió código incorrecto. Cambiar de modelo durante una carga obliga a esperar a que termine.
+   - **El usuario aprobó A, 2, B y C (2026-11-25); implementados (`7a7b3b8`), pendiente de CI y móvil:** (A) `readAhead` lee el GGUF en bloques de 8 MiB antes de
+     mapearlo, saltando la tabla por capas (rastro «MiB leídos en bloques en N ms»); (2) `warm`: la instrucción se procesa tras la carga anticipada (rastro
+     «warm: …»); (B) muestreo según `general.sampling.*` (LFM3 temp 0,1 / top-k 50 / penalización 1,1; CyberSecQwen 0,7/20/0,8; Nemotron 1,0/64/0,95; Qwen3 y Phi
+     sin cambios), y se quita un segundo `accept` del sampler; (C) `*cursiva*`. **Comparar:** carga de Nemotron (21–39 s antes) y primer mensaje (87–90 tokens).
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
