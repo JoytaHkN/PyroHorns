@@ -1,6 +1,14 @@
 package expo.modules.pyrohornsllama
 
+import android.Manifest
 import android.app.ActivityManager
+import android.content.ContentUris
+import android.content.ContentValues
+import android.content.pm.PackageManager
+import android.provider.AlarmClock
+import android.provider.CalendarContract
+import expo.modules.interfaces.permissions.Permissions
+import expo.modules.kotlin.Promise
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -30,6 +38,35 @@ class PyroHornsLlamaModule : Module() {
   private fun diagnosticsDir(): File {
     val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
     return File(context.filesDir, "diagnostics").apply { mkdirs() }
+  }
+
+  private fun appCtx(): Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+  // El primer calendario en el que se puede escribir, prefiriendo el principal.
+  private fun writableCalendar(context: Context): Long {
+    var chosen = -1L
+    context.contentResolver.query(
+      CalendarContract.Calendars.CONTENT_URI,
+      arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.IS_PRIMARY),
+      "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL} >= ${CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR}",
+      null,
+      null
+    )?.use { cursor ->
+      while (cursor.moveToNext()) {
+        if (chosen < 0 || cursor.getInt(1) == 1) chosen = cursor.getLong(0)
+      }
+    }
+    check(chosen >= 0) { "No hay ningún calendario en el que escribir. Crea uno en la app Calendario." }
+    return chosen
+  }
+
+  private fun openClock(intent: Intent) {
+    intent.putExtra(AlarmClock.EXTRA_SKIP_UI, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+      appCtx().startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+      throw IllegalStateException("Este teléfono no tiene una app de reloj que lo admita.", e)
+    }
   }
 
   // Si la sesión anterior no terminó en reposo («idle»/«start»), se guarda su rastro como cierre inesperado.
@@ -141,6 +178,58 @@ class PyroHornsLlamaModule : Module() {
           Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
       }
+    }
+
+    AsyncFunction("requestCalendarPermission") { promise: Promise ->
+      val context = appCtx()
+      val wanted = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+      if (wanted.all { context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED }) {
+        promise.resolve(mapOf("granted" to true))
+      } else {
+        Permissions.askForPermissionsWithPermissionsManager(appContext.permissions, promise, *wanted)
+      }
+    }
+
+    AsyncFunction("addEvent") { title: String, startMs: Double, endMs: Double ->
+      val context = appCtx()
+      val event = ContentValues().apply {
+        put(CalendarContract.Events.CALENDAR_ID, writableCalendar(context))
+        put(CalendarContract.Events.TITLE, title)
+        put(CalendarContract.Events.DTSTART, startMs.toLong())
+        put(CalendarContract.Events.DTEND, endMs.toLong())
+        put(CalendarContract.Events.EVENT_TIMEZONE, java.util.TimeZone.getDefault().id)
+      }
+      val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, event)
+      val id = ContentUris.parseId(checkNotNull(uri) { "El calendario no aceptó el evento." })
+      val reminder = ContentValues().apply {
+        put(CalendarContract.Reminders.EVENT_ID, id)
+        put(CalendarContract.Reminders.MINUTES, 10)
+        put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
+      }
+      context.contentResolver.insert(CalendarContract.Reminders.CONTENT_URI, reminder)
+      id.toString()
+    }
+
+    AsyncFunction("deleteEvent") { id: String ->
+      val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id.toLong())
+      appCtx().contentResolver.delete(uri, null, null) > 0
+    }
+
+    AsyncFunction("setAlarm") { hour: Int, minute: Int, label: String ->
+      openClock(
+        Intent(AlarmClock.ACTION_SET_ALARM)
+          .putExtra(AlarmClock.EXTRA_HOUR, hour)
+          .putExtra(AlarmClock.EXTRA_MINUTES, minute)
+          .putExtra(AlarmClock.EXTRA_MESSAGE, label)
+      )
+    }
+
+    AsyncFunction("setTimer") { seconds: Int, label: String ->
+      openClock(
+        Intent(AlarmClock.ACTION_SET_TIMER)
+          .putExtra(AlarmClock.EXTRA_LENGTH, seconds)
+          .putExtra(AlarmClock.EXTRA_MESSAGE, label)
+      )
     }
 
     AsyncFunction("loadModel") Coroutine { path: String, contextTokens: Int, threads: Int, useMmap: Boolean ->

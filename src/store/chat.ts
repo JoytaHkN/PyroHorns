@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ChatRepo, ConversationMeta } from '@/db/repo';
 import { fold } from '@/db/repo';
 import { log } from '@/lib/log';
-import type { AgentSnapshot, ChatData, Conversation, Message, Project } from '@/types/chat';
+import type { AgendaItem, AgentSnapshot, ChatData, Conversation, Message, Project } from '@/types/chat';
 
 export type { AgentSnapshot, Conversation, Message, Project } from '@/types/chat';
 
@@ -77,6 +77,10 @@ interface ChatState {
   conversations: Conversation[];
   projects: Project[];
   activeId: string | null;
+  /** Notas y tareas del asistente. */
+  items: AgendaItem[];
+  saveItem: (item: AgendaItem) => void;
+  removeItem: (id: string) => void;
   hydrate: (data: ChatData) => void;
   newConversation: (agent: AgentSnapshot, projectId?: string | null) => string;
   select: (id: string | null) => void;
@@ -98,9 +102,23 @@ export const useChat = create<ChatState>()((set, get) => ({
   conversations: [],
   projects: [],
   activeId: null,
+  items: [],
+
+  saveItem: (item) => {
+    set((s) => ({
+      items: s.items.some((i) => i.id === item.id) ? s.items.map((i) => (i.id === item.id ? item : i)) : [...s.items, item],
+    }));
+    enqueue((r) => r.saveItem(item));
+  },
+
+  removeItem: (id) => {
+    set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+    enqueue((r) => r.deleteItem(id));
+  },
 
   hydrate: (data) =>
     set({
+      items: data.items ?? [],
       conversations: [...data.conversations].sort((a, b) => b.updatedAt - a.updatedAt),
       projects: data.projects,
       activeId: null,

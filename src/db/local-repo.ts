@@ -1,4 +1,4 @@
-import type { ChatData, Conversation, Message, Project } from '@/types/chat';
+import type { AgendaItem, ChatData, Conversation, Message, Project } from '@/types/chat';
 import { fold, settleStatus, type ChatRepo, type ConversationMeta } from './repo';
 
 /** Almacén clave-valor síncrono (localStorage en el navegador; un mapa en memoria en las pruebas). */
@@ -62,6 +62,7 @@ export class LocalChatRepo implements ChatRepo {
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .map((c) => ({ ...c, messages: c.messages.map(settleStatus) })),
       projects: [...this.data.projects],
+      items: [...(this.data.items ?? [])],
     };
   }
 
@@ -111,6 +112,19 @@ export class LocalChatRepo implements ChatRepo {
 
   async deleteAll(): Promise<void> {
     this.data.conversations = [];
+    this.save();
+  }
+
+  async saveItem(item: AgendaItem): Promise<void> {
+    const items = (this.data.items ??= []);
+    const i = items.findIndex((x) => x.id === item.id);
+    if (i >= 0) items[i] = { ...item };
+    else items.push({ ...item });
+    this.save();
+  }
+
+  async deleteItem(id: string): Promise<void> {
+    this.data.items = (this.data.items ?? []).filter((x) => x.id !== id);
     this.save();
   }
 

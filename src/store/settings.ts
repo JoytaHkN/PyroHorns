@@ -15,6 +15,9 @@ interface SettingsState {
   modelOverride: string | null;
   /** Cómo lee la app los GGUF (S3): carpeta de la app (sin permisos) o todo el almacenamiento. */
   modelAccess: ModelAccess;
+  /** Asistente: hace las acciones solo, espera un toque, o está apagado. */
+  assistant: 'auto' | 'tap' | 'off';
+  setAssistant: (a: 'auto' | 'tap' | 'off') => void;
   setScheme: (s: SchemePref) => void;
   toggleScheme: () => void;
   /** Cambiar de modo vuelve al modelo automático. */
@@ -34,6 +37,8 @@ export const useSettings = create<SettingsState>()(
       deep: false,
       modelOverride: null,
       modelAccess: DEFAULT_MODEL_ACCESS,
+      assistant: 'auto',
+      setAssistant: (assistant) => set({ assistant }),
       setScheme: (scheme) => set({ scheme }),
       toggleScheme: () => set((s) => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),
       setMode: (mode) => set({ mode, modelOverride: null }),

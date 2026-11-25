@@ -1,5 +1,5 @@
 import type { ModeId } from '@/data/agents';
-import type { ChatData, Conversation, Message, MessageStatus, Project, ToolCall, Usage, WebInfo } from '@/types/chat';
+import type { AgendaItem, ChatData, Conversation, Message, MessageStatus, Project, ToolCall, Usage, WebInfo } from '@/types/chat';
 import { fold, settleStatus, type ChatRepo, type ConversationMeta } from './repo';
 import type { SqlDb } from './sql';
 
@@ -27,6 +27,7 @@ interface MessageRow {
   tool_calls: string | null;
   feedback: string | null;
   web: string | null;
+  assist: string | null;
   created_at: number;
 }
 
@@ -57,6 +58,7 @@ function toMessage(r: MessageRow): Message {
   if (r.feedback === 'up' || r.feedback === 'down') m.feedback = r.feedback;
   const web = parseJson<WebInfo>(r.web);
   if (web) m.web = web;
+  if (r.assist) m.assist = r.assist;
   return settleStatus(m);
 }
 
@@ -99,9 +101,20 @@ export class SqlChatRepo implements ChatRepo {
     const projects = await this.db.all<{ id: string; name: string; created_at: number }>(
       'SELECT * FROM projects ORDER BY created_at',
     );
+    const items = await this.db.all<{ id: string; kind: string; text: string; due: number | null; done: number; created_at: number }>(
+      'SELECT * FROM items ORDER BY created_at',
+    );
     return {
       conversations,
       projects: projects.map((p) => ({ id: p.id, name: p.name, createdAt: p.created_at })),
+      items: items.map((i) => ({
+        id: i.id,
+        kind: i.kind === 'task' ? 'task' : 'note',
+        text: i.text,
+        ...(i.due != null ? { due: i.due } : {}),
+        ...(i.done ? { done: true } : {}),
+        createdAt: i.created_at,
+      })),
     };
   }
 
@@ -122,8 +135,8 @@ export class SqlChatRepo implements ChatRepo {
   async insertMessage(conversationId: string, m: Message): Promise<void> {
     await this.db.transaction(async () => {
       await this.db.run(
-        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, web, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, web, assist, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           m.id,
           conversationId,
@@ -137,6 +150,7 @@ export class SqlChatRepo implements ChatRepo {
           m.toolCalls?.length ? JSON.stringify(m.toolCalls) : null,
           m.feedback ?? null,
           m.web ? JSON.stringify(m.web) : null,
+          m.assist ?? null,
           m.createdAt,
         ],
       );
@@ -146,7 +160,7 @@ export class SqlChatRepo implements ChatRepo {
 
   async updateMessage(m: Message): Promise<void> {
     await this.db.run(
-      `UPDATE messages SET content = ?, thinking = ?, status = ?, think_ms = ?, model_id = ?, usage = ?, tool_calls = ?, feedback = ?, web = ?
+      `UPDATE messages SET content = ?, thinking = ?, status = ?, think_ms = ?, model_id = ?, usage = ?, tool_calls = ?, feedback = ?, web = ?, assist = ?
        WHERE id = ?`,
       [
         m.content,
@@ -158,6 +172,7 @@ export class SqlChatRepo implements ChatRepo {
         m.toolCalls?.length ? JSON.stringify(m.toolCalls) : null,
         m.feedback ?? null,
         m.web ? JSON.stringify(m.web) : null,
+        m.assist ?? null,
         m.id,
       ],
     );
@@ -182,6 +197,18 @@ export class SqlChatRepo implements ChatRepo {
       await this.db.run('DELETE FROM messages');
       await this.db.run('DELETE FROM conversations');
     });
+  }
+
+  async saveItem(i: AgendaItem): Promise<void> {
+    await this.db.run(
+      `INSERT INTO items (id, kind, text, due, done, created_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET text = excluded.text, due = excluded.due, done = excluded.done`,
+      [i.id, i.kind, i.text, i.due ?? null, i.done ? 1 : 0, i.createdAt],
+    );
+  }
+
+  async deleteItem(id: string): Promise<void> {
+    await this.db.run('DELETE FROM items WHERE id = ?', [id]);
   }
 
   async search(term: string): Promise<string[]> {

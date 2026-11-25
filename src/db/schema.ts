@@ -47,6 +47,18 @@ const MIGRATIONS: string[] = [
   `
   ALTER TABLE messages ADD COLUMN web TEXT;
   `,
+  // v4: asistente (notas y tareas)
+  `
+  ALTER TABLE messages ADD COLUMN assist TEXT;
+  CREATE TABLE items (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    due INTEGER,
+    done INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 /** Búsqueda de texto completo. Se crea aparte para poder seguir sin ella si el motor no trae FTS5. */

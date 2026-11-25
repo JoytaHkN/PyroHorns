@@ -6,6 +6,8 @@ import type { ChatProvider, StreamOptions } from '@/providers/types';
 import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
 import { uid, useChat, type AgentSnapshot, type Message } from '@/store/chat';
+import { assistContext, extractActions, wantsAction, type Action } from './assistant/actions';
+import { canUndo, runAction, undoAction } from './assistant/run';
 import { buildContext, estimateTokens } from './context';
 import { errorSummary, log } from './log';
 import { cleanQuery, needsRewrite, queryMessages } from './search-query';
@@ -60,7 +62,15 @@ export async function send(text: string, convId?: string | null, opts: { web?: b
   if (conv.messages.length === 0) chat.rename(convId_, titleFrom(text));
   chat.setAgent(convId_, agent);
 
-  chat.addMessage(convId_, { id: uid(), role: 'user', content: text, createdAt: Date.now(), ...(opts.web ? { web: {} } : {}) });
+  const assist = useSettings.getState().assistant !== 'off' && wantsAction(text) ? assistContext(new Date()) : undefined;
+  chat.addMessage(convId_, {
+    id: uid(),
+    role: 'user',
+    content: text,
+    createdAt: Date.now(),
+    ...(opts.web ? { web: {} } : {}),
+    ...(assist ? { assist } : {}),
+  });
   const aiId = uid();
   chat.addMessage(convId_, {
     id: aiId,
@@ -92,11 +102,12 @@ export async function regenerate(convId: string): Promise<void> {
     status: 'thinking',
     modelId: agent.modelId,
   });
-  await reply(convId, last.id, agent);
+  // Al regenerar, las acciones esperan un toque: repetirlas solas duplicaría eventos o notas.
+  await reply(convId, last.id, agent, false);
 }
 
 /** Genera la respuesta `aiId` a partir de los mensajes anteriores a ella. */
-async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promise<void> {
+async function reply(convId_: string, aiId: string, agent: AgentSnapshot, mayRunActions = true): Promise<void> {
   const chat = useChat.getState();
   const started = Date.now();
   const ctx = contextTokens(modelById(agent.modelId), agent.deep);
@@ -145,6 +156,7 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot): Promi
     }
     // Un proveedor que termina sin "done" no debe dejar el mensaje generando.
     patch((m) => (m.status === 'done' ? {} : { status: 'done' }));
+    await proposeActions(convId_, aiId, mayRunActions);
   } catch (e) {
     const aborted = e instanceof Error && e.name === 'AbortError';
     if (!aborted) log.error('engine.stream', e, { model: agent.modelId });
@@ -187,6 +199,62 @@ async function searchQuery(before: Message[], text: string, opts: StreamOptions 
     if (opts.signal.aborted) throw e;
     log.warn('web.query_failed'); // sin el mensaje ni la consulta (S9)
     return text;
+  }
+}
+
+const findMessage = (convId: string, id: string) =>
+  useChat.getState().conversations.find((c) => c.id === convId)?.messages.find((m) => m.id === id);
+
+/**
+ * Asistente: convierte los bloques de la respuesta en acciones. Solo si el mensaje del usuario las pidió (llevaba las
+ * instrucciones del asistente); lo que venga en una respuesta a otra cosa no se ejecuta.
+ */
+async function proposeActions(convId: string, aiId: string, mayRun: boolean): Promise<void> {
+  const mode = useSettings.getState().assistant;
+  const messages = useChat.getState().conversations.find((c) => c.id === convId)?.messages ?? [];
+  const index = messages.findIndex((m) => m.id === aiId);
+  if (mode === 'off' || index < 1 || !messages[index - 1]!.assist) return;
+  const { actions } = extractActions(messages[index]!.content);
+  if (!actions.length) return;
+  const calls = actions.map((a) => ({ id: uid(), name: a.type, args: JSON.stringify(a), status: 'pending' as const }));
+  useChat.getState().patchMessage(convId, aiId, { toolCalls: calls });
+  // Ver la lista no cambia nada: se muestra siempre.
+  for (const call of calls) if ((mode === 'auto' && mayRun) || call.name === 'list') await confirmAction(convId, aiId, call.id);
+}
+
+function updateCall(convId: string, aiId: string, callId: string, patch: Partial<NonNullable<Message['toolCalls']>[number]>) {
+  useChat.getState().patchMessage(convId, aiId, (m) => ({
+    toolCalls: (m.toolCalls ?? []).map((c) => (c.id === callId ? { ...c, ...patch } : c)),
+  }));
+}
+
+/** Hace la acción pendiente (automática o al tocar «Hacer»). */
+export async function confirmAction(convId: string, aiId: string, callId: string): Promise<void> {
+  const call = findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId);
+  if (!call || (call.status !== 'pending' && call.status !== 'error')) return;
+  updateCall(convId, aiId, callId, { status: 'done', result: 'Haciendo…' });
+  try {
+    const { result, ref } = await runAction(JSON.parse(call.args) as Action);
+    updateCall(convId, aiId, callId, { status: 'done', result, ...(ref ? { ref } : {}) });
+  } catch (e) {
+    updateCall(convId, aiId, callId, { status: 'error', result: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+export function dismissAction(convId: string, aiId: string, callId: string): void {
+  updateCall(convId, aiId, callId, { status: 'dismissed', result: 'Descartada' });
+}
+
+export async function revertAction(convId: string, aiId: string, callId: string): Promise<void> {
+  const call = findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId);
+  if (!call?.ref || call.status !== 'done') return;
+  const action = JSON.parse(call.args) as Action;
+  if (!canUndo(action)) return;
+  try {
+    await undoAction(action, call.ref);
+    updateCall(convId, aiId, callId, { status: 'undone', result: 'Deshecho' });
+  } catch (e) {
+    updateCall(convId, aiId, callId, { result: e instanceof Error ? e.message : String(e) });
   }
 }
 

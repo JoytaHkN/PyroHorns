@@ -62,6 +62,28 @@ export async function complete(): Promise<string> {
   return '';
 }
 
+const onlyAndroid = (): never => {
+  throw new Error('Solo disponible en Android');
+};
+
+export async function requestCalendarPermission(): Promise<boolean> {
+  return false;
+}
+
+export async function addEvent(_title: string, _startMs: number, _endMs: number): Promise<string> {
+  return onlyAndroid();
+}
+
+export async function deleteEvent(_id: string): Promise<void> {}
+
+export async function setAlarm(_hour: number, _minute: number, _label: string): Promise<void> {
+  onlyAndroid();
+}
+
+export async function setTimer(_seconds: number, _label: string): Promise<void> {
+  onlyAndroid();
+}
+
 export async function cancel(): Promise<void> {}
 
 export async function unloadModel(): Promise<void> {}

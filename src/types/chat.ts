@@ -19,6 +19,22 @@ export interface ToolCall {
   name: string;
   /** Argumentos en JSON tal como los emitió el modelo. */
   args: string;
+  /** Asistente: estado de la acción. */
+  status?: 'pending' | 'done' | 'error' | 'undone' | 'dismissed';
+  /** Asistente: qué pasó, para mostrarlo. */
+  result?: string;
+  /** Asistente: id de lo creado, para poder deshacerlo. */
+  ref?: string;
+}
+
+/** Nota o tarea del asistente; se guarda en la base cifrada. */
+export interface AgendaItem {
+  id: string;
+  kind: 'note' | 'task';
+  text: string;
+  due?: number;
+  done?: boolean;
+  createdAt: number;
 }
 
 /** Página que se usó en una búsqueda. */
@@ -55,6 +71,8 @@ export interface Message {
   feedback?: 'up' | 'down' | null;
   /** Presente en el mensaje del usuario si pidió buscar en internet, y en la respuesta que usó la búsqueda. */
   web?: WebInfo;
+  /** Solo usuario: instrucciones del asistente que acompañan a este mensaje (si pide anotar, agendar, etc.). */
+  assist?: string;
 }
 
 /** Agente con el que se creó o continuó la conversación. */
@@ -84,4 +102,5 @@ export interface Project {
 export interface ChatData {
   conversations: Conversation[];
   projects: Project[];
+  items?: AgendaItem[];
 }

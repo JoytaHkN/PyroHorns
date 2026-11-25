@@ -17,6 +17,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { Uniwind } from 'uniwind';
 import { RestoreScreen } from '@/components/restore-screen';
 import { useBoot } from '@/store/boot';
+import { registerDevice } from '@/lib/assistant/device';
 import { registerCloud } from '@/lib/cloud';
 import { registerNativeLlama } from '@/lib/native';
 import { flushWrites } from '@/store/chat';
@@ -49,6 +50,7 @@ export default function RootLayout() {
   useEffect(() => {
     void registerNativeLlama();
     registerCloud();
+    registerDevice();
   }, []);
 
   // Al pasar a segundo plano se escribe lo pendiente del streaming.

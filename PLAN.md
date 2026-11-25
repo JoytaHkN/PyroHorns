@@ -1,7 +1,7 @@
 # PLAN — PyroHorns
 
 > **Versión 2.4** · 2026-11-24
-> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S18 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
+> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S19 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
 ## 1. Decisiones tomadas
@@ -91,6 +91,7 @@ Solo se aplican estas medidas. Ninguna otra.
 | S16 | **A → B** | Clave de firma en los secretos de GitHub; compilación reproducible antes de entrar en F-Droid. Las versiones de prueba se firman con una clave de prelanzamiento generada en el móvil (`APK IA/firma-prelanzamiento/`, fuera del repo). La **v1** usará una clave nueva creada en el PC: habrá que desinstalar la versión de prueba antes de instalarla | F1.1 / antes de F-Droid |
 | S17 | **B** | Dependabot propone actualizaciones (npm, Gradle, Actions) y se revisan | F1.1 |
 | S18 | **B** | Búsqueda en internet: se pide al modelo que trate los resultados como información y no siga instrucciones que vengan en ellos (elegido por el usuario el 2026-11-25; reduce el riesgo, no lo elimina) | F1.5 |
+| S19 | **Elegible** | Acciones del asistente: automáticas (por defecto, elegido por el usuario el 2026-11-25) con «Deshacer», confirmadas con un toque, o apagadas. Voz: cuando haya reconocimiento (F4). Solo se ejecutan si el propio mensaje del usuario las pide | F1.5 |
 
 **Dudas resueltas (2026-11-23)**
 1. **Copias frente a cifrado → opción b.** Las claves del almacén seguro no salen del móvil, así que en la copia viaja la clave de la base de datos protegida con una **contraseña de copia** que tú defines en Ajustes. Solo se pide al restaurar (en otro móvil o tras reinstalar). Detalle técnico:
@@ -266,9 +267,10 @@ Arquitectura:
 
 - **P19. Pedido del 2026-11-25** — implementado (pendiente de móvil): los 12 GGUF nuevos en la app (chat, visión, complementos), enlaces de descarga de los
   `mmproj`, parche de Dory, respuestas que se tocan y **agente en la nube** (adelanta parte de F6: NVIDIA y OpenRouter con la clave del usuario, S5-B).
-- **P20. Asistente tipo Jarvis** — preguntado por el usuario; **no estaba planeado**. Propuesta pendiente de visto bueno: (1) herramientas en la app (notas y tareas
-  propias, eventos en el calendario con permiso, alarmas con la app de reloj) con confirmación táctil; (2) dictado y voz (F4); (3) registrarse como asistente de
-  Android (se abre con el gesto del teléfono). Depende del bucle de herramientas de F3.
+- **P20. Asistente tipo Jarvis** — **punto 1 aprobado e implementado el 2026-11-25** (pendiente de móvil): notas y tareas (base cifrada), eventos de calendario,
+  alarmas y temporizadores; S19. El usuario quiere que tenga «acceso a todo lo posible»: cada acceso nuevo se le presenta y lo decide por separado. Siguientes:
+  (2) dictado y voz (F4; el teléfono Huawei puede no tener el reconocimiento de Google); (3) asistente predeterminado de Android; después, según elija: abrir
+  apps, contactos, llamadas, SMS, notificaciones, ubicación, cámara, ajustes del teléfono y control de pantalla (servicio de accesibilidad).
 
 Bloqueo de F1.5 (2026-11-23; P14 decidida, P13 sigue pendiente):
 - **P14. Cómo lee la app los GGUF** (bloquea P13 y la F1.5). **Decidido por el usuario el 2026-11-23: opción C** (A y B seleccionables, por defecto B); implementado en F1.5, pendiente de probar en el móvil. El APK de prueba falla con «No se encontró LFM3-1.7B-Q4_K_M.gguf en /sdcard ni en el

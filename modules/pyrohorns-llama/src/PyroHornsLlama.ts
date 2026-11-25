@@ -26,6 +26,11 @@ declare class PyroHornsLlamaModule extends NativeModule<{ onEvent: (event: Llama
   generate(handle: number, roles: string[], contents: string[], threads: number, noThink: boolean): Promise<void>;
   warm(handle: number, roles: string[], contents: string[], threads: number): Promise<void>;
   complete(handle: number, roles: string[], contents: string[], threads: number, noThink: boolean, maxTokens: number): Promise<string>;
+  requestCalendarPermission(): Promise<{ granted: boolean }>;
+  addEvent(title: string, startMs: number, endMs: number): Promise<string>;
+  deleteEvent(id: string): Promise<boolean>;
+  setAlarm(hour: number, minute: number, label: string): Promise<void>;
+  setTimer(seconds: number, label: string): Promise<void>;
   cancel(handle: number): Promise<void>;
   unloadModel(handle: number): Promise<void>;
 }

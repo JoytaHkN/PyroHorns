@@ -157,6 +157,27 @@ export async function complete(
   );
 }
 
+/** Asistente: calendario y reloj de Android. */
+export async function requestCalendarPermission(): Promise<boolean> {
+  return (await Native.requestCalendarPermission()).granted;
+}
+
+export async function addEvent(title: string, startMs: number, endMs: number): Promise<string> {
+  return Native.addEvent(title, startMs, endMs);
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  await Native.deleteEvent(id);
+}
+
+export async function setAlarm(hour: number, minute: number, label: string): Promise<void> {
+  await Native.setAlarm(hour, minute, label);
+}
+
+export async function setTimer(seconds: number, label: string): Promise<void> {
+  await Native.setTimer(seconds, label);
+}
+
 export async function cancel(handle: number): Promise<void> {
   await Native.cancel(handle);
 }

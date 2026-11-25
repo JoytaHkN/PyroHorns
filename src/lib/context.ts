@@ -4,9 +4,11 @@ import type { Message } from '@/types/chat';
 /** ~4 caracteres por token + 4 de formato por mensaje. Aproximación hasta tener el tokenizer real (F1.5). */
 export const estimateTokens = (text: string) => Math.ceil(text.length / 4) + 4;
 
-/** Lo que el modelo recibe de un mensaje: la pregunta, precedida de los resultados de internet si los hubo. */
-export const modelText = (m: Message) =>
-  m.role === 'user' && m.web?.context ? `${m.web.context}\n\nPregunta: ${m.content}` : m.content;
+/** Lo que el modelo recibe de un mensaje: la pregunta, precedida de lo que la acompaña (internet, asistente). */
+export const modelText = (m: Message) => {
+  const extra = m.role === 'user' ? [m.web?.context, m.assist].filter(Boolean) : [];
+  return extra.length ? `${extra.join('\n\n')}\n\nPregunta: ${m.content}` : m.content;
+};
 
 export interface ContextOptions {
   /** Tamaño total del contexto del modelo, en tokens. */

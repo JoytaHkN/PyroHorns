@@ -97,12 +97,20 @@ function BackupPasswordDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   );
 }
 
+const ASSISTANT_MODES = [
+  { id: 'auto', title: 'Automático', subtitle: 'Hace lo que pides (notas, tareas, calendario, alarmas) y deja un botón para deshacer' },
+  { id: 'tap', title: 'Confirmar con un toque', subtitle: 'Muestra lo que va a hacer y espera a que toques «Hacer»' },
+  { id: 'off', title: 'Apagado', subtitle: 'No anota ni agenda nada' },
+] as const;
+
 export default function Settings() {
   const pal = usePalette();
   const { toast } = useToast();
   const scheme = useSettings((s) => s.scheme);
   const toggleScheme = useSettings((s) => s.toggleScheme);
   const removeAll = useChat((s) => s.removeAll);
+  const assistant = useSettings((s) => s.assistant);
+  const setAssistant = useSettings((s) => s.setAssistant);
   const backupSupported = useBoot((s) => s.backupSupported);
   const backupSet = useBoot((s) => s.backupSet);
   const [backupOpen, setBackupOpen] = useState(false);
@@ -153,6 +161,22 @@ export default function Settings() {
           <Item icon="chip" title="Modelos" subtitle="Activar, desactivar y configurar" onPress={() => router.push('/models')} />
           <Item icon="sliders" title="Diagnóstico del motor" subtitle="Rastros y cierres inesperados (F1.5)" onPress={() => router.push('/diagnostico')} />
           <Item icon="chip" title="Prueba de rendimiento" subtitle="Carga, primer token, tok/s y RAM (F1.5)" onPress={() => router.push('/benchmark')} />
+        </Group>
+
+        <SectionLabel>Asistente</SectionLabel>
+        <Group>
+          {ASSISTANT_MODES.map((a, i) => (
+            <Item
+              key={a.id}
+              first={i === 0}
+              icon="spark"
+              title={a.title}
+              subtitle={a.subtitle}
+              onPress={() => setAssistant(a.id)}
+              end={assistant === a.id ? <PlasmaTag>Elegido</PlasmaTag> : undefined}
+            />
+          ))}
+          <Item icon="tasks" title="Notas y tareas" subtitle="Lo que ha anotado el asistente" onPress={() => router.push('/agenda')} />
         </Group>
 
         <SectionLabel>Respuestas</SectionLabel>

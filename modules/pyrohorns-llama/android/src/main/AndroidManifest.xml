@@ -1,1 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Asistente (P20): crear eventos en el calendario y poner alarmas en la app de reloj. -->
+  <uses-permission android:name="android.permission.READ_CALENDAR" />
+  <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+  <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+</manifest>

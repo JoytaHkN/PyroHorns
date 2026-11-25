@@ -3,7 +3,9 @@ import { useToast } from 'heroui-native';
 import { memo, useState } from 'react';
 import { Pressable, Share, View } from 'react-native';
 import { modelById } from '@/data/models';
-import { regenerate, send } from '@/lib/engine';
+import { describeAction, extractActions, type Action as AssistantAction } from '@/lib/assistant/actions';
+import { canUndo } from '@/lib/assistant/run';
+import { confirmAction, dismissAction, regenerate, revertAction, send } from '@/lib/engine';
 import { extractOptions } from '@/lib/options';
 import { usageLine } from '@/lib/stats';
 import { useChat, type Message } from '@/store/chat';
@@ -221,14 +223,74 @@ function Choices({ options, convId }: { options: string[]; convId: string }) {
   );
 }
 
+function CardButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const pal = usePalette();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        borderRadius: 999,
+        paddingHorizontal: 14,
+        paddingVertical: 7,
+        backgroundColor: pressed ? pal.line : pal.surface2,
+      })}
+    >
+      <T size={13} weight="semibold">
+        {label}
+      </T>
+    </Pressable>
+  );
+}
+
+/** Acciones del asistente: qué se va a hacer o se hizo, con sus botones. */
+function AssistantActions({ m, convId }: { m: Message; convId: string }) {
+  const pal = usePalette();
+  if (!m.toolCalls?.some((c) => c.status)) return null;
+  return (
+    <View style={{ gap: 6 }}>
+      {m.toolCalls.map((c) => {
+        if (!c.status) return null;
+        const action = JSON.parse(c.args) as AssistantAction;
+        return (
+          <View key={c.id} style={{ gap: 6, borderRadius: 14, borderWidth: 1, borderColor: pal.line, backgroundColor: pal.surface, padding: 12 }}>
+            <T size={14} weight="semibold">
+              {describeAction(action)}
+            </T>
+            {c.result ? (
+              <T size={13} tone="muted" selectable>
+                {c.result}
+              </T>
+            ) : null}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {c.status === 'pending' ? (
+                <>
+                  <CardButton label="Hacer" onPress={() => void confirmAction(convId, m.id, c.id)} />
+                  <CardButton label="Descartar" onPress={() => dismissAction(convId, m.id, c.id)} />
+                </>
+              ) : null}
+              {c.status === 'error' ? <CardButton label="Reintentar" onPress={() => void confirmAction(convId, m.id, c.id)} /> : null}
+              {c.status === 'done' && c.ref && canUndo(action) ? (
+                <CardButton label="Deshacer" onPress={() => void revertAction(convId, m.id, c.id)} />
+              ) : null}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: boolean }) {
   const pal = usePalette();
   const live = m.status === 'thinking' || m.status === 'streaming';
   const showBody = m.status !== 'thinking' || !!m.content;
-  const { text, options } = extractOptions(m.content);
+  // Los bloques de acción del asistente no se muestran como código: salen como tarjetas.
+  const visible = m.toolCalls?.some((c) => c.status) || live ? extractActions(m.content).text : m.content;
+  const { text, options } = extractOptions(visible);
   // Solo la última respuesta se contesta tocando; en las anteriores las opciones quedan como lista.
   const tappable = isLast && m.status === 'done' && options.length > 0;
-  const shown = !tappable && text !== m.content ? `${text}\n\n${options.map((o) => `- ${o}`).join('\n')}` : text;
+  const shown = !tappable && text !== visible ? `${text}\n\n${options.map((o) => `- ${o}`).join('\n')}` : text;
   const footer = [
     m.modelId ? modelById(m.modelId).name : null,
     m.status === 'done' && m.usage ? usageLine(m.usage) : null,
@@ -253,6 +315,7 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
         </PlasmaGradient>
       )}
       {showBody && <Sources m={m} />}
+      <AssistantActions m={m} convId={convId} />
       {tappable ? <Choices options={options} convId={convId} /> : null}
       {!live && (
         <View style={{ gap: 2 }}>

@@ -6,14 +6,14 @@ necesario está en este repo**, no en la memoria de ningún agente.
 
 ## Al empezar (obligatorio)
 1. Lee `docs/ESTADO.md` (qué está hecho y qué sigue), `PLAN.md` (decisiones D1–D8, seguridad
-   S1–S18, fases) y `docs/CONTINUIDAD.md` (checklist de cierre y prompts para móvil y PC).
+   S1–S19, fases) y `docs/CONTINUIDAD.md` (checklist de cierre y prompts para móvil y PC).
 2. Ejecuta `git log --oneline -10` y `git status`: puede haber trabajo hecho desde otro agente.
 3. Responde siempre en español, con explicaciones claras (el usuario trabaja desde el móvil).
 
 ## Reglas del usuario
 - **Planes antes que código.** Si cambia el alcance o hay una decisión abierta, propón y espera su
   visto bueno. No des por definitivo nada que haya dejado pendiente.
-- **Seguridad: solo lo elegido.** Aplica únicamente las medidas S1–S18 de `PLAN.md` §4. No añadas
+- **Seguridad: solo lo elegido.** Aplica únicamente las medidas S1–S19 de `PLAN.md` §4. No añadas
   restricciones ni avisos por tu cuenta; si crees que hace falta uno nuevo, preséntalo como opciones
   (de la más libre a la más protegida) y que decida.
 - **Todo dentro de APK IA.** El proyecto es `/sdcard/IA/Proyectos/APK IA`; el repo, `APK IA/PyroHorns`.

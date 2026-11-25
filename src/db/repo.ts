@@ -1,4 +1,4 @@
-import type { ChatData, Conversation, Message, Project } from '@/types/chat';
+import type { AgendaItem, ChatData, Conversation, Message, Project } from '@/types/chat';
 
 export type ConversationMeta = Omit<Conversation, 'messages'>;
 
@@ -13,7 +13,10 @@ export interface ChatRepo {
   saveProject(p: Project): Promise<void>;
   /** Borra el proyecto; sus conversaciones quedan sin proyecto. */
   deleteProject(id: string): Promise<void>;
+  /** Borra las conversaciones (las notas y tareas se conservan). */
   deleteAll(): Promise<void>;
+  saveItem(item: AgendaItem): Promise<void>;
+  deleteItem(id: string): Promise<void>;
   /** Ids de conversaciones cuyo título o mensajes contienen el texto. */
   search(term: string): Promise<string[]>;
 }

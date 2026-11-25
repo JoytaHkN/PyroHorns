@@ -242,6 +242,9 @@
      «Agente en la nube», claves en SecureStore; `nvidia/nemotron-3-ultra-550b-a55b`, `moonshotai/kimi-k3.1-pro`, `z-ai/glm-5.3-flash`,
      `nvidia/nemotron-3-ultra-550b-a55b:free`; **sin probar con una clave real**, y las condiciones de la prueba gratuita de NVIDIA no se pudieron leer) y
      respuestas que se tocan (bloque ```opciones o pregunta + lista). La instrucción de sistema cambió.
+   - **P20 punto 1 (2026-11-25), pendiente de CI y móvil:** `src/lib/assistant/` (instrucciones solo cuando el mensaje pide anotar/agendar; bloques ```accion),
+     tabla `items` (esquema v4), pantalla «Notas y tareas», modo Automático/Toque/Apagado en Ajustes, y nativo para calendario (permiso al primer evento, aviso 10 min
+     antes) y reloj. **Comprobar en el móvil** si LFM3 y los demás respetan el formato, y que exista un calendario con escritura.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -364,3 +367,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Arreglos 1, 4 y 2 implementados (typecheck, pruebas y bundle en verde); investigados los modelos de NVIDIA para el móvil. Pendiente: CI y móvil.
 - **2026-11-25** · CI de los arreglos 1, 4 y 2 en verde; APK copiado. Revisados los metadatos de 13 GGUF nuevos.
 - **2026-11-25** · P19: modelos nuevos, nube y opciones táctiles (typecheck, pruebas y bundles en verde). Pendiente: CI y móvil.
+- **2026-11-25** · Primer parche de Dory no compilaba (`graph_nodes_per_tensor`), corregido (`716a283`). Asistente (P20-1): typecheck, pruebas y bundle en verde.
