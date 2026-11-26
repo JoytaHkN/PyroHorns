@@ -2,12 +2,13 @@ import { CLOUD_DEFAULT_ID, contextTokens, modelById } from '@/data/models';
 import { parseRoute, rewriteCommand } from './assistant/intents';
 import { CloudError } from '@/providers/cloud';
 import { MockProvider } from '@/providers/mock';
-import { LlamaProvider, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
-import type { ChatProvider, StreamOptions } from '@/providers/types';
+import { LlamaProvider, isLoadedLlama, isNativeLlamaAvailable, setNativeLlamaModule } from '@/providers/llama';
+import type { ChatProvider, ProviderMessage, StreamOptions } from '@/providers/types';
 import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
 import { uid, useChat, type AgentSnapshot, type Message } from '@/store/chat';
-import { assistContext, describeAction, extractActions, wantsAction, type Action } from './assistant/actions';
+import type { ToolCall } from '@/types/chat';
+import { assistContext, describeAction, extractActions, problemOf, wantsAction, type Action } from './assistant/actions';
 import { canUndo, runAction, undoAction } from './assistant/run';
 import { foldText } from './assistant/template';
 import { buildContext, estimateTokens } from './context';
@@ -41,6 +42,12 @@ function engineFor(modelId: string): ChatProvider {
 
 const controllers = new Map<string, AbortController>();
 
+/** Respuesta si el modelo no escribió texto (y no hay acciones): se dice, en vez de dejar la burbuja en blanco (P26-E). */
+const EMPTY_REPLY = 'No obtuve respuesta. Prueba otra vez o dímelo de otra forma.';
+
+/** Lo que propone el modelo y crea o avisa algo: en Automático espera un toque (P26-C2). Lo demás sigue la regla de siempre. */
+const NEEDS_TAP_FROM_MODEL: ReadonlySet<Action['type']> = new Set<Action['type']>(['event', 'alarm', 'timer']);
+
 export const isGenerating = (convId: string) => controllers.has(convId);
 
 export function currentAgent(): AgentSnapshot {
@@ -54,7 +61,11 @@ function titleFrom(text: string) {
 }
 
 /** Envía un mensaje; crea la conversación si no existe. Devuelve el id de conversación. */
-export async function send(input: string, convId?: string | null, opts: { web?: boolean; cloud?: boolean; voice?: boolean } = {}): Promise<string> {
+export async function send(
+  input: string,
+  convId?: string | null,
+  opts: { web?: boolean; cloud?: boolean; voice?: boolean; heard?: string } = {},
+): Promise<string> {
   // «@llamar Ana» y similares: el menú del cuadro de texto se traduce antes de todo.
   const command = rewriteCommand(input);
   const text = command.text;
@@ -81,6 +92,8 @@ export async function send(input: string, convId?: string | null, opts: { web?: 
     createdAt: Date.now(),
     ...(web ? { web: {} } : {}),
     ...(assist ? { assist } : {}),
+    // Dictado: lo que oyó la voz, cuando la corrección cambió la frase (se muestra bajo el mensaje).
+    ...(opts.heard ? { heard: opts.heard } : {}),
   });
 
   // Planilla de intenciones: lo que la app puede hacer sin el modelo se resuelve aquí (evita respuestas inventadas).
@@ -96,13 +109,11 @@ export async function send(input: string, convId?: string | null, opts: { web?: 
   }
 
   const route = mode !== 'off' && !web && !opts.cloud ? parseRoute(text, new Date()) : null;
-  if (route?.kind === 'question' || route?.kind === 'answer') {
-    const aiId = uid();
-    chat.addMessage(convId_, { id: aiId, role: 'assistant', content: route.text, createdAt: Date.now(), status: 'done', modelId: agent.modelId });
-    if (opts.voice) say(route.text);
-    return convId_;
-  }
+  if (route?.kind === 'question' || route?.kind === 'answer') return answerNow(convId_, agent.modelId, route.text, opts.voice);
   if (route?.kind === 'action') {
+    // Lo que no tiene sentido (un texto vago, una fecha pasada) se pregunta en vez de hacerlo (P26-C1).
+    const problem = problemOf(route.action, new Date());
+    if (problem) return answerNow(convId_, agent.modelId, problem, opts.voice);
     const aiId = uid();
     const callId = uid();
     chat.addMessage(convId_, {
@@ -133,7 +144,7 @@ export async function send(input: string, convId?: string | null, opts: { web?: 
     modelId: agent.modelId,
   });
   await reply(convId_, aiId, agent);
-  if (opts.voice) say(findMessage(convId_, aiId)?.content ?? '');
+  if (opts.voice) say(spokenReply(convId_, aiId));
   return convId_;
 }
 
@@ -148,6 +159,21 @@ function say(text: string) {
   const clean = text.trim();
   if (!clean || !speaker || !useSettings.getState().voiceReply) return;
   speaker(clean);
+}
+
+/** Respuesta de la propia app (sin modelo): se escribe y, con voz, se lee. */
+function answerNow(convId: string, modelId: string, text: string, voice?: boolean): string {
+  useChat.getState().addMessage(convId, { id: uid(), role: 'assistant', content: text, createdAt: Date.now(), status: 'done', modelId });
+  if (voice) say(text);
+  return convId;
+}
+
+/** Lo que se lee de una respuesta: su texto y, si hay una acción esperando un toque, la pregunta de confirmación. */
+function spokenReply(convId: string, aiId: string): string {
+  const m = findMessage(convId, aiId);
+  const waiting = m?.toolCalls?.find((c) => c.status === 'pending');
+  const ask = waiting ? `${describeAction(JSON.parse(waiting.args) as Action)}. ¿Lo hago? Di sí o no.` : '';
+  return [m?.content ?? '', ask].filter(Boolean).join(' ');
 }
 
 const resultOf = (convId: string, aiId: string, callId: string): string =>
@@ -241,7 +267,11 @@ async function reply(convId_: string, aiId: string, agent: AgentSnapshot, mayRun
       }
     }
     // Un proveedor que termina sin "done" no debe dejar el mensaje generando.
-    patch((m) => (m.status === 'done' ? {} : { status: 'done' }));
+    // Si no llegó texto ni acciones, se dice en vez de dejar una burbuja en blanco (P26-E).
+    patch((m) => ({
+      ...(m.status === 'done' ? {} : { status: 'done' as const }),
+      ...(m.content.trim() || m.toolCalls?.length ? {} : { content: EMPTY_REPLY }),
+    }));
     await proposeActions(convId_, aiId, mayRunActions);
   } catch (e) {
     const aborted = e instanceof Error && e.name === 'AbortError';
@@ -302,10 +332,22 @@ async function proposeActions(convId: string, aiId: string, mayRun: boolean): Pr
   if (mode === 'off' || index < 1 || !messages[index - 1]!.assist) return;
   const { actions } = extractActions(messages[index]!.content);
   if (!actions.length) return;
-  const calls = actions.map((a) => ({ id: uid(), name: a.type, args: JSON.stringify(a), status: 'pending' as const }));
+  // Lo que no tiene sentido (un texto vago, una fecha pasada, la medianoche sin hora) no se hace: queda como error con su motivo (P26-C1).
+  const calls = actions.map((a): ToolCall => {
+    const id = uid();
+    const problem = problemOf(a, new Date());
+    return problem
+      ? { id, name: a.type, args: JSON.stringify(a), status: 'error', result: problem }
+      : { id, name: a.type, args: JSON.stringify(a), status: 'pending' };
+  });
   useChat.getState().patchMessage(convId, aiId, { toolCalls: calls });
-  // Ver la lista no cambia nada: se muestra siempre.
-  for (const call of calls) if ((mode === 'auto' && mayRun) || call.name === 'list') await confirmAction(convId, aiId, call.id);
+  for (let i = 0; i < calls.length; i++) {
+    const call = calls[i]!;
+    if (call.status !== 'pending') continue;
+    // Ver la lista no cambia nada: se muestra siempre. Evento, alarma y temporizador esperan un toque en Automático (P26-C2).
+    const auto = (mode === 'auto' && mayRun && !NEEDS_TAP_FROM_MODEL.has(actions[i]!.type)) || call.name === 'list';
+    if (auto) await confirmAction(convId, aiId, call.id);
+  }
 }
 
 function updateCall(convId: string, aiId: string, callId: string, patch: Partial<NonNullable<Message['toolCalls']>[number]>) {
@@ -318,9 +360,16 @@ function updateCall(convId: string, aiId: string, callId: string, patch: Partial
 export async function confirmAction(convId: string, aiId: string, callId: string): Promise<void> {
   const call = findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId);
   if (!call || (call.status !== 'pending' && call.status !== 'error')) return;
+  const action = JSON.parse(call.args) as Action;
+  // Se vuelve a mirar antes de hacerla: lo que se pidió con un toque también puede estar vacío o caducado (P26-C1).
+  const problem = problemOf(action, new Date());
+  if (problem) {
+    updateCall(convId, aiId, callId, { status: 'error', result: problem });
+    return;
+  }
   updateCall(convId, aiId, callId, { status: 'done', result: 'Haciendo…' });
   try {
-    const { result, ref } = await runAction(JSON.parse(call.args) as Action);
+    const { result, ref } = await runAction(action);
     updateCall(convId, aiId, callId, { status: 'done', result, ...(ref ? { ref } : {}) });
   } catch (e) {
     updateCall(convId, aiId, callId, { status: 'error', result: e instanceof Error ? e.message : String(e) });
@@ -346,4 +395,16 @@ export async function revertAction(convId: string, aiId: string, callId: string)
 
 export function stop(convId: string) {
   controllers.get(convId)?.abort();
+}
+
+/**
+ * Completa con el modelo del teléfono sin cargar ninguno (P26-A3): null si el modelo es de la nube, si no está cargado
+ * con este contexto o si hay una respuesta en curso (no se hace esperar al dictado).
+ */
+export async function completeLocal(messages: ProviderMessage[], maxTokens: number): Promise<string | null> {
+  const agent = currentAgent();
+  const model = modelById(agent.modelId);
+  const contextSize = contextTokens(model, agent.deep);
+  if (model.cloud || !provider.complete || controllers.size > 0 || !isLoadedLlama(model.id, contextSize)) return null;
+  return provider.complete(messages, { modelId: model.id, mode: agent.mode, deep: agent.deep, contextTokens: contextSize, maxTokens });
 }

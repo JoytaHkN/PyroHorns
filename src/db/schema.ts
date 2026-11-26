@@ -59,6 +59,10 @@ const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL
   );
   `,
+  // v5: dictado («Oí: …» cuando la corrección cambió la frase)
+  `
+  ALTER TABLE messages ADD COLUMN heard TEXT;
+  `,
 ];
 
 /** Búsqueda de texto completo. Se crea aparte para poder seguir sin ella si el motor no trae FTS5. */

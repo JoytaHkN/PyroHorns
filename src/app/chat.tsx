@@ -16,10 +16,13 @@ import { contextTokens, modelById } from '@/data/models';
 import { conversationTokens, formatTokens } from '@/lib/context';
 import { cloudAvailable } from '@/lib/cloud';
 import { errorSummary } from '@/lib/log';
-import { send, stop } from '@/lib/engine';
+import { completeLocal, send, stop } from '@/lib/engine';
 import { systemPrompt } from '@/lib/system-prompt';
 import { listen, stopMic } from '@/lib/voice/listen';
 import { voiceModelInstalled } from '@/lib/voice/model';
+import { refineTranscript } from '@/lib/voice/refine';
+import { cleanTranscript } from '@/lib/voice/text';
+import { voiceVocabulary } from '@/lib/voice/vocabulary';
 import { preloadLlamaModel } from '@/providers/llama';
 import { useActiveConversation, useChat } from '@/store/chat';
 import { useEngine } from '@/store/engine';
@@ -66,8 +69,11 @@ export default function ChatScreen() {
   const { toast } = useToast();
   const listening = useEngine((s) => s.listening);
   const lastTouch = useRef(0);
+  const listenStart = useRef(0);
   const onDoubleTap = () => {
     if (useEngine.getState().listening) {
+      // El doble toque que acaba de abrir la escucha no la cierra: pasado un instante, sí (P26-B).
+      if (Date.now() - listenStart.current < 1500) return;
       void stopMic();
       return;
     }
@@ -75,16 +81,20 @@ export default function ChatScreen() {
       toast.show({ label: 'Voz sin instalar', description: 'Instálala en Ajustes → Voz (una vez, 60 MB).' });
       return;
     }
+    listenStart.current = Date.now();
     useEngine.getState().setListening(true);
     listen()
-      .then((text) => {
+      .then(async ({ raw, names }) => {
         useEngine.getState().setListening(false);
-        const said = text.trim();
-        if (!said) {
+        // Sin música, etiquetas ni frases de silencio: si no queda nada, no se crea mensaje (P26-A2).
+        const heard = cleanTranscript(raw);
+        if (!heard) {
           toast.show({ label: 'No te escuché', description: 'Prueba otra vez, más cerca del micrófono.' });
           return;
         }
-        void send(said, conv?.id ?? null, { voice: true });
+        // Corrección con el vocabulario y, si hay un modelo del teléfono cargado, con él (P26-A3). Nunca en la nube.
+        const refined = await refineTranscript(heard, { vocabulary: voiceVocabulary(names), names, complete: completeLocal });
+        void send(refined.text, conv?.id ?? null, { voice: true, ...(refined.changed ? { heard } : {}) });
       })
       .catch((e: unknown) => {
         useEngine.getState().setListening(false);

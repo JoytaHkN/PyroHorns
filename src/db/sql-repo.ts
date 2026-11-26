@@ -28,6 +28,7 @@ interface MessageRow {
   feedback: string | null;
   web: string | null;
   assist: string | null;
+  heard: string | null;
   created_at: number;
 }
 
@@ -59,6 +60,7 @@ function toMessage(r: MessageRow): Message {
   const web = parseJson<WebInfo>(r.web);
   if (web) m.web = web;
   if (r.assist) m.assist = r.assist;
+  if (r.heard) m.heard = r.heard;
   return settleStatus(m);
 }
 
@@ -135,8 +137,8 @@ export class SqlChatRepo implements ChatRepo {
   async insertMessage(conversationId: string, m: Message): Promise<void> {
     await this.db.transaction(async () => {
       await this.db.run(
-        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, web, assist, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO messages (id, conversation_id, role, content, thinking, status, think_ms, model_id, usage, tool_calls, feedback, web, assist, heard, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           m.id,
           conversationId,
@@ -151,6 +153,7 @@ export class SqlChatRepo implements ChatRepo {
           m.feedback ?? null,
           m.web ? JSON.stringify(m.web) : null,
           m.assist ?? null,
+          m.heard ?? null,
           m.createdAt,
         ],
       );

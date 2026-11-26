@@ -73,6 +73,8 @@ export interface Message {
   web?: WebInfo;
   /** Solo usuario: instrucciones del asistente que acompañan a este mensaje (si pide anotar, agendar, etc.). */
   assist?: string;
+  /** Solo usuario, por dictado: lo que oyó la voz, si la corrección cambió la frase («Oí: …»). */
+  heard?: string;
 }
 
 /** Agente con el que se creó o continuó la conversación. */

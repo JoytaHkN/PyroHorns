@@ -31,6 +31,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
 import kotlin.math.sqrt
 import java.io.FileOutputStream
 import org.json.JSONArray
@@ -42,8 +43,14 @@ class PyroHornsLlamaModule : Module() {
   private val native = PyroHornsLlamaNative()
 
   companion object {
-    // Energía media (RMS) por encima de la cual hay voz; el silencio de una habitación queda muy por debajo.
-    private const val SPEECH_RMS = 0.02
+    // Voz (P26-B): el umbral sale del ruido de la sala medido en los primeros 0,5 s, entre estos límites.
+    private const val CALIBRATION_FRAMES = 5 // tramos de 100 ms
+    private const val THRESHOLD_MIN = 0.006
+    private const val THRESHOLD_MAX = 0.03
+    private const val NO_SPEECH_SECONDS = 8
+    // El dictado se sube hasta este pico (sin pasar de MAX_GAIN veces) para que whisper lo oiga bien.
+    private const val PEAK_TARGET = 0.9f
+    private const val MAX_GAIN = 20f
   }
 
   private fun diagnosticsDir(): File {
@@ -71,7 +78,7 @@ class PyroHornsLlamaModule : Module() {
   }
 
   // Escucha hasta el silencio tras hablar, hasta que se pulse parar o hasta el tiempo máximo; luego transcribe en español.
-  private fun listenAndTranscribe(modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double): String {
+  private fun listenAndTranscribe(modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double, prompt: String): String {
     val context = appCtx()
     check(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
       "Sin permiso de micrófono."
@@ -94,6 +101,8 @@ class PyroHornsLlamaModule : Module() {
     var n = 0
     var heardSpeech = false
     var silentMs = 0.0
+    val calibration = ArrayList<Double>(CALIBRATION_FRAMES)
+    var threshold = THRESHOLD_MIN
     recorder.startRecording()
     try {
       while (!stopListening.get() && n < capacity) {
@@ -107,22 +116,37 @@ class PyroHornsLlamaModule : Module() {
         }
         n += read
         val rms = sqrt(energy / read)
-        if (rms > SPEECH_RMS) {
+        if (calibration.size < CALIBRATION_FRAMES) {
+          // Los primeros 0,5 s miden el ruido de la sala: el umbral es tres veces el más bajo de ellos.
+          calibration.add(rms)
+          if (calibration.size == CALIBRATION_FRAMES) {
+            threshold = ((calibration.minOrNull() ?: 0.0) * 3).coerceIn(THRESHOLD_MIN, THRESHOLD_MAX)
+          }
+        } else if (rms > threshold) {
           heardSpeech = true
           silentMs = 0.0
         } else if (heardSpeech) {
           silentMs += read * 1000.0 / rate
           if (silentMs >= silenceSeconds * 1000) break
-        } else if (n >= rate * 6) {
-          break // seis segundos sin voz: no hay nada que transcribir
         }
+        if (!heardSpeech && n >= rate * NO_SPEECH_SECONDS) break // ocho segundos sin voz: nada que transcribir
       }
     } finally {
       recorder.stop()
       recorder.release()
     }
     if (!heardSpeech) return ""
-    return whisperNative.transcribe(whisperFor(modelPath), samples.copyOf(n), threads)
+    normalize(samples, n)
+    return whisperNative.transcribe(whisperFor(modelPath), samples.copyOf(n), threads, prompt)
+  }
+
+  // Sube el dictado hasta un pico razonable (sin pasar de MAX_GAIN): así se oyen también las voces bajas.
+  private fun normalize(samples: FloatArray, n: Int) {
+    var peak = 0f
+    for (i in 0 until n) peak = maxOf(peak, abs(samples[i]))
+    if (peak <= 0f) return
+    val gain = minOf(PEAK_TARGET / peak, MAX_GAIN)
+    for (i in 0 until n) samples[i] = (samples[i] * gain).coerceIn(-1f, 1f)
   }
 
   // SHA-256 en streaming (el modelo pesa ~60 MB): se compara con la huella fijada antes de usarlo.
@@ -139,26 +163,40 @@ class PyroHornsLlamaModule : Module() {
     return digest.digest().joinToString("") { "%02x".format(it) }
   }
 
-  // El primer calendario en el que se puede escribir, prefiriendo el principal.
-  private fun writableCalendar(context: Context): Long {
-    var chosen = -1L
+  private data class WritableCalendar(val id: Long, val name: String, val visible: Boolean)
+
+  // El calendario donde se guarda: con permiso de escritura, y de preferencia visible, principal y sincronizado (P26-C3).
+  private fun pickCalendar(context: Context): WritableCalendar {
+    var best: WritableCalendar? = null
+    var bestScore = -1
     context.contentResolver.query(
       CalendarContract.Calendars.CONTENT_URI,
-      arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.IS_PRIMARY),
+      arrayOf(
+        CalendarContract.Calendars._ID,
+        CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
+        CalendarContract.Calendars.VISIBLE,
+        CalendarContract.Calendars.IS_PRIMARY,
+        CalendarContract.Calendars.SYNC_EVENTS
+      ),
       "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL} >= ${CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR}",
       null,
       null
     )?.use { cursor ->
       while (cursor.moveToNext()) {
-        if (chosen < 0 || cursor.getInt(1) == 1) chosen = cursor.getLong(0)
+        val visible = cursor.getInt(2) == 1
+        val score = (if (visible) 4 else 0) + (if (cursor.getInt(3) == 1) 2 else 0) + (if (cursor.getInt(4) == 1) 1 else 0)
+        if (score > bestScore) {
+          bestScore = score
+          best = WritableCalendar(cursor.getLong(0), cursor.getString(1) ?: "Calendario", visible)
+        }
       }
     }
-    check(chosen >= 0) { "No hay ningún calendario en el que escribir. Crea uno en la app Calendario." }
-    return chosen
+    return checkNotNull(best) { "No hay ningún calendario en el que escribir. Crea uno en la app Calendario." }
   }
 
+  // Se abre la pantalla del Reloj con los datos escritos: el usuario confirma (P26-C4). Sin EXTRA_SKIP_UI no hay forma de saber si quedó.
   private fun openClock(intent: Intent) {
-    intent.putExtra(AlarmClock.EXTRA_SKIP_UI, true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {
       appCtx().startActivity(intent)
     } catch (e: ActivityNotFoundException) {
@@ -366,8 +404,40 @@ class PyroHornsLlamaModule : Module() {
     }
 
     // Escucha y devuelve lo dicho en español. Se resuelve cuando termina la escucha (silencio, parar o tiempo máximo).
-    AsyncFunction("listenOnce") Coroutine { modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double ->
-      withContext(Dispatchers.IO) { listenAndTranscribe(modelPath, threads, maxSeconds, silenceSeconds) }
+    // `prompt` es el vocabulario que se enseña a whisper (órdenes y nombres de contactos).
+    AsyncFunction("listenOnce") Coroutine { modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double, prompt: String ->
+      withContext(Dispatchers.IO) { listenAndTranscribe(modelPath, threads, maxSeconds, silenceSeconds, prompt) }
+    }
+
+    // Nombres de los contactos más usados (para el vocabulario del dictado). Lista vacía sin permiso de contactos.
+    AsyncFunction("contactNames") { limit: Int ->
+      val context = appCtx()
+      val names = mutableListOf<String>()
+      if (context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+        context.contentResolver.query(
+          ContactsContract.Contacts.CONTENT_URI,
+          arrayOf(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY),
+          "${ContactsContract.Contacts.HAS_PHONE_NUMBER} = 1",
+          null,
+          "${ContactsContract.Contacts.TIMES_CONTACTED} DESC"
+        )?.use { cursor ->
+          while (cursor.moveToNext() && names.size < limit) {
+            val name = cursor.getString(0)?.trim().orEmpty()
+            if (name.isNotEmpty() && name !in names) names.add(name)
+          }
+        }
+      }
+      names
+    }
+
+    // Abre la app Calendario en el día indicado (solo lectura: no crea nada).
+    AsyncFunction("openCalendarAt") { millis: Double ->
+      val uri = CalendarContract.CONTENT_URI.buildUpon().appendPath("time").appendPath(millis.toLong().toString()).build()
+      try {
+        appCtx().startActivity(Intent(Intent.ACTION_VIEW).setData(uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+      } catch (e: ActivityNotFoundException) {
+        throw IllegalStateException("Este teléfono no tiene una app de calendario.", e)
+      }
     }
 
     AsyncFunction("stopListening") {
@@ -378,10 +448,12 @@ class PyroHornsLlamaModule : Module() {
       withContext(Dispatchers.IO) { sha256Of(path) }
     }
 
+    // Guarda el evento y lo vuelve a leer: devuelve (JSON) su id, el calendario donde quedó y si ese calendario está visible.
     AsyncFunction("addEvent") { title: String, startMs: Double, endMs: Double ->
       val context = appCtx()
+      val calendar = pickCalendar(context)
       val event = ContentValues().apply {
-        put(CalendarContract.Events.CALENDAR_ID, writableCalendar(context))
+        put(CalendarContract.Events.CALENDAR_ID, calendar.id)
         put(CalendarContract.Events.TITLE, title)
         put(CalendarContract.Events.DTSTART, startMs.toLong())
         put(CalendarContract.Events.DTEND, endMs.toLong())
@@ -389,13 +461,25 @@ class PyroHornsLlamaModule : Module() {
       }
       val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, event)
       val id = ContentUris.parseId(checkNotNull(uri) { "El calendario no aceptó el evento." })
+      val stored = context.contentResolver.query(
+        ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id),
+        arrayOf(CalendarContract.Events._ID),
+        null,
+        null,
+        null
+      )?.use { it.moveToFirst() } ?: false
+      check(stored) { "El calendario no guardó el evento." }
       val reminder = ContentValues().apply {
         put(CalendarContract.Reminders.EVENT_ID, id)
         put(CalendarContract.Reminders.MINUTES, 10)
         put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT)
       }
       context.contentResolver.insert(CalendarContract.Reminders.CONTENT_URI, reminder)
-      id.toString()
+      JSONObject()
+        .put("id", id.toString())
+        .put("calendar", calendar.name)
+        .put("visible", calendar.visible)
+        .toString()
     }
 
     AsyncFunction("deleteEvent") { id: String ->

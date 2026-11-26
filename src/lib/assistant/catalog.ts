@@ -7,7 +7,7 @@
  */
 import type { Action } from './actions';
 import { foldText } from './template';
-import { dayLabel, durationSeconds, dayOf, hhmm, labelOf, stripHonorifics, timeOf } from './slots';
+import { dateFromText, dayLabel, durationSeconds, dayOf, hhmm, labelOf, stripHonorifics, timeOf } from './slots';
 
 export type Route =
   | { kind: 'action'; action: Action }
@@ -159,6 +159,20 @@ export const CATALOG: Intent[] = [
     build: (s) => {
       const name = stripHonorifics(s.nombre ?? '');
       return name ? act({ type: 'email', name }) : ask('¿De quién quieres el correo?');
+    },
+  },
+  // Calendario: abrir un día (solo lectura; no crea nada, así que no necesita confirmación en el modelo)
+  {
+    name: 'PyroOpenCalendar',
+    source: 'pyrohorns',
+    templates: [
+      '[(abre|abrir|abreme|muestrame|mostrar|ver|ahora) ][(el|mi) ]calendario[ (en|del|de|para|el) ][(la fecha|el dia|la) ]{fecha}',
+      '[(abre|abrir|abreme|muestrame|mostrar|ver|ahora) ][(el|mi) ]calendario',
+    ],
+    build: (s, now) => {
+      const fecha = (s.fecha ?? '').trim();
+      const day = fecha ? dateFromText(fecha, now) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return day ? act({ type: 'openCalendar', start: day.getTime() }) : ask('¿Qué fecha quieres ver?');
     },
   },
   // Calendario y alarmas

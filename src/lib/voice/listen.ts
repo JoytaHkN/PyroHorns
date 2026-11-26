@@ -1,17 +1,29 @@
 /** Escucha con el micrófono y devuelve lo dicho en español (whisper.cpp, sin conexión). */
-import { listenOnce, requestMicrophonePermission, stopListening } from '@pyrohorns/llama';
+import { contactNames, listenOnce, requestMicrophonePermission, stopListening } from '@pyrohorns/llama';
 import { voiceModelPath } from './model';
+import { whisperPrompt } from './vocabulary';
 
-/** Tiempo máximo de una frase, y silencio que la cierra. */
-const MAX_SECONDS = 20;
-const SILENCE_SECONDS = 1.2;
+/** Tiempo máximo de una frase (límite del búfer nativo) y silencio que la cierra (P26-B). */
+const MAX_SECONDS = 30;
+const SILENCE_SECONDS = 2.5;
 const THREADS = 4;
+/** Contactos que se enseñan a whisper y a la corrección. */
+const CONTACTS = 25;
 
-export async function listen(): Promise<string> {
+export interface Heard {
+  /** Transcripción tal como la devolvió whisper. */
+  raw: string;
+  /** Nombres de contactos usados como vocabulario. */
+  names: string[];
+}
+
+export async function listen(): Promise<Heard> {
   if (!(await requestMicrophonePermission())) {
     throw new Error('Sin permiso de micrófono: concédelo en Ajustes del teléfono.');
   }
-  return listenOnce(voiceModelPath(), THREADS, MAX_SECONDS, SILENCE_SECONDS);
+  const names = await contactNames(CONTACTS).catch(() => [] as string[]);
+  const raw = await listenOnce(voiceModelPath(), THREADS, MAX_SECONDS, SILENCE_SECONDS, whisperPrompt(names));
+  return { raw, names };
 }
 
 /** Termina la escucha actual: lo dicho hasta ahora se transcribe. */

@@ -90,3 +90,38 @@ export function stripHonorifics(name: string): string {
   }
   return out.trim();
 }
+
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const plainText = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+/**
+ * Una fecha dicha o escrita («17 de septiembre», «17 de septiembre de 2027», «17/09», «2027-09-17», «mañana», «el viernes»):
+ * medianoche de ese día, o null si no hay fecha o no existe. Sin año, es el de este año.
+ */
+export function dateFromText(text: string, now: Date): Date | null {
+  const f = plainText(text);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const exact = (y: number, m: number, d: number) => {
+    const date = new Date(y, m, d);
+    return date.getMonth() === m && date.getDate() === d ? date : null;
+  };
+  const iso = f.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+  if (iso) return exact(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  const named = f.match(/\b(\d{1,2})\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(?:\s+(?:de\s+)?(\d{4}))?\b/);
+  if (named) {
+    const month = MONTHS.indexOf(named[2] === 'setiembre' ? 'septiembre' : (named[2] ?? ''));
+    return exact(named[3] ? Number(named[3]) : now.getFullYear(), month, Number(named[1]));
+  }
+  const numeric = f.match(/\b(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{4}|\d{2}))?\b/);
+  if (numeric) {
+    const y = numeric[3];
+    const year = y ? (y.length === 2 ? 2000 + Number(y) : Number(y)) : now.getFullYear();
+    return exact(year, Number(numeric[2]) - 1, Number(numeric[1]));
+  }
+  if (/\bpasado manana\b/.test(f)) return addDays(today, 2);
+  if (/\bmanana\b/.test(f)) return addDays(today, 1);
+  if (/\bhoy\b/.test(f)) return today;
+  const week = WEEK.find(([re]) => re.test(f));
+  return week ? addDays(today, (week[1] - now.getDay() + 7) % 7 || 7) : null;
+}

@@ -41,4 +41,17 @@ check(r('cuéntame un chiste') === null, 'un chiste va al modelo');
 check(intentCount() === CATALOG.length && CATALOG.length >= 15, 'hay al menos 15 intenciones en la planilla');
 check(CATALOG.every((i) => i.templates.length > 0 && i.name.length > 0), 'cada intención tiene plantillas y nombre');
 check(CATALOG.filter((i) => i.source === 'home-assistant').length >= 7, 'hay al menos siete intenciones de Home Assistant');
+
+// Calendario: abrir un día (solo lectura; no crea nada) (P26-D).
+type Opened = { kind?: string; action?: { type: string; start: number } };
+const open = (s: string) => r(s) as Opened;
+check(open('abre el calendario del 17 de septiembre').action?.type === 'openCalendar', 'abre el calendario: intención propia');
+check(open('abre el calendario del 17 de septiembre').action?.start === new Date(2026, 8, 17).getTime(), 'del 17 de septiembre: ese día a medianoche');
+check(open('ahora el calendario en la fecha del 17 de septiembre').action?.start === new Date(2026, 8, 17).getTime(), 'con «ahora» y «en la fecha»');
+check(open('abre el calendario').action?.start === new Date(2026, 10, 25).getTime(), 'abre el calendario sin fecha: hoy');
+check(open('abre el calendario del 17/09/2027').action?.start === new Date(2027, 8, 17).getTime(), 'fecha con barras y año');
+check(open('abre el calendario del 2027-03-05').action?.start === new Date(2027, 2, 5).getTime(), 'fecha ISO');
+check(open('abre el calendario del viernes').action?.start === new Date(2026, 10, 27).getTime(), 'el próximo viernes');
+check(open('abre el calendario del 31 de febrero').kind === 'question', 'una fecha que no existe pregunta');
+check((r('agenda reunión el viernes a las 10') as { action?: { type: string } })?.action?.type === 'event', 'agendar sigue siendo un evento');
 done();

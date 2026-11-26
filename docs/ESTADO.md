@@ -3,7 +3,7 @@
 > Documento vivo para retomar el trabajo desde cualquier agente o entorno. Se actualiza al cerrar
 > cada bloque de trabajo (ver `AGENTS.md`).
 
-**Última actualización:** 2026-11-25 · Claude Opus 5.5 en and-code
+**Última actualización:** 2026-11-26 · Claude Haiku 5.5 en and-code
 
 ## Dónde estamos
 - **F1** ✅ y **F1.1** ✅, cerradas: el usuario probó el APK en su móvil y todo está OK (2026-11-23).
@@ -20,6 +20,11 @@
   `LLM_ARCH_LFM3`.
 
 ## Siguiente paso
+0. **P26 (voz fiable y acciones comprobadas), implementada el 2026-11-26** (aprobada con 1b, 2a, 3b, 4a; `PLAN.md` §7).
+   Pendiente de CI, del APK y de probarla en el móvil: dictado sin «[Música]» y con «Oí: …» cuando se corrige; corte tras
+   2,5 s de silencio (doble toque para terminar); el calendario guarda y confirma en qué calendario quedó; la alarma y el
+   temporizador abren el Reloj con los datos para confirmar; «abre el calendario del 17 de septiembre»; respuesta vacía
+   con aviso; en Automático, el evento y el temporizador que propone el modelo esperan un toque.
 1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
    - Paso 1 ✅: `LlamaProvider` en TypeScript (`src/providers/llama.ts`) con fallback a
      `MockProvider` cuando el módulo nativo no esté disponible; integración en `src/lib/engine.ts`.
@@ -400,3 +405,5 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Asistente: bloques con cualquier etiqueta (nota) y sin cercar (Nemotron Nano) ya se ejecutan; repetidas cuentan una vez. LFM3 mezcla su razonamiento en la respuesta (pendiente). OpenRouter sin clave avisa bien.
 - **2026-11-25** · Voz (P25) implementada: whisper.cpp aislado, modelo verificado, doble toque, «sí/no» por voz, lectura en voz alta; planilla con sintaxis y nombres de Home Assistant (CC-BY-4.0). Pendiente: CI y móvil.
 - **2026-11-26** · CI de la voz en verde (`61e94a8`): `libpyrohorns_whisper.so` (1,2 MB) exporta solo las funciones JNI; ningún símbolo de ggml sale de la biblioteca. Fuentes de plantillas revisadas: Home Assistant (es, CC-BY-4.0) incorporado; Rhasspy y Rasa sin plantillas en español accesibles.
+- **2026-11-26** · Informe de voz del móvil: causas comprobadas en el código (dictado sin corregir, corte a 1,2 s, «[Música]» enviado como mensaje, respuestas vacías, calendario y alarmas sin comprobar, acciones del modelo sin validar). Plan P26 en `PLAN.md` §7; sin código hasta el visto bueno.
+- **2026-11-26** · P26 aprobada por el usuario (1b, 2a, 3b, 4a) e implementada: nativo (umbral de voz adaptativo, normalización, vocabulario y filtros de whisper, calendario verificado y en JSON, reloj con confirmación, abrir un día del calendario, contactos para el dictado); TS (`cleanTranscript`, corrección por vocabulario y con el modelo local, validación de acciones, política de Automático, «Oí», respuesta vacía, `completeLocal`); esquema v5 (`messages.heard`). Typecheck, 18 suites de pruebas y bundle Android en verde. Pendiente: CI, APK y móvil.

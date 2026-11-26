@@ -4,6 +4,7 @@ import {
   addEvent,
   deleteEvent,
   dialNumber,
+  openCalendarAt,
   openWhatsApp,
   requestCalendarPermission,
   requestContactsPermission,
@@ -11,14 +12,15 @@ import {
   setAlarm,
   setTimer,
 } from '@pyrohorns/llama';
-import { setDevice, type PhoneContact } from './run';
+import { setDevice, type PhoneContact, type SavedEvent } from './run';
 
 export function registerDevice() {
   if (Platform.OS !== 'android') return;
   setDevice({
     async addEvent(title, start, end) {
       if (!(await requestCalendarPermission())) throw new Error('Sin permiso de calendario no puedo crear el evento.');
-      return addEvent(title, start, end);
+      // El módulo devuelve JSON: el id, el calendario y si está visible (P26-C3).
+      return JSON.parse(await addEvent(title, start, end)) as SavedEvent;
     },
     async contact(name) {
       if (!(await requestContactsPermission())) throw new Error('Sin permiso de contactos no puedo buscar a esa persona.');
@@ -30,5 +32,6 @@ export function registerDevice() {
     deleteEvent,
     setAlarm,
     setTimer,
+    openCalendar: openCalendarAt,
   });
 }

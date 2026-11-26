@@ -60,9 +60,9 @@ Java_expo_modules_pyrohornsllama_PyroHornsWhisperNative_load(JNIEnv * env, jobje
   return handle;
 }
 
-// Audio mono a 16 kHz en coma flotante (-1 a 1). Idioma fijo: español.
+// Audio mono a 16 kHz en coma flotante (-1 a 1). Idioma fijo: español. `jPrompt` es el vocabulario del dictado (P26-A1).
 extern "C" JNIEXPORT jstring JNICALL
-Java_expo_modules_pyrohornsllama_PyroHornsWhisperNative_transcribe(JNIEnv * env, jobject, jlong handle, jfloatArray jSamples, jint threads) {
+Java_expo_modules_pyrohornsllama_PyroHornsWhisperNative_transcribe(JNIEnv * env, jobject, jlong handle, jfloatArray jSamples, jint threads, jstring jPrompt) {
   std::lock_guard<std::mutex> lock(g_mutex);
   const auto it = g_contexts.find(handle);
   if (it == g_contexts.end()) {
@@ -71,6 +71,13 @@ Java_expo_modules_pyrohornsllama_PyroHornsWhisperNative_transcribe(JNIEnv * env,
   whisper_context * ctx = it->second;
   const jsize n = env->GetArrayLength(jSamples);
   jfloat * samples = env->GetFloatArrayElements(jSamples, nullptr);
+
+  // Se copia el vocabulario antes de soltar la cadena de Java; vive hasta que termina whisper_full.
+  const char * promptChars = jPrompt != nullptr ? env->GetStringUTFChars(jPrompt, nullptr) : nullptr;
+  const std::string prompt = promptChars != nullptr ? promptChars : "";
+  if (promptChars != nullptr) {
+    env->ReleaseStringUTFChars(jPrompt, promptChars);
+  }
 
   whisper_full_params params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
   params.n_threads = threads;
@@ -83,6 +90,10 @@ Java_expo_modules_pyrohornsllama_PyroHornsWhisperNative_transcribe(JNIEnv * env,
   params.print_progress = false;
   params.print_realtime = false;
   params.print_timestamps = false;
+  // Menos «[Música]» y «♪» cuando no hay voz: se suprimen los símbolos no verbales y las ventanas casi en silencio se descartan.
+  params.suppress_nst = true;
+  params.no_speech_thold = 0.6f;
+  params.initial_prompt = prompt.empty() ? nullptr : prompt.c_str();
 
   const int rc = whisper_full(ctx, params, samples, n);
   env->ReleaseFloatArrayElements(jSamples, samples, JNI_ABORT);

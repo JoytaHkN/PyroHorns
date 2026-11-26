@@ -70,8 +70,22 @@ export async function requestMicrophonePermission(): Promise<boolean> {
   return false;
 }
 
-export async function listenOnce(_modelPath: string, _threads: number, _maxSeconds: number, _silenceSeconds: number): Promise<string> {
+export async function listenOnce(
+  _modelPath: string,
+  _threads: number,
+  _maxSeconds: number,
+  _silenceSeconds: number,
+  _prompt: string,
+): Promise<string> {
   return onlyAndroid();
+}
+
+export async function contactNames(_limit: number): Promise<string[]> {
+  return [];
+}
+
+export async function openCalendarAt(_millis: number): Promise<void> {
+  onlyAndroid();
 }
 
 export async function stopListening(): Promise<void> {}

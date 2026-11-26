@@ -12,7 +12,8 @@ export type Action =
   | { type: 'call'; name: string; channel: 'phone' | 'whatsapp' }
   | { type: 'email'; name: string }
   | { type: 'alarm'; hour: number; minute: number; label: string }
-  | { type: 'timer'; seconds: number; label: string };
+  | { type: 'timer'; seconds: number; label: string }
+  | { type: 'openCalendar'; start: number };
 
 const INTENT =
   /(an[oó]ta|ap[uú]nta|recu[eé]rda|recordatorio|ag[eé]nda|calendario|\bevento\b|reuni[oó]n|\bcita\b|\b\w?larma|despi[eé]rta|temporizador|av[ií]same|\btareas?\b|\bpendientes?\b|\bnotas?\b)/i;
@@ -23,6 +24,10 @@ const DAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', '
 const pad = (n: number) => String(n).padStart(2, '0');
 const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const dayLabel = (d: Date) => `${DAYS[d.getDay()]} ${isoDay(d)}`;
+/** Día con su fecha, como «miércoles 2026-11-25». */
+export const dayText = (ms: number) => dayLabel(new Date(ms));
+/** «5 min» o «90 s». */
+export const durationText = (seconds: number) => (seconds >= 60 ? `${Math.round(seconds / 60)} min` : `${seconds} s`);
 
 /** Instrucciones que acompañan al mensaje. Llevan la fecha para que «mañana» o «el viernes» tengan sentido. */
 export function assistContext(now: Date): string {
@@ -175,6 +180,45 @@ export function describeAction(a: Action): string {
     case 'alarm':
       return `Alarma ${pad(a.hour)}:${pad(a.minute)}${a.label ? ` · ${a.label}` : ''}`;
     case 'timer':
-      return `Temporizador de ${a.seconds >= 60 ? `${Math.round(a.seconds / 60)} min` : `${a.seconds} s`}${a.label ? ` · ${a.label}` : ''}`;
+      return `Temporizador de ${durationText(a.seconds)}${a.label ? ` · ${a.label}` : ''}`;
+    case 'openCalendar':
+      return `Abrir el calendario · ${dayText(a.start)}`;
+  }
+}
+
+const DAY_MS = 24 * 3600_000;
+const VAGUE = new Set(['calendario', 'alarma', 'nota', 'tarea', 'evento', 'recordatorio', 'reloj', 'temporizador', 'agenda', 'eso', 'esto', 'algo', 'cosa', 'listo', 'hecho']);
+
+/** Un texto vacío o demasiado general («calendario», «algo») no dice qué hacer. */
+function vague(text: string): boolean {
+  const t = fold(text).replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return t.length < 2 || VAGUE.has(t);
+}
+
+/**
+ * Por qué no debe hacerse una acción tal como está, o null si puede hacerse. Se mira antes de ejecutarla, en la
+ * planilla, en lo que propone el modelo y al confirmarla: el modelo puede inventar una nota o un evento (P26-C1).
+ */
+export function problemOf(a: Action, now: Date): string | null {
+  switch (a.type) {
+    case 'note':
+      return vague(a.text) ? '¿Qué quieres anotar?' : null;
+    case 'task':
+      return vague(a.text) ? '¿Qué tarea quieres anotar?' : null;
+    case 'complete':
+      return vague(a.text) ? '¿Qué tarea quieres marcar como hecha?' : null;
+    case 'event': {
+      if (vague(a.title)) return '¿Cómo se llama el evento?';
+      if (a.start < now.getTime() - DAY_MS) return `Esa fecha ya pasó (${dayText(a.start)}). ¿La quieres en otro año?`;
+      const d = new Date(a.start);
+      if (d.getHours() === 0 && d.getMinutes() === 0) return '¿A qué hora?';
+      return null;
+    }
+    case 'call':
+      return vague(a.name) ? '¿A quién quieres llamar?' : null;
+    case 'email':
+      return vague(a.name) ? '¿De quién quieres el correo?' : null;
+    default:
+      return null;
   }
 }

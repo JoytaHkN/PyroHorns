@@ -162,9 +162,28 @@ export async function requestMicrophonePermission(): Promise<boolean> {
   return (await Native.requestMicrophonePermission()).granted;
 }
 
-/** Escucha hasta el silencio, hasta que se pulse parar o hasta maxSeconds; devuelve lo dicho en español. */
-export async function listenOnce(modelPath: string, threads: number, maxSeconds: number, silenceSeconds: number): Promise<string> {
-  return Native.listenOnce(modelPath, threads, maxSeconds, silenceSeconds);
+/**
+ * Escucha hasta el silencio, hasta que se pulse parar o hasta maxSeconds; devuelve lo dicho en español.
+ * `prompt` es el vocabulario que se enseña a whisper (órdenes y contactos).
+ */
+export async function listenOnce(
+  modelPath: string,
+  threads: number,
+  maxSeconds: number,
+  silenceSeconds: number,
+  prompt: string,
+): Promise<string> {
+  return Native.listenOnce(modelPath, threads, maxSeconds, silenceSeconds, prompt);
+}
+
+/** Nombres de los contactos más usados (vacío sin permiso de contactos). */
+export async function contactNames(limit: number): Promise<string[]> {
+  return Native.contactNames(limit);
+}
+
+/** Abre la app Calendario en el día indicado (solo lectura). */
+export async function openCalendarAt(millis: number): Promise<void> {
+  await Native.openCalendarAt(millis);
 }
 
 export async function stopListening(): Promise<void> {

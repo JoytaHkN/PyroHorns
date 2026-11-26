@@ -140,6 +140,11 @@ export function isNativeLlamaAvailable(): boolean {
   return nativeModule !== null;
 }
 
+/** ¿Está ya cargado este modelo con este contexto? No carga nada (lo usa el dictado para no esperar una carga). */
+export function isLoadedLlama(modelId: string, contextTokens: number): boolean {
+  return loaded?.key === `${modelId}@${contextTokens}`;
+}
+
 /**
  * LlamaProvider: proveedor real basado en llama.cpp nativo.
  * Si el módulo nativo no está disponible (web, pruebas, Android sin native),
@@ -159,7 +164,7 @@ export const LlamaProvider: ChatProvider = {
       opts.signal?.addEventListener('abort', abort, { once: true });
       try {
         const noThink = LOCAL_MODELS.find((m) => m.id === opts.modelId)?.thinking ?? false;
-        return await native.complete(modelId, messages, { threads: DEFAULT_THREADS, noThink, maxTokens: 32 });
+        return await native.complete(modelId, messages, { threads: DEFAULT_THREADS, noThink, maxTokens: opts.maxTokens ?? 32 });
       } finally {
         opts.signal?.removeEventListener('abort', abort);
       }

@@ -46,6 +46,11 @@ function UserBubble({ m }: { m: Message }) {
           {m.content}
         </T>
       </View>
+      {m.heard ? (
+        <T selectable style={{ fontSize: 12, opacity: 0.6 }}>
+          Oí: «{m.heard}»
+        </T>
+      ) : null}
       <Action icon="copy" label="Copiar mensaje" onPress={() => copy(m.content, 'Mensaje copiado')} />
     </View>
   );

@@ -27,6 +27,8 @@ export interface StreamOptions {
   /** Tamaño de contexto con el que se construyó el historial. */
   contextTokens: number;
   signal?: AbortSignal;
+  /** Tope de tokens de la respuesta de `complete` (por defecto 32; para la corrección del dictado, unos pocos más). */
+  maxTokens?: number;
 }
 
 export type StreamEvent =

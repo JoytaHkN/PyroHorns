@@ -1,12 +1,19 @@
 /** Ejecuta las acciones del asistente. El acceso al teléfono se inyecta para poder probarlo. */
 import { uid, useChat } from '@/store/chat';
 import type { AgendaItem } from '@/types/chat';
-import { when, type Action } from './actions';
+import { dayText, durationText, when, type Action } from './actions';
 
 export interface PhoneContact {
   name: string;
   phones: string[];
   emails: string[];
+}
+
+/** Evento guardado: su id, el calendario donde quedó y si ese calendario está visible. */
+export interface SavedEvent {
+  id: string;
+  calendar: string;
+  visible: boolean;
 }
 
 export interface Device {
@@ -16,11 +23,13 @@ export interface Device {
   dial(number: string): Promise<void>;
   /** Abre el chat de WhatsApp con el número; el usuario envía. */
   whatsapp(number: string): Promise<void>;
-  /** Pide el permiso de calendario si falta y crea el evento; devuelve su id. */
-  addEvent(title: string, start: number, end: number): Promise<string>;
+  /** Pide el permiso de calendario si falta, guarda el evento y lo vuelve a leer para confirmarlo. */
+  addEvent(title: string, start: number, end: number): Promise<SavedEvent>;
   deleteEvent(id: string): Promise<void>;
   setAlarm(hour: number, minute: number, label: string): Promise<void>;
   setTimer(seconds: number, label: string): Promise<void>;
+  /** Abre la app Calendario en ese día (solo lectura). */
+  openCalendar(start: number): Promise<void>;
 }
 
 let device: Device | null = null;
@@ -70,7 +79,13 @@ export async function runAction(a: Action): Promise<{ result: string; ref?: stri
         const c = await phone().contact(a.guest);
         if (c?.emails[0]) title = `${a.title} (${c.name}: ${c.emails[0]})`;
       }
-      return { result: 'Evento creado en tu calendario', ref: await phone().addEvent(title, a.start, a.start + a.minutes * 60_000) };
+      const saved = await phone().addEvent(title, a.start, a.start + a.minutes * 60_000);
+      return {
+        result: saved.visible
+          ? `Evento guardado en «${saved.calendar}»`
+          : `Evento guardado en «${saved.calendar}», pero ese calendario está oculto: muéstralo en la app Calendario.`,
+        ref: saved.id,
+      };
     }
     case 'call': {
       const c = await phone().contact(a.name);
@@ -91,10 +106,15 @@ export async function runAction(a: Action): Promise<{ result: string; ref?: stri
     }
     case 'alarm':
       await phone().setAlarm(a.hour, a.minute, a.label);
-      return { result: 'Alarma puesta en la app Reloj' };
+      return {
+        result: `Abrí el Reloj con la alarma de las ${String(a.hour).padStart(2, '0')}:${String(a.minute).padStart(2, '0')}. Confirma que quedó guardada.`,
+      };
     case 'timer':
       await phone().setTimer(a.seconds, a.label);
-      return { result: 'Temporizador iniciado en la app Reloj' };
+      return { result: `Abrí el Reloj con el temporizador de ${durationText(a.seconds)}. Confirma que quedó puesto.` };
+    case 'openCalendar':
+      await phone().openCalendar(a.start);
+      return { result: `Calendario abierto en ${dayText(a.start)}.` };
   }
 }
 

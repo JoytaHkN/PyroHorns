@@ -329,6 +329,32 @@ Pulido del chat real (F1.5, 2026-11-24):
     medidas de P13 si no se hace antes.
   - Recomendación del agente: **2 ahora** y **3 antes de medir (P13)**.
 
+- **P26. Voz fiable y acciones comprobadas** — **aprobada el 2026-11-26 con las opciones 1b, 2a, 3b y 4a**; implementada (pendiente de CI y de probar en el móvil).
+  - **Qué se ve en el código:**
+    1. El dictado va tal cual de whisper a `send()` (`chat.tsx` → `listen()`): no hay corrección ni vocabulario. Lo que se transcribió como «misiones» llegó así al modelo.
+    2. El corte: `listen.ts` termina tras 1,2 s de silencio y el umbral de voz es fijo (`SPEECH_RMS` = 0,02, `PyroHornsLlamaModule.kt`). Una pausa para pensar corta la frase, y el ruido por encima del umbral (música) impide el corte.
+    3. «[Música]»: whisper convierte el ruido en una etiqueta; no hay filtro, así que se envía como mensaje tuyo. La respuesta vacía (0–42 tokens sin texto visible) deja la burbuja en blanco: `reply()` (`engine.ts`) no comprueba si el texto queda vacío.
+    4. Acciones que se dan por hechas sin estar hechas:
+       - **Evento:** `writableCalendar` toma un calendario escribible sin mirar si está oculto; `addEvent` no vuelve a leer el evento; `run.ts` responde «Evento creado» en cualquier caso.
+       - **Alarma y temporizador:** `openClock` usa `EXTRA_SKIP_UI = true`, así que el Reloj las pone sin mostrar nada. La app responde «Alarma puesta» al abrir el Reloj, sin poder comprobar que quedó guardada.
+       - **Automático:** `proposeActions` (`engine.ts`, línea ~308) ejecuta lo que propone el modelo sin validarlo. Así entraron la nota «Calendario» y el evento de las 00:00 del 17/09/2026 (fecha ya pasada y hora por defecto).
+       - **«Abre el calendario en…»** no tiene intención propia: la frase fue al modelo.
+  - **Propuesta por bloques:**
+    - **A. Dictado.** A1: vocabulario para whisper (`initial_prompt`) con palabras de comandos y hasta 25 nombres de contactos (`contactNames`, nuevo); si whisper devuelve el vocabulario en silencio, se descarta. A2: filtro de no-voz (`[…]`, `(…)`, `*…*`, ♪ y frases típicas de silencio); si no queda texto, no se envía nada y se avisa «No te escuché». A3: corrección con contexto, según la decisión 1: primero determinista (palabras cercanas al vocabulario) y, si se elige, reescritura con el modelo local ya cargado (nunca en la nube; si no está cargado, se omite). Guardas: solo cambia palabras, no añade números ni palabras nuevas, con tope de tokens y de tiempo; si algo falla, usa el original. Si cambia algo, se muestra bajo tu mensaje «Oí: …».
+    - **B. Escucha.** Corte tras 2,5 s de silencio (decisión 2); máximo 30 s (límite del búfer nativo); 8 s sin voz antes de cortar; umbral adaptativo (3 veces el ruido medido en los primeros 0,5 s, entre 0,006 y 0,03); normalización del pico a 0,9; el doble toque para terminar se ignora durante 1,5 s tras empezar.
+    - **C. Acciones.** C1: `problemOf(action, now)` antes de ejecutar (planilla, modelo y al confirmar). Texto vacío o genérico (calendario, alarma, nota, tarea, evento, recordatorio, reloj, temporizador, agenda, eso, esto, algo, cosa) → pregunta. Evento en una fecha de más de 24 h atrás → pregunta si lo quieres en otro año. Hora 00:00 sin hora dicha → «¿A qué hora?». C2: política de Automático (decisión 3). C3: calendario visible y escribible (preferir el principal y el sincronizado); tras insertar, se relee el evento y se responde «Evento guardado en «<calendario>»»; si está oculto, se avisa. C4: alarma y temporizador según la decisión 4.
+    - **D. Intención «abre el calendario».** `PyroOpenCalendar`, colocada antes de `PyroCalendar`: «abre/muéstrame el calendario (del) 17 de septiembre» abre la app Calendario en esa fecha (`ACTION_VIEW`, solo lectura: no crea nada). Fechas: día y mes (año opcional), dd/mm, hoy, mañana, pasado y días de la semana (`dateFromText` en `slots.ts`).
+    - **E. Respuesta vacía.** Si el texto queda vacío al terminar: «No obtuve respuesta. Prueba otra vez o dímelo de otra forma.» (no burbuja en blanco).
+    - **F. Técnico.** `maxTokens` pasa a `StreamOptions` (hoy fijo en 32 en `llama.ts`) y se añade `completeLocal` en el motor, para A3.
+  - **Decisiones (aprobadas: 1b, 2a, 3b, 4a):**
+    1. Corrección del dictado: **(a) vocabulario y reglas, sin modelo**; **(b) lo anterior y reescritura con el modelo local** (≈ 2–3 s más por frase con LFM3 y ≈ 4–5 s con Nemotron; estimación con las medidas de P13); (c) ninguna.
+    2. Fin de la escucha: **(a) 2,5 s de silencio, o doble toque**; (b) 3,5 s de silencio, o doble toque; (c) solo doble toque, sin corte automático.
+    3. Automático con lo que propone el modelo: (a) como ahora, se ejecuta solo; **(b) evento, alarma y temporizador piden un toque; notas, tareas y lo que la planilla resuelve y es válido siguen automáticos**; (c) todo lo que propone el modelo pide un toque.
+    4. Alarma y temporizador: **(a) se abre el Reloj con los datos para que confirmes con un toque** («Abrí el Reloj con la alarma de las 07:00. Confirma que quedó guardada»); (b) se ponen en silencio, como ahora, sin poder comprobarlo.
+  - **Pruebas.** Automáticas: `cleanTranscript`, guardas de A3 (con un `complete` falso), `problemOf`, `dateFromText`, intención de `PyroOpenCalendar`, flujos del asistente (un evento del modelo queda pendiente), JSON de `addEvent`; `sh scripts/sync-build.sh` y bundle Android. En el móvil: dictar con pausas; música de fondo sin «[Música]»; «abre el calendario del 17 de septiembre»; «agenda … mañana a las 10» y comprobarlo en Calendario; «pon una alarma a las 7»; respuesta vacía.
+  - **Límites.** Aquí no se pueden probar el micrófono, el calendario ni el Reloj: eso se comprueba en el móvil.
+  - **Implementación (2026-11-26) y elecciones propias:** la planilla entiende la frase → no se llama al modelo para corregirla (más rápido y sin inventar); la corrección del modelo solo si hay un modelo del teléfono ya cargado y no hay respuesta en curso; el dictado con menos de tres palabras no se corrige con el modelo; «Oí: …» se guarda con el mensaje (esquema v5, columna `heard`); los eventos y temporizadores que propone el modelo esperan un toque en Automático, y notas, tareas, listas, llamadas, correos y la planilla válida siguen automáticos; con voz se lee también la pregunta de confirmación pendiente; el calendario se elige visible > principal > sincronizado y, si no hay ninguno visible, se usa uno oculto avisando; el tope de ganancia del dictado es 20×.
+
 ## 8. Riesgos
 
 | Riesgo | Fase | Respuesta |

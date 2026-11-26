@@ -1,8 +1,8 @@
-import { assistContext, describeAction, extractActions, wantsAction } from '@/lib/assistant/actions';
+import { assistContext, describeAction, extractActions, problemOf, wantsAction } from '@/lib/assistant/actions';
 import { setDevice } from '@/lib/assistant/run';
 import { migrate } from '@/db/schema';
 import { SqlChatRepo } from '@/db/sql-repo';
-import { confirmAction, regenerate, revertAction, send, setProvider } from '@/lib/engine';
+import { completeLocal, confirmAction, regenerate, revertAction, send, setProvider } from '@/lib/engine';
 import { MockProvider } from '@/providers/mock';
 import { attachRepo, flushWrites, useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -40,22 +40,37 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   check(wantsAction('creame una larma') && wantsAction('pon una alarma'), 'typo «larma» también se reconoce');
   check(assistContext(new Date()).includes('no inventes'), 'el modelo no inventa lo que ya tiene el usuario');
 
+  // Lo que no tiene sentido no se hace (P26-C1): texto vago, fecha pasada, medianoche sin hora.
+  const now = new Date(2026, 10, 26, 10, 0); // jueves 26 de noviembre de 2026, 10:00
+  const at = (y: number, m: number, d: number, h = 10) => new Date(y, m, d, h, 0).getTime();
+  check(problemOf({ type: 'note', text: 'Calendario' }, now) === '¿Qué quieres anotar?', 'una nota con un texto vago pregunta');
+  check(problemOf({ type: 'note', text: 'comprar pan' }, now) === null, 'una nota normal se hace');
+  check(problemOf({ type: 'event', title: 'Dentista', start: at(2026, 8, 17), minutes: 60 }, now)?.includes('ya pasó') === true, 'un evento en una fecha pasada pregunta');
+  check(problemOf({ type: 'event', title: 'Dentista', start: at(2026, 10, 27, 0), minutes: 60 }, now) === '¿A qué hora?', 'un evento a medianoche pregunta la hora');
+  check(problemOf({ type: 'event', title: 'Calendario', start: at(2026, 10, 27), minutes: 60 }, now) === '¿Cómo se llama el evento?', 'un evento sin título pregunta');
+  check(problemOf({ type: 'event', title: 'Dentista', start: at(2026, 10, 27), minutes: 60 }, now) === null, 'un evento futuro con hora se hace');
+  check(problemOf({ type: 'openCalendar', start: at(2026, 8, 17, 0) }, now) === null, 'abrir el calendario de una fecha pasada no es un problema');
+
   const db = nodeDb();
   const { fts } = await migrate(db);
   attachRepo(new SqlChatRepo(db, fts));
   const events: string[] = [];
+  const opened: number[] = [];
   setDevice({
     contact: async () => null,
     dial: async () => {},
     whatsapp: async () => {},
     addEvent: async (title) => {
       events.push(title);
-      return `ev${events.length}`;
+      return { id: `ev${events.length}`, calendar: 'Trabajo', visible: true };
     },
     deleteEvent: async () => void events.pop(),
     setAlarm: async () => {},
     setTimer: async () => {
       throw new Error('sin reloj');
+    },
+    openCalendar: async (start) => {
+      opened.push(start);
     },
   });
   let answer = '';
@@ -68,16 +83,27 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   });
   const calls = (id: string) => useChat.getState().conversations.find((c) => c.id === id)!.messages.at(-1)!.toolCalls ?? [];
   const msgId = (id: string) => useChat.getState().conversations.find((c) => c.id === id)!.messages.at(-1)!.id;
+  const lastText = (id: string) => useChat.getState().conversations.find((c) => c.id === id)!.messages.at(-1)!.content;
 
-  // Automático: se hace y se puede deshacer.
+  // Automático: la tarea se hace sola; el evento y el temporizador que propone el modelo esperan un toque (P26-C2).
   useSettings.getState().setAssistant('auto');
-  answer = 'Hecho.\n' + block('tipo: tarea\ntexto: comprar pan') + '\n' + block('tipo: evento\ntitulo: Dentista\ninicio: 2026-11-26 17:00') + '\n' + block('tipo: temporizador\nminutos: 5');
+  // Fecha futura: la validación mira que no sea una fecha pasada.
+  answer =
+    'Hecho.\n' +
+    block('tipo: tarea\ntexto: comprar pan') +
+    '\n' +
+    block('tipo: evento\ntitulo: Dentista\ninicio: 2031-11-26 17:00') +
+    '\n' +
+    block('tipo: temporizador\nminutos: 5');
   const a = await send('tengo que hacer tareas hoy: comprar pan y agendar el dentista');
-  check(calls(a).map((c) => c.status).join() === 'done,done,error' && events.join() === 'Dentista', 'automático: hace las acciones y anota el error');
+  check(calls(a).map((c) => c.status).join() === 'done,pending,pending' && events.length === 0, 'automático: la tarea se hace; evento y temporizador del modelo esperan un toque');
   check(useChat.getState().items.some((i) => i.text === 'comprar pan'), 'la tarea queda guardada');
   await flushWrites();
   const stored = await new SqlChatRepo(db, fts).loadAll();
   check(stored.items?.length === 1 && stored.conversations[0]!.messages[0]!.assist !== undefined, 'tarea e instrucciones persisten');
+  await confirmAction(a, msgId(a), calls(a)[1]!.id);
+  check(events.join() === 'Dentista' && calls(a)[1]!.status === 'done', 'con un toque, el evento se guarda');
+  check(calls(a)[1]!.result === 'Evento guardado en «Trabajo»', 'el evento dice en qué calendario quedó');
   await revertAction(a, msgId(a), calls(a)[1]!.id);
   check(events.length === 0 && calls(a)[1]!.status === 'undone', 'deshacer borra el evento');
 
@@ -93,11 +119,42 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   await confirmAction(b, msgId(b), calls(b)[0]!.id);
   check(useChat.getState().items[0]!.done === true, 'al tocar se hace');
 
+  // Planilla en Automático: lo válido se hace solo; lo vago se pregunta.
+  useSettings.getState().setAssistant('auto');
+  const p = await send('agenda el dentista mañana a las 10');
+  check(calls(p)[0]?.status === 'done' && events.includes('dentista'), 'la planilla agenda sola cuando el evento es válido');
+  const v = await send('anota algo');
+  check(lastText(v) === '¿Qué quieres anotar?' && calls(v).length === 0, 'anota algo: pregunta qué anotar, no anota nada');
+  answer = block('tipo: nota\ntexto: Calendario');
+  const n = await send('tengo que hacer tareas: lo del calendario');
+  check(calls(n)[0]?.status === 'error' && calls(n)[0]?.result === '¿Qué quieres anotar?', 'una nota inventada por el modelo queda como error con su motivo');
+  answer = block('tipo: evento\ntitulo: Dentista\ninicio: 2020-09-17 10:00');
+  const old = await send('tengo que hacer tareas: el dentista de septiembre');
+  check(calls(old)[0]?.status === 'error' && calls(old)[0]?.result?.includes('ya pasó') === true, 'un evento del modelo en una fecha pasada no se crea');
+  await send('abre el calendario del 17 de septiembre');
+  check(opened.length === 1 && new Date(opened[0]!).getMonth() === 8 && new Date(opened[0]!).getDate() === 17, 'abre el calendario del 17 de septiembre: ese día, solo lectura');
+
+  // Dictado: lo que oyó la voz queda bajo el mensaje, y se guarda.
+  const h = await send('anota comprar leche', null, { heard: 'anota comprar lechhe' });
+  await flushWrites();
+  const reloaded = await new SqlChatRepo(db, fts).loadAll();
+  check(reloaded.conversations.find((c) => c.id === h)?.messages[0]?.heard === 'anota comprar lechhe', 'el dictado «Oí» se guarda con el mensaje');
+
   // Lo que no se pidió no se ejecuta.
+  const before = useChat.getState().items.length;
   useSettings.getState().setAssistant('auto');
   answer = block('tipo: nota\ntexto: colada desde una web');
   const c = await send('resume esta página');
-  check(calls(c).length === 0 && useChat.getState().items.length === 1, 'un bloque sin petición del usuario se ignora');
+  check(calls(c).length === 0 && useChat.getState().items.length === before, 'un bloque sin petición del usuario se ignora');
+
+  // Si el modelo no escribe nada, se dice en vez de dejar una burbuja en blanco (P26-E).
+  answer = '';
+  const e = await send('cuéntame algo');
+  check(lastText(e) === 'No obtuve respuesta. Prueba otra vez o dímelo de otra forma.', 'respuesta vacía: se dice');
+
+  // La corrección del dictado nunca carga un modelo: sin uno listo, no hay corrección del modelo.
+  check((await completeLocal([{ role: 'user', content: 'hola' }], 16)) === null, 'sin modelo cargado, la corrección no carga ninguno');
+
   useSettings.getState().setAssistant('off');
   const d = await send('anota algo');
   check(calls(d).length === 0, 'apagado: nada');
