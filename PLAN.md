@@ -1,7 +1,7 @@
 # PLAN — PyroHorns
 
-> **Versión 2.5** · 2026-11-26 (añade P27–P30: datos NLU, notas y agenda, archivos y nubes, integración con la IA; ver `docs/integraciones.md`)
-> Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S19 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
+> **Versión 2.6** · 2026-11-26 (añade P31: evaluación del plan, hitos y acta de cierre de F1.5)
+> Estado: F1 implementada (commit `c8234c0`). Decisiones D1–D9 y S1–S19 cerradas (las dos dudas de seguridad también). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 cerrada** (acta del 2026-11-26, §5); hito en curso: v0.2. Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
 ## 1. Decisiones tomadas
@@ -134,14 +134,35 @@ Objetivo: comprobar lo más arriesgado antes de construir F2.
 - Comparar abrir el GGUF desde `/sdcard` con copiarlo al almacenamiento de la app.
 - Medir en tu móvil el tiempo hasta el primer token, los tok/s y el pico de RAM, con 1K y 8K de contexto.
 - Plan B si el módulo propio se atasca: llama.rn (MIT).
-- **Pasos 3 y 4 medidos (2026-11-24):** paso 3 (mmap frente a sin mmap) y paso 4 (1K y 7,6K) con la compilación base, en teléfono y tablet; ver la tabla en `docs/ESTADO.md`. Quedan por medir: compilación con dotprod y medición con batería.
+- **Pasos 3 y 4 medidos (2026-11-24):** paso 3 (mmap frente a sin mmap) y paso 4 (1K y 7,6K) con la compilación base, en teléfono y tablet; ver `docs/mediciones.md`. Quedan por medir: compilación con dotprod y medición con batería.
 - **Primeros resultados (2026-11-24, teléfono HUAWEI LMR-LX9, LFM3, compilación base armv8-a):** prefill 17–21 tok/s (TTFT 48–59 s con un prompt de 1K: no cumple),
   generación 13,3 tok/s con mmap y 11,2 sin mmap a 1K (cumple) y 8,8/8,4 a 7,6K (no cumple), RAM pico ≈ 1,6 GB (sin cierres). La CPU soporta dotprod/fp16/i8mm; se
-  prueba `armv8.2-a+dotprod+fp16` (decisión f-B). Detalle y tabla en `docs/ESTADO.md`.
-- **Con dotprod (2026-11-24, teléfono y tablet):** prefill ≈ 2,5× (56 tok/s en el teléfono, 43 en la tablet), generación LFM3 16–19 tok/s a 1K y 9–13 a 7,6K; TTFT con 1K 15–32 s (objetivo no alcanzable con esta CPU); RAM pico +1 GB (LFM3 2,6 GB, Qwen3 3,4 GB, 4B 5,0 GB); Qwen3 4–5 tok/s a 7,6K y el 4B 5 tok/s. Propuesta pendiente: reformular el objetivo de TTFT (< 2 s con ≈ 100 tokens). Detalle en `docs/ESTADO.md`.
+  prueba `armv8.2-a+dotprod+fp16` (decisión f-B). Detalle y tabla en `docs/mediciones.md`.
+- **Con dotprod (2026-11-24, teléfono y tablet):** prefill ≈ 2,5× (56 tok/s en el teléfono, 43 en la tablet), generación LFM3 16–19 tok/s a 1K y 9–13 a 7,6K; TTFT con 1K 15–32 s (objetivo no alcanzable con esta CPU); RAM pico +1 GB (LFM3 2,6 GB, Qwen3 3,4 GB, 4B 5,0 GB); Qwen3 4–5 tok/s a 7,6K y el 4B 5 tok/s. Propuesta pendiente: reformular el objetivo de TTFT (< 2 s con ≈ 100 tokens). Detalle en `docs/mediciones.md`.
 - **Modelo en prueba (2026-11-24):** `NVIDIA-Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf` (6,18 GB, arquitectura gemma4), opcional y solo para medir; no cambia el reparto de modelos (D1). Preajuste «Resumen» de P13 (20 ejecuciones). Objetivo de TTFT sin cambios por ahora.
 - **Objetivos iniciales** (se ajustan tras medir): primer token en < 1,5 s con un prompt de 1K · ≥ 10 tok/s · sin cierres por memoria a 8K.
 - **Salida:** decidir entre módulo propio y llama.rn.
+
+#### Acta de cierre de F1.5 (2026-11-26, P31-M1)
+- **Salida:** módulo propio. llama.rn queda descartado.
+- **Probado en el móvil:** carga y chat con LFM3, Qwen3 y Nemotron; memoria de conversación; internet.
+- **Medidas:** `docs/mediciones.md`. Generación ≥ 10 tok/s solo con LFM3 (y Qwen3 a 1K).
+- **TTFT < 1,5 s con 1K:** sigue como meta (decisión del 24-11), pero no condiciona el cierre de fases.
+- **Pasa a v0.2 / F2:** medir con las variantes de CPU; comparar `/sdcard` con copia; control de memoria en el chat.
+
+### Hitos (P31-M1)
+El trabajo se planifica por hitos; las fases F2–F6 quedan como mapa de alcance. Una idea nueva va a la
+«lista de pendientes» y no entra en el hito en curso salvo decisión del usuario.
+
+**v0.2 «Asistente local fiable».** M4, M5, M7, M3 (autoprueba), M6 y M2. Criterios **propuestos**, pendientes de visto bueno:
+1. Las casillas de `docs/pruebas-movil.md` pasan en el móvil.
+2. Actualizar la app conserva las conversaciones (probado desde cada versión del esquema).
+3. Ningún cierre por memoria al cargar un modelo desde el chat: si no cabe, avisa.
+4. Un juego de 10–20 pruebas en español por modo con resultados anotados.
+
+**v0.3 «Notas y archivos».** P28-F1 + P30-1, P29-F1 y P28-F5.
+
+**Lista de pendientes (sin hito):** P17, P21 (accesos y «Hey JJ»), P22, P27-F2, P29-F2 y MEGA, P1–P12, y el resto de F2–F6.
 
 ### F2 — Runtime local y modelos
 - Módulo completo: cargar, liberar, generar con eventos, parar, tokenizar; preparado para embeddings (F4).
@@ -445,6 +466,23 @@ Pulido del chat real (F1.5, 2026-11-24):
     3. Intenciones fuera de la planilla: **(a) modelo local con la lista de intenciones, cacheada, tras medir**; (b) solo responder, sin acciones; (c) nube con consentimiento por uso.
   - **Evaluación:** MASSIVE (P27-F1) y pruebas propias en el teléfono: cobertura, falsos positivos y latencia.
 
+- **P31. Evaluación del plan (2026-11-26)** — **aprobada («todo lo recomendado»)**, salvo M8, que necesita confirmación expresa.
+  - **Causas detectadas de corregir sobre la marcha:** F1.5 absorbió P16–P30 sin cerrarse; el móvil era la única prueba de
+    integración; parches por modelo en vez de mecanismos generales; la regla de memoria no se aplica en el chat; sin pruebas de
+    actualización de datos; documentación desfasada y muy larga.
+  - **M1-b** acta de F1.5 e hitos (§5). **M2-b** juego de pruebas por modo antes de revisar D1.
+  - **M3-c** lista de comprobación, pantalla «Autoprueba» (cargar y generar 16 tokens, audio de muestra por whisper, voz en
+    español, permisos, leer calendario, internet) y máximo 3 bloques sin probar.
+  - **M4-b** commit, número de compilación y fecha visibles; `versionCode` = número de commits (en vez del número de ejecución,
+    porque cada workflow lleva un contador propio y el código podría retroceder).
+  - **M5-b** CI que revisa el contenido del APK, ccache y no recompilar por `scripts/eval-*`. **M5-c** al empezar F2.
+  - **M6-b** núcleo del motor **antes de P28** (cambia el orden aprobado): regla de memoria en el chat, GBNF/JSON, plantillas Jinja,
+    tokenizador real y compactado.
+  - **M7-b** probar la migración desde cada versión con datos y copiar la base antes de migrar.
+  - **M8** firma de los APK de la CI: **pendiente** (b exige desinstalar y borra las conversaciones de prueba).
+  - **M9-b** ESTADO ≤ 120 líneas; historial y medidas aparte. **M10-b** Dependabot al día; sin versiones mayores de TypeScript y Babel.
+  - **Excepción a M10:** `gradle/actions` se queda en v5; la v6 usa una caché propietaria bajo los términos de Gradle.
+
 ## 8. Riesgos
 
 | Riesgo | Fase | Respuesta |
@@ -472,5 +510,4 @@ conversación, así que el contexto vive en el repo:
 - Los cambios solo de documentación no recompilan el APK.
 
 ## 10. Preguntas abiertas
-1. Propuestas P1–P15 (sección 7).
-2. Revisión visual de F1 cuando tengas el primer APK.
+La lista vigente está en `docs/ESTADO.md`, «Pendiente de decisión del usuario».

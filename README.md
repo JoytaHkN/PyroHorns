@@ -9,10 +9,8 @@ mascota Ibex. Modelos GGUF en el propio móvil; visor web online como complement
 
 ## Estado
 
-**F1.1 — cierre de F1.** Chat con respuestas simuladas en streaming (el modelo real llega en F1.5),
-modos que eligen el modelo, interruptor Profundo con razonamiento plegable, conversaciones en
-SQLite cifrado (SQLCipher) con búsqueda de texto completo, contraseña de copia para restaurar
-copias de seguridad, proyectos, catálogo GGUF y ajustes.
+F1.5 cerrada. Hito en curso: **v0.2 «Asistente local fiable»** (modelos GGUF en el móvil, voz sin nube y asistente).
+Estado vigente en [docs/ESTADO.md](docs/ESTADO.md).
 
 ## Desarrollo en el móvil (and-code)
 
@@ -51,6 +49,6 @@ Secretos para `release.yml`: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWO
 - `src/data`: modelos GGUF y modos
 - `src/db`: SQLite cifrado (Android) y almacenamiento del visor web, esquema, copia de seguridad
 - `src/lib`: motor de chat, política de contexto, registros
-- `src/providers`: contrato `ChatProvider`; `MockProvider` (hasta F1.5)
+- `src/providers`: contrato `ChatProvider`; motor local, nube y `MockProvider` (web y pruebas)
 - `src/store`: estado (conversaciones, ajustes, arranque)
 - `tests`: pruebas de lógica

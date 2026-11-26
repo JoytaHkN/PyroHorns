@@ -12,6 +12,9 @@ necesario está en este repo**, no en la memoria de ningún agente.
 3. Responde siempre en español, con explicaciones claras (el usuario trabaja desde el móvil).
 
 ## Reglas del usuario
+- **Hitos (P31).** Se trabaja en el hito en curso (`PLAN.md` §5); las ideas nuevas van a la lista de pendientes salvo que
+  el usuario decida otra cosa. Máximo 3 bloques que cambien el APK sin probar en el móvil (`docs/pruebas-movil.md`).
+- **ESTADO.md, máximo 120 líneas.** La historia va a `docs/historial/` y las medidas a `docs/mediciones.md`; léelos solo si hace falta.
 - **Planes antes que código.** Si cambia el alcance o hay una decisión abierta, propón y espera su
   visto bueno. No des por definitivo nada que haya dejado pendiente.
 - **Código y datos de terceros.** Antes de copiar, enlazar o empaquetar código o datos ajenos, verifica su licencia (`gh api repos/<dueño>/<repo> --jq .license`, o su fichero LICENSE/NOTICE) y compárala con la de PyroHorns (GPL-3.0-only). Lo que sea AGPL, tenga licencia dudosa o no tenga ninguna no se integra sin decisión del titular. Los datos grandes van fuera del repo (`APK IA/datasets/`), con su huella SHA-256 y, si se usan en la app, su atribución en `THIRD_PARTY_NOTICES.md`.

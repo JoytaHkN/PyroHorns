@@ -23,8 +23,10 @@
    - «Última actualización» con la fecha y el agente/runtime usado.
    - «Dónde estamos» con lo que quedó cerrado.
    - «Siguiente paso»: marca ✅ lo cerrado; deja el nuevo como pendiente, con lo que falta hacer.
-   - «Registro»: una línea por bloque, con el SHA del commit.
-3. Si cambias decisiones (D1–D9, S1–S17), fases o riesgos: edita `PLAN.md` **y** su copia idéntica en
+   - Máximo 120 líneas: la historia va a `docs/historial/` y las medidas a `docs/mediciones.md`.
+   - Una línea por bloque, con el SHA del commit, al final de `docs/historial/registro.md`.
+   - Si el bloque cambia el APK, añade sus casillas a `docs/pruebas-movil.md` (máximo 3 bloques sin probar).
+3. Si cambias decisiones (D1–D9, S1–S19), fases o riesgos: edita `PLAN.md` **y** su copia idéntica en
    `/sdcard/IA/Proyectos/APK IA/PLAN.md` (`cp PyroHorns/PLAN.md ../PLAN.md`).
 4. Si cambias reglas de entorno o procedimiento: edita `AGENTS.md` (`CLAUDE.md` y `GEMINI.md` lo importan).
 5. Si vendimizas código de terceros: verifica su licencia (ver «Código y datos de terceros» en `AGENTS.md`) y actualiza `THIRD_PARTY_NOTICES.md`.
