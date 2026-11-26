@@ -21,6 +21,9 @@ mkdir -p "$DST/ggml/src"
 cp "$SRC/CMakeLists.txt" "$SRC/LICENSE" "$DST/"
 cp -r "$SRC/cmake" "$SRC/src" "$SRC/include" "$DST/"
 cp "$SRC/ggml/CMakeLists.txt" "$DST/ggml/"
+# Plantillas que el CMake lee con configure_file (aunque no se usen en Android).
+mkdir -p "$DST/bindings/javascript"
+cp "$SRC/bindings/javascript/package-tmpl.json" "$DST/bindings/javascript/"
 cp -r "$SRC/ggml/cmake" "$SRC/ggml/include" "$DST/ggml/"
 # Backends de GPU y de otras plataformas: no se compilan en Android/CPU.
 cd "$SRC/ggml/src"
