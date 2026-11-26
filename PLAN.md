@@ -329,7 +329,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     medidas de P13 si no se hace antes.
   - Recomendación del agente: **2 ahora** y **3 antes de medir (P13)**.
 
-- **P26. Voz fiable y acciones comprobadas** — **aprobada el 2026-11-26 con las opciones 1b, 2a, 3b y 4a**; implementada (pendiente de CI y de probar en el móvil).
+- **P26. Voz fiable y acciones comprobadas** — **aprobada el 2026-11-26 con las opciones 1b, 2a, 3b y 4a**; implementada; CI en verde (`9f0844d`) y APK copiado. Pendiente: probarla en el móvil.
   - **Qué se ve en el código:**
     1. El dictado va tal cual de whisper a `send()` (`chat.tsx` → `listen()`): no hay corrección ni vocabulario. Lo que se transcribió como «misiones» llegó así al modelo.
     2. El corte: `listen.ts` termina tras 1,2 s de silencio y el umbral de voz es fijo (`SPEECH_RMS` = 0,02, `PyroHornsLlamaModule.kt`). Una pausa para pensar corta la frase, y el ruido por encima del umbral (música) impide el corte.

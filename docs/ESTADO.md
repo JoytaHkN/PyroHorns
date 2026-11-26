@@ -21,7 +21,7 @@
 
 ## Siguiente paso
 0. **P26 (voz fiable y acciones comprobadas), implementada el 2026-11-26** (aprobada con 1b, 2a, 3b, 4a; `PLAN.md` §7).
-   Pendiente de CI, del APK y de probarla en el móvil: dictado sin «[Música]» y con «Oí: …» cuando se corrige; corte tras
+   CI en verde (`9f0844d`) y APK en `APK IA/apk/PyroHorns-0.1.0-F1.5-voz2-prueba.apk` (+ `.sha256`). Pendiente de probarla en el móvil: dictado sin «[Música]» y con «Oí: …» cuando se corrige; corte tras
    2,5 s de silencio (doble toque para terminar); el calendario guarda y confirma en qué calendario quedó; la alarma y el
    temporizador abren el Reloj con los datos para confirmar; «abre el calendario del 17 de septiembre»; respuesta vacía
    con aviso; en Automático, el evento y el temporizador que propone el modelo esperan un toque.
@@ -406,4 +406,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · Voz (P25) implementada: whisper.cpp aislado, modelo verificado, doble toque, «sí/no» por voz, lectura en voz alta; planilla con sintaxis y nombres de Home Assistant (CC-BY-4.0). Pendiente: CI y móvil.
 - **2026-11-26** · CI de la voz en verde (`61e94a8`): `libpyrohorns_whisper.so` (1,2 MB) exporta solo las funciones JNI; ningún símbolo de ggml sale de la biblioteca. Fuentes de plantillas revisadas: Home Assistant (es, CC-BY-4.0) incorporado; Rhasspy y Rasa sin plantillas en español accesibles.
 - **2026-11-26** · Informe de voz del móvil: causas comprobadas en el código (dictado sin corregir, corte a 1,2 s, «[Música]» enviado como mensaje, respuestas vacías, calendario y alarmas sin comprobar, acciones del modelo sin validar). Plan P26 en `PLAN.md` §7; sin código hasta el visto bueno.
-- **2026-11-26** · P26 aprobada por el usuario (1b, 2a, 3b, 4a) e implementada: nativo (umbral de voz adaptativo, normalización, vocabulario y filtros de whisper, calendario verificado y en JSON, reloj con confirmación, abrir un día del calendario, contactos para el dictado); TS (`cleanTranscript`, corrección por vocabulario y con el modelo local, validación de acciones, política de Automático, «Oí», respuesta vacía, `completeLocal`); esquema v5 (`messages.heard`). Typecheck, 18 suites de pruebas y bundle Android en verde. Pendiente: CI, APK y móvil.
+- **2026-11-26** · P26 aprobada por el usuario (1b, 2a, 3b, 4a) e implementada: nativo (umbral de voz adaptativo, normalización, vocabulario y filtros de whisper, calendario verificado y en JSON, reloj con confirmación, abrir un día del calendario, contactos para el dictado); TS (`cleanTranscript`, corrección por vocabulario y con el modelo local, validación de acciones, política de Automático, «Oí», respuesta vacía, `completeLocal`); esquema v5 (`messages.heard`). Typecheck, 18 suites de pruebas y bundle Android en verde. CI en verde (`9f0844d`) y APK copiado a `APK IA/apk/PyroHorns-0.1.0-F1.5-voz2-prueba.apk` (+ `.sha256`). Pendiente: móvil.
