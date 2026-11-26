@@ -255,6 +255,14 @@
    - **Nemotron 3 Nano 4B añadido (2026-11-25, pedido por el usuario):** GGUF oficial descargado en `APK IA/NVIDIA-Nemotron3-Nano-4B-Q4_K_M.gguf`
      (2.837.072.864 bytes, verificado). Arquitectura `nemotron_h` (soportada por el motor), 4 capas de atención (caché ≈ 16 KB/token), plantilla ChatML con
      razonamiento por defecto. Catálogo: `nemotron-nano-4b`, opcional, 8K / 16K. **Sin probar en el móvil**: comprobar la carga y las respuestas.
+   - **Voz (P25), aprobada el 2026-11-25: doble toque, whisper.cpp, voz del sistema, sin nube.** Implementado (pendiente de CI y móvil):
+     `scripts/vendor-whisper.sh` (whisper.cpp v1.9.6, huella fijada), compilación aparte en CMake (`whisper_ext`, bibliotecas estáticas con símbolos ocultos,
+     `libpyrohorns_whisper.so`), `whisper-jni.cpp`, `PyroHornsWhisperNative.kt`, micrófono a 16 kHz con corte por silencio (1,2 s), modelo `ggml-base-q5_1.bin`
+     (59.707.625 bytes, SHA-256 `422f1ae4…`) descargado una vez desde Hugging Face y verificado, `expo-speech` para leer las respuestas. Doble toque en el chat;
+     «sí/no» confirman o descartan la acción pendiente. Ajustes → Voz.
+     **Planilla (P24–P25):** `template.ts` (sintaxis de Home Assistant), `rules.ts`, `slots.ts`, `catalog.ts` (15 intenciones: 7 de Home Assistant con sus nombres
+     `Hass…` y 8 propias `Pyro…`); respuestas directas («qué hora es», «estado de temporizadores»). 17 suites de pruebas en verde.
+     **Por comprobar en el móvil:** el dictado en español, el umbral de voz (`SPEECH_RMS` = 0,02), que el modelo cargue en la RAM, y la voz en español del Huawei.
    - Paso 3 ✅ (medido con P13, teléfono y tablet, compilación base): mmap frente a sin mmap. La generación es 10–15 % más rápida con mmap;
      la carga no es comparable por el orden de la prueba (ver lectura en esta sección). Abrir desde `/sdcard` no se ha comparado todavía
      con copiar a la app: la app copia (vía B) en las pruebas de P13 — pendiente si se quiere medir la diferencia.
@@ -390,3 +398,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-25** · P23: catálogo de 29 empresas y 191 modelos de la nube, selector agrupado, pantalla de claves para todas. Solo Pollinations funciona sin clave; el resto espera claves del usuario.
 - **2026-11-25** · Prueba del asistente y de la nube: el bloque con etiqueta distinta de «accion» (```nota) y el bloque sin ``` (Nemotron Nano) ya se ejecutan; las acciones repetidas cuentan una vez. LFM3 mezcla su razonamiento en la respuesta (pendiente). OpenRouter sin clave avisa bien.
 - **2026-11-25** · Asistente: bloques con cualquier etiqueta (nota) y sin cercar (Nemotron Nano) ya se ejecutan; repetidas cuentan una vez. LFM3 mezcla su razonamiento en la respuesta (pendiente). OpenRouter sin clave avisa bien.
+- **2026-11-25** · Voz (P25) implementada: whisper.cpp aislado, modelo verificado, doble toque, «sí/no» por voz, lectura en voz alta; planilla con sintaxis y nombres de Home Assistant (CC-BY-4.0). Pendiente: CI y móvil.

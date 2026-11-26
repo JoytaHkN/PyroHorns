@@ -14,6 +14,9 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -27,6 +30,8 @@ import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.sqrt
 import java.io.FileOutputStream
 import org.json.JSONArray
 import org.json.JSONObject
@@ -36,12 +41,103 @@ import kotlinx.coroutines.withContext
 class PyroHornsLlamaModule : Module() {
   private val native = PyroHornsLlamaNative()
 
+  companion object {
+    // Energía media (RMS) por encima de la cual hay voz; el silencio de una habitación queda muy por debajo.
+    private const val SPEECH_RMS = 0.02
+  }
+
   private fun diagnosticsDir(): File {
     val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
     return File(context.filesDir, "diagnostics").apply { mkdirs() }
   }
 
   private fun appCtx(): Context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+
+  // --- Voz (P25): micrófono y whisper.cpp ---
+  private val whisperNative by lazy { PyroHornsWhisperNative() }
+  private var whisperHandle = 0L
+  private var whisperPath = ""
+  private val stopListening = AtomicBoolean(false)
+
+  // El modelo se carga una vez y se reutiliza mientras sea el mismo archivo.
+  private fun whisperFor(path: String): Long = synchronized(this) {
+    if (whisperHandle == 0L || whisperPath != path) {
+      if (whisperHandle != 0L) whisperNative.free(whisperHandle)
+      whisperHandle = whisperNative.load(path)
+      whisperPath = path
+    }
+    check(whisperHandle != 0L) { "No se pudo abrir el modelo de voz." }
+    whisperHandle
+  }
+
+  // Escucha hasta el silencio tras hablar, hasta que se pulse parar o hasta el tiempo máximo; luego transcribe en español.
+  private fun listenAndTranscribe(modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double): String {
+    val context = appCtx()
+    check(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+      "Sin permiso de micrófono."
+    }
+    val rate = 16_000
+    val minBuffer = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
+    check(minBuffer > 0) { "Este teléfono no ofrece micrófono para la voz." }
+    val capacity = (maxSeconds * rate).toInt().coerceIn(rate, rate * 30)
+    val samples = FloatArray(capacity)
+    val recorder = AudioRecord(
+      MediaRecorder.AudioSource.VOICE_RECOGNITION,
+      rate,
+      AudioFormat.CHANNEL_IN_MONO,
+      AudioFormat.ENCODING_PCM_16BIT,
+      maxOf(minBuffer, rate * 2)
+    )
+    check(recorder.state == AudioRecord.STATE_INITIALIZED) { "No se pudo abrir el micrófono." }
+    val chunk = ShortArray(rate / 10) // 100 ms
+    stopListening.set(false)
+    var n = 0
+    var heardSpeech = false
+    var silentMs = 0.0
+    recorder.startRecording()
+    try {
+      while (!stopListening.get() && n < capacity) {
+        val read = recorder.read(chunk, 0, minOf(chunk.size, capacity - n))
+        if (read <= 0) break
+        var energy = 0.0
+        for (i in 0 until read) {
+          val v = chunk[i].toFloat() / 32768f
+          samples[n + i] = v
+          energy += v * v
+        }
+        n += read
+        val rms = sqrt(energy / read)
+        if (rms > SPEECH_RMS) {
+          heardSpeech = true
+          silentMs = 0.0
+        } else if (heardSpeech) {
+          silentMs += read * 1000.0 / rate
+          if (silentMs >= silenceSeconds * 1000) break
+        } else if (n >= rate * 6) {
+          break // seis segundos sin voz: no hay nada que transcribir
+        }
+      }
+    } finally {
+      recorder.stop()
+      recorder.release()
+    }
+    if (!heardSpeech) return ""
+    return whisperNative.transcribe(whisperFor(modelPath), samples.copyOf(n), threads)
+  }
+
+  // SHA-256 en streaming (el modelo pesa ~60 MB): se compara con la huella fijada antes de usarlo.
+  private fun sha256Of(path: String): String {
+    val digest = java.security.MessageDigest.getInstance("SHA-256")
+    File(path).inputStream().use { input ->
+      val buffer = ByteArray(1 shl 16)
+      while (true) {
+        val read = input.read(buffer)
+        if (read < 0) break
+        digest.update(buffer, 0, read)
+      }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) }
+  }
 
   // El primer calendario en el que se puede escribir, prefiriendo el principal.
   private fun writableCalendar(context: Context): Long {
@@ -257,6 +353,29 @@ class PyroHornsLlamaModule : Module() {
       } catch (e: ActivityNotFoundException) {
         throw IllegalStateException("No hay WhatsApp ni navegador para abrir el chat.", e)
       }
+    }
+
+    AsyncFunction("requestMicrophonePermission") { promise: Promise ->
+      val context = appCtx()
+      val wanted = Manifest.permission.RECORD_AUDIO
+      if (context.checkSelfPermission(wanted) == PackageManager.PERMISSION_GRANTED) {
+        promise.resolve(mapOf("granted" to true))
+      } else {
+        Permissions.askForPermissionsWithPermissionsManager(appContext.permissions, promise, wanted)
+      }
+    }
+
+    // Escucha y devuelve lo dicho en español. Se resuelve cuando termina la escucha (silencio, parar o tiempo máximo).
+    AsyncFunction("listenOnce") Coroutine { modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double ->
+      withContext(Dispatchers.IO) { listenAndTranscribe(modelPath, threads, maxSeconds, silenceSeconds) }
+    }
+
+    AsyncFunction("stopListening") {
+      stopListening.set(true)
+    }
+
+    AsyncFunction("fileSha256") Coroutine { path: String ->
+      withContext(Dispatchers.IO) { sha256Of(path) }
     }
 
     AsyncFunction("addEvent") { title: String, startMs: Double, endMs: Double ->

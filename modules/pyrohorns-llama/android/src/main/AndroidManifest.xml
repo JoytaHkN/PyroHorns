@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <!-- Asistente (P20): crear eventos en el calendario y poner alarmas en la app de reloj. -->
   <uses-permission android:name="android.permission.READ_CONTACTS" />
+  <!-- Voz (P25): dictado con whisper.cpp; el audio no sale del teléfono. -->
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
   <uses-permission android:name="android.permission.READ_CALENDAR" />
   <uses-permission android:name="android.permission.WRITE_CALENDAR" />
   <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />

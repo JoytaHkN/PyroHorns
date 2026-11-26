@@ -285,6 +285,9 @@ Arquitectura:
   KDE Connect (protocolo abierto; empezar apoyándose en su app). Huawei Share / Súper Dispositivo: no encontré SDK público; solo el menú «Compartir» del sistema.
 - **Agente de respaldo en and-code:** no hace falta variante: and-code ya conecta proveedores en OpenCode y OpenCode 1.19.6 lista modelos de NVIDIA.
 
+- **P25. Voz sin nube** — aprobada el 2026-11-25: **doble toque** en el chat para hablar (otro doble toque termina), **whisper.cpp** (modelo `base` multilingüe
+  cuantizado, 60 MB, descarga única verificada), **voz del sistema** para responder, **sin nube** (el audio no sale del teléfono). Pendiente de medir: velocidad del
+  dictado en el Huawei y voz en español. «Hey JJ» y el modo siempre escuchando quedan para después, si se decide.
 - **P24. Planilla de intenciones y menú «@»** (pedido el 2026-11-25, tarde): `src/lib/assistant/intents.ts`. Frases de todos los días («llama», «marca», «agenda»,
   «correo de», «pon una alarma», «temporizador», «anota», «tarea») con sinónimos; lo que la app puede hacer se resuelve sin el modelo, lo demás va al modelo.
   Llamar abre el marcador y WhatsApp abre el chat (el usuario pulsa); buscar contactos usa el permiso de contactos. El menú «@» muestra los comandos y

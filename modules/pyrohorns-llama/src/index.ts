@@ -157,6 +157,25 @@ export async function complete(
   );
 }
 
+/** Voz (P25): micrófono y dictado con whisper.cpp. */
+export async function requestMicrophonePermission(): Promise<boolean> {
+  return (await Native.requestMicrophonePermission()).granted;
+}
+
+/** Escucha hasta el silencio, hasta que se pulse parar o hasta maxSeconds; devuelve lo dicho en español. */
+export async function listenOnce(modelPath: string, threads: number, maxSeconds: number, silenceSeconds: number): Promise<string> {
+  return Native.listenOnce(modelPath, threads, maxSeconds, silenceSeconds);
+}
+
+export async function stopListening(): Promise<void> {
+  await Native.stopListening();
+}
+
+/** SHA-256 de un archivo en hexadecimal (para verificar la descarga del modelo). */
+export async function fileSha256(path: string): Promise<string> {
+  return Native.fileSha256(path);
+}
+
 /** Asistente: contactos, marcador y WhatsApp. */
 export async function requestContactsPermission(): Promise<boolean> {
   return (await Native.requestContactsPermission()).granted;

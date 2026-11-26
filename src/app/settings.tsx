@@ -7,6 +7,8 @@ import { PlasmaGradient } from '@/components/plasma';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
 import { errorSummary } from '@/lib/log';
+import { spanishVoiceAvailable, speakText } from '@/lib/voice/speak';
+import { VOICE_MODEL, installVoiceModel, voiceModelInstalled } from '@/lib/voice/model';
 import { useBoot } from '@/store/boot';
 import { useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -114,6 +116,29 @@ export default function Settings() {
   const backupSupported = useBoot((s) => s.backupSupported);
   const backupSet = useBoot((s) => s.backupSet);
   const [backupOpen, setBackupOpen] = useState(false);
+  const voiceReply = useSettings((s) => s.voiceReply);
+  const setVoiceReply = useSettings((s) => s.setVoiceReply);
+  const [voiceInstalled, setVoiceInstalled] = useState(() => voiceModelInstalled());
+  const [installingVoice, setInstallingVoice] = useState(false);
+  const installVoice = async () => {
+    setInstallingVoice(true);
+    toast.show({ label: 'Descargando la voz…', description: `Unos ${VOICE_MODEL.megabytes} MB. No cierres la app.` });
+    try {
+      await installVoiceModel();
+      setVoiceInstalled(true);
+      toast.show({ variant: 'success', label: 'Voz instalada: funciona sin conexión' });
+    } catch (e) {
+      toast.show({ variant: 'danger', label: 'No se pudo instalar la voz', description: errorSummary(e) });
+    } finally {
+      setInstallingVoice(false);
+    }
+  };
+  const testVoice = async () => {
+    if (!(await spanishVoiceAvailable())) {
+      toast.show({ label: 'Sin voz en español', description: 'Instala una voz en español en Ajustes del teléfono → Texto a voz.' });
+    }
+    speakText('Hola, soy PyroHorns. Puedo ayudarte también con la voz.');
+  };
   const soon = (what: string, phase: string) => () => toast.show({ label: what, description: `Llega en ${phase}.` });
 
   return (
@@ -162,6 +187,29 @@ export default function Settings() {
           <Item icon="sliders" title="Diagnóstico del motor" subtitle="Rastros y cierres inesperados (F1.5)" onPress={() => router.push('/diagnostico')} />
           <Item icon="chip" title="Prueba de rendimiento" subtitle="Carga, primer token, tok/s y RAM (F1.5)" onPress={() => router.push('/benchmark')} />
         </Group>
+
+        <SectionLabel>Voz</SectionLabel>
+        <Group>
+          <Item
+            first
+            icon="spark"
+            title="Voz en este teléfono"
+            subtitle={voiceInstalled ? 'Instalada · funciona sin conexión' : `Falta · descarga única de ${VOICE_MODEL.megabytes} MB, verificada`}
+            onPress={installingVoice || voiceInstalled ? undefined : () => void installVoice()}
+            end={voiceInstalled ? <PlasmaTag>Lista</PlasmaTag> : undefined}
+          />
+          <Item
+            icon="sliders"
+            title="Responder en voz alta"
+            subtitle="Si hablas, el asistente contesta también en voz"
+            onPress={() => setVoiceReply(!voiceReply)}
+            end={<Switch isSelected={voiceReply} onSelectedChange={setVoiceReply} />}
+          />
+          <Item icon="chat" title="Probar la voz" subtitle="Lee una frase con la voz del sistema" onPress={() => void testVoice()} />
+        </Group>
+        <T size={12} tone="muted">
+          En el chat, toca dos veces la pantalla para hablar y otra vez para terminar. Lo que digas se transcribe aquí, sin conexión.
+        </T>
 
         <SectionLabel>Asistente</SectionLabel>
         <Group>

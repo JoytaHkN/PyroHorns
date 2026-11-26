@@ -66,6 +66,20 @@ const onlyAndroid = (): never => {
   throw new Error('Solo disponible en Android');
 };
 
+export async function requestMicrophonePermission(): Promise<boolean> {
+  return false;
+}
+
+export async function listenOnce(_modelPath: string, _threads: number, _maxSeconds: number, _silenceSeconds: number): Promise<string> {
+  return onlyAndroid();
+}
+
+export async function stopListening(): Promise<void> {}
+
+export async function fileSha256(_path: string): Promise<string> {
+  return onlyAndroid();
+}
+
 export async function requestContactsPermission(): Promise<boolean> {
   return false;
 }

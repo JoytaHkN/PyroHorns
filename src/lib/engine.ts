@@ -7,8 +7,9 @@ import type { ChatProvider, StreamOptions } from '@/providers/types';
 import { useEngine } from '@/store/engine';
 import { activeModelId, useSettings } from '@/store/settings';
 import { uid, useChat, type AgentSnapshot, type Message } from '@/store/chat';
-import { assistContext, extractActions, wantsAction, type Action } from './assistant/actions';
+import { assistContext, describeAction, extractActions, wantsAction, type Action } from './assistant/actions';
 import { canUndo, runAction, undoAction } from './assistant/run';
+import { foldText } from './assistant/template';
 import { buildContext, estimateTokens } from './context';
 import { errorSummary, log } from './log';
 import { cleanQuery, needsRewrite, queryMessages } from './search-query';
@@ -53,7 +54,7 @@ function titleFrom(text: string) {
 }
 
 /** Envía un mensaje; crea la conversación si no existe. Devuelve el id de conversación. */
-export async function send(input: string, convId?: string | null, opts: { web?: boolean; cloud?: boolean } = {}): Promise<string> {
+export async function send(input: string, convId?: string | null, opts: { web?: boolean; cloud?: boolean; voice?: boolean } = {}): Promise<string> {
   // «@llamar Ana» y similares: el menú del cuadro de texto se traduce antes de todo.
   const command = rewriteCommand(input);
   const text = command.text;
@@ -84,9 +85,21 @@ export async function send(input: string, convId?: string | null, opts: { web?: 
 
   // Planilla de intenciones: lo que la app puede hacer sin el modelo se resuelve aquí (evita respuestas inventadas).
   const mode = useSettings.getState().assistant;
+  // «Sí» o «no» responden a la acción pendiente de la última respuesta (modo con confirmación).
+  const pending = pendingCall(convId_);
+  const decision = pending ? decisionOf(text) : null;
+  if (pending && decision) {
+    if (decision === 'yes') await confirmAction(convId_, pending.aiId, pending.callId);
+    else dismissAction(convId_, pending.aiId, pending.callId);
+    if (opts.voice) say(decision === 'yes' ? resultOf(convId_, pending.aiId, pending.callId) : 'Descartada.');
+    return convId_;
+  }
+
   const route = mode !== 'off' && !web && !opts.cloud ? parseRoute(text, new Date()) : null;
-  if (route?.kind === 'question') {
-    chat.addMessage(convId_, { id: uid(), role: 'assistant', content: route.text, createdAt: Date.now(), status: 'done', modelId: agent.modelId });
+  if (route?.kind === 'question' || route?.kind === 'answer') {
+    const aiId = uid();
+    chat.addMessage(convId_, { id: aiId, role: 'assistant', content: route.text, createdAt: Date.now(), status: 'done', modelId: agent.modelId });
+    if (opts.voice) say(route.text);
     return convId_;
   }
   if (route?.kind === 'action') {
@@ -101,7 +114,12 @@ export async function send(input: string, convId?: string | null, opts: { web?: 
       modelId: agent.modelId,
       toolCalls: [{ id: callId, name: route.action.type, args: JSON.stringify(route.action), status: 'pending' }],
     });
-    if (mode === 'auto') await confirmAction(convId_, aiId, callId);
+    if (mode === 'auto') {
+      await confirmAction(convId_, aiId, callId);
+      if (opts.voice) say(resultOf(convId_, aiId, callId));
+    } else if (opts.voice) {
+      say(`${describeAction(route.action)}. ¿Lo hago? Di sí o no.`);
+    }
     return convId_;
   }
 
@@ -115,7 +133,40 @@ export async function send(input: string, convId?: string | null, opts: { web?: 
     modelId: agent.modelId,
   });
   await reply(convId_, aiId, agent);
+  if (opts.voice) say(findMessage(convId_, aiId)?.content ?? '');
   return convId_;
+}
+
+/** Voz de salida (la pone la app al arrancar; el motor no depende de la librería de voz). */
+let speaker: ((text: string) => void) | null = null;
+export const setSpeaker = (fn: ((text: string) => void) | null) => {
+  speaker = fn;
+};
+
+/** Lee en voz alta si el ajuste lo permite. */
+function say(text: string) {
+  const clean = text.trim();
+  if (!clean || !speaker || !useSettings.getState().voiceReply) return;
+  speaker(clean);
+}
+
+const resultOf = (convId: string, aiId: string, callId: string): string =>
+  findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId)?.result ?? '';
+
+/** Acción pendiente de la última respuesta del asistente, si la hay. */
+function pendingCall(convId: string): { aiId: string; callId: string } | null {
+  const messages = useChat.getState().conversations.find((c) => c.id === convId)?.messages ?? [];
+  const last = [...messages].reverse().find((m) => m.role === 'assistant');
+  const call = last?.toolCalls?.find((c) => c.status === 'pending');
+  return last && call ? { aiId: last.id, callId: call.id } : null;
+}
+
+/** «sí», «hazlo», «adelante» → yes; «no», «cancela», «olvídalo» → no; cualquier otra cosa → null. */
+export function decisionOf(text: string): 'yes' | 'no' | null {
+  const f = foldText(text).trim();
+  if (/^(si|hazlo|confirmalo|confirma|adelante|dale|vale|ok)\b/.test(f)) return 'yes';
+  if (/^(no|cancelalo|cancela|olvidalo|dejalo)\b/.test(f)) return 'no';
+  return null;
 }
 
 /** Vuelve a generar la última respuesta de la conversación (sustituye a la anterior). */

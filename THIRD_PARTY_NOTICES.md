@@ -35,3 +35,15 @@ TypeScript (Apache-2.0), esbuild (MIT), Babel (MIT).
 
 llama.cpp lleva además `modules/pyrohorns-llama/cpp/patches/dory.patch`: soporte de la arquitectura Dory tomado de la propuesta
 ggml-org/llama.cpp#30306 (MIT), aún no aceptada en el proyecto original, adaptado a la versión vendimizada.
+
+## Voz (P25)
+
+| Componente | Licencia | Uso |
+|---|---|---|
+| whisper.cpp v1.9.6 (`ggml-org/whisper.cpp`, `modules/pyrohorns-llama/cpp/whisper.cpp`) | MIT | Voz a texto en el teléfono, sin conexión. Se compila con su propio ggml, aislado del de llama.cpp. |
+| Modelo `ggml-base-q5_1.bin` (OpenAI Whisper, en formato ggml de `ggerganov/whisper.cpp`) | MIT | Descarga única desde Hugging Face, verificada por tamaño y SHA-256. |
+| Plantillas de intenciones de OHF-Voice/intents (Home Assistant) | CC-BY-4.0 | Nombres y frases de `Hass…` en `src/lib/assistant/catalog.ts`, adaptadas al español y a la sintaxis de las plantillas. Cambios: se conservan solo las frases que aplican a un teléfono. |
+| expo-speech (voz del sistema) | MIT | Lectura en voz alta con la voz del sistema. |
+
+Las intenciones que no existen en Home Assistant (`Pyro…`) son propias de PyroHorns.
+

@@ -19,6 +19,8 @@ import { RestoreScreen } from '@/components/restore-screen';
 import { useBoot } from '@/store/boot';
 import { registerDevice } from '@/lib/assistant/device';
 import { registerCloud } from '@/lib/cloud';
+import { setSpeaker } from '@/lib/engine';
+import { speakText } from '@/lib/voice/speak';
 import { registerNativeLlama } from '@/lib/native';
 import { flushWrites } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -51,6 +53,7 @@ export default function RootLayout() {
     void registerNativeLlama();
     registerCloud();
     registerDevice();
+    setSpeaker(speakText);
   }, []);
 
   // Al pasar a segundo plano se escribe lo pendiente del streaming.

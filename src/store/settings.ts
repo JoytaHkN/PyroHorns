@@ -15,6 +15,9 @@ interface SettingsState {
   modelOverride: string | null;
   /** Cómo lee la app los GGUF (S3): carpeta de la app (sin permisos) o todo el almacenamiento. */
   modelAccess: ModelAccess;
+  /** Responder en voz alta cuando la pregunta llegó por voz. */
+  voiceReply: boolean;
+  setVoiceReply: (v: boolean) => void;
   /** Asistente: hace las acciones solo, espera un toque, o está apagado. */
   assistant: 'auto' | 'tap' | 'off';
   setAssistant: (a: 'auto' | 'tap' | 'off') => void;
@@ -38,6 +41,8 @@ export const useSettings = create<SettingsState>()(
       modelOverride: null,
       modelAccess: DEFAULT_MODEL_ACCESS,
       assistant: 'auto',
+      voiceReply: true,
+      setVoiceReply: (voiceReply) => set({ voiceReply }),
       setAssistant: (assistant) => set({ assistant }),
       setScheme: (scheme) => set({ scheme }),
       toggleScheme: () => set((s) => ({ scheme: s.scheme === 'dark' ? 'light' : 'dark' })),

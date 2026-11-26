@@ -1,4 +1,4 @@
-import { Button, Dialog } from 'heroui-native';
+import { Button, Dialog, useToast } from 'heroui-native';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
@@ -15,8 +15,11 @@ import { modeById } from '@/data/agents';
 import { contextTokens, modelById } from '@/data/models';
 import { conversationTokens, formatTokens } from '@/lib/context';
 import { cloudAvailable } from '@/lib/cloud';
+import { errorSummary } from '@/lib/log';
 import { send, stop } from '@/lib/engine';
 import { systemPrompt } from '@/lib/system-prompt';
+import { listen, stopMic } from '@/lib/voice/listen';
+import { voiceModelInstalled } from '@/lib/voice/model';
 import { preloadLlamaModel } from '@/providers/llama';
 import { useActiveConversation, useChat } from '@/store/chat';
 import { useEngine } from '@/store/engine';
@@ -59,6 +62,45 @@ export default function ChatScreen() {
     if (messages.length) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [messages.length, last?.content.length]);
 
+  // Voz (P25): doble toque en el chat para hablar; otro doble toque para terminar (lo dicho se transcribe y se envía).
+  const { toast } = useToast();
+  const listening = useEngine((s) => s.listening);
+  const lastTouch = useRef(0);
+  const onDoubleTap = () => {
+    if (useEngine.getState().listening) {
+      void stopMic();
+      return;
+    }
+    if (!voiceModelInstalled()) {
+      toast.show({ label: 'Voz sin instalar', description: 'Instálala en Ajustes → Voz (una vez, 60 MB).' });
+      return;
+    }
+    useEngine.getState().setListening(true);
+    listen()
+      .then((text) => {
+        useEngine.getState().setListening(false);
+        const said = text.trim();
+        if (!said) {
+          toast.show({ label: 'No te escuché', description: 'Prueba otra vez, más cerca del micrófono.' });
+          return;
+        }
+        void send(said, conv?.id ?? null, { voice: true });
+      })
+      .catch((e: unknown) => {
+        useEngine.getState().setListening(false);
+        toast.show({ variant: 'danger', label: 'No se pudo escuchar', description: errorSummary(e) });
+      });
+  };
+  const onTouchEnd = () => {
+    const now = Date.now();
+    if (now - lastTouch.current < 350) {
+      lastTouch.current = 0;
+      onDoubleTap();
+    } else {
+      lastTouch.current = now;
+    }
+  };
+
   const onSend = (text: string, web = false, cloud = false) => {
     if (cloud && !cloudAvailable) return;
     void send(text, conv?.id, { web, cloud });
@@ -98,6 +140,7 @@ export default function ChatScreen() {
           <RoundButton icon="plus" label="Nueva conversación" plasma onPress={() => select(null)} />
         </View>
 
+        <View style={{ flex: 1 }} onTouchEnd={onTouchEnd}>
         {messages.length === 0 ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 }}>
             <Mascot size={88} />
@@ -164,6 +207,17 @@ export default function ChatScreen() {
             }
           />
         )}
+
+        </View>
+
+        {listening ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 4 }}>
+            <Orb size={10} active />
+            <T size={12} tone="muted">
+              Escuchando… toca dos veces para terminar.
+            </T>
+          </View>
+        ) : null}
 
         <Composer busy={busy} onSend={(t, w, c) => onSend(t, w, c)} onStop={() => conv && stop(conv.id)} onOpenAgent={() => setPicker(true)} />
       </KeyboardAvoidingView>

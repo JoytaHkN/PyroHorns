@@ -18,7 +18,7 @@ done
 rm -rf "${DST:?}/modules"
 if [ -d "$SRC/modules" ]; then
   cp -r "$SRC/modules" "$DST/modules"
-  rm -rf "$DST/modules/pyrohorns-llama/cpp/llama.cpp"
+  rm -rf "$DST/modules/pyrohorns-llama/cpp/llama.cpp" "$DST/modules/pyrohorns-llama/cpp/whisper.cpp"
 fi
 
 if ! cmp -s "$SRC/package-lock.json" "$DST/.installed-lock.json"; then
