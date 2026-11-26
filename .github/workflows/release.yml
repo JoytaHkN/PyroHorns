@@ -49,7 +49,7 @@ jobs:
           OUT="PyroHorns-${GITHUB_REF_NAME}-arm64-v8a.apk"
           sh scripts/sign-apk.sh android/app/build/outputs/apk/release/app-release.apk "$OUT"
           sha256sum "$OUT" > "$OUT.sha256"
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: PyroHorns ${{ github.ref_name }}
           # Las etiquetas con guion (v0.1.0-alpha.1, -beta…) se publican como versión de prueba.
