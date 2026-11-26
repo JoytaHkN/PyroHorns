@@ -25,7 +25,15 @@
    2,5 s de silencio (doble toque para terminar); el calendario guarda y confirma en qué calendario quedó; la alarma y el
    temporizador abren el Reloj con los datos para confirmar; «abre el calendario del 17 de septiembre»; respuesta vacía
    con aviso; en Automático, el evento y el temporizador que propone el modelo esperan un toque.
-0b. **Planificadas P27–P30 (2026-11-26), sin código:** datos NLU (MASSIVE, SNIPS, Mycroft, Leon), notas y agenda (AppFlowy o versión propia, con selector en Ajustes), archivos y nubes (SAF primero) e integración con la IA. Verificación y fuentes en `docs/integraciones.md`. Esperan las decisiones de cada propuesta (`PLAN.md` §7).
+0b. **P27–P30 aprobadas el 2026-11-26 con las opciones recomendadas** (`PLAN.md` §7; guía de impacto en `docs/integraciones.md` §9).
+   - **Hecho, P27-F1:** MASSIVE 1.0 descargado y verificado en `APK IA/datasets/massive-1.0/` (fuera del repo; huellas en `SHA256SUMS`). La planilla acierta el **8,7 %** de las frases de lo que la app hace y solo intercepta el **0,3 %** del resto (`docs/integraciones.md` §10). Se repite con `scripts/eval-massive.mjs`.
+   - **Orden para retomar** (desde aquí o desde otro entorno):
+     1. Usuario: probar en el móvil el APK `voz2` (P26, punto 0) y decidir F27-2 (ver «Pendiente de decisión»).
+     2. Agente: **P28-F1 + P30-1**, notas cifradas con búsqueda. Diseño paso a paso en `PLAN.md`, P28, «Diseño para retomar F28-1 + P30-1».
+     3. Agente: P29-F1, explorador con SAF (`expo-file-system` 58 ya trae los selectores de archivo y de carpeta).
+     4. Agente: P28-F5, Ajustes y aplicaciones predeterminadas (plugin de configuración y rol NOTES en Android 14 o superior).
+     5. Más adelante: P29-F2 (OAuth con AppAuth, MSAL y el SDK de Dropbox) y MEGA.
+   - **Desde un PC:** los datos de MASSIVE no están en git. Se descargan de nuevo con la URL y la huella de `docs/integraciones.md` §10.
 1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
    - Paso 1 ✅: `LlamaProvider` en TypeScript (`src/providers/llama.ts`) con fallback a
      `MockProvider` cuando el módulo nativo no esté disponible; integración en `src/lib/engine.ts`.
@@ -279,11 +287,7 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
-- **P27 — datos NLU en español** (`PLAN.md` §7): uso de MASSIVE (solo evaluación o también plantillas con atribución), SNIPS (no), Mycroft y Leon (solo referencia o copiar las 11 habilidades `es-*`), NLU en la nube (no, por P25) y descarga de 39,5 MB en `APK IA/datasets/`.
-- **P28 — notas y agenda** (`PLAN.md` §7): camino (versión propia, AppFlowy como complemento), almacenamiento (SQLCipher con exportación Markdown, o carpeta Markdown), alcance estilo Obsidian/Notion, predeterminadas (en Android 12 no hay rol NOTES) y licencia (mantener GPL-3.0-only).
-- **P29 — archivos y nubes** (`PLAN.md` §7): SAF primero u OAuth directo, reimplementar o reutilizar código de AnExplorer, MEGA (más adelante o no) y permisos de acceso a archivos.
-- **P30 — integración con la IA** (`PLAN.md` §7): búsqueda en notas con FTS5, qué se indexa de los archivos y cómo usa el modelo local la lista de intenciones.
-- **Guía para decidir P27–P30:** recomendación, qué cambia y cómo afecta cada opción, dependencias y orden sugerido en `docs/integraciones.md` §9.
+- **F27-2 — mejorar la planilla con lo aprendido de MASSIVE** (`PLAN.md` P27; `docs/integraciones.md` §10): cambia la app (`rules.ts`, `slots.ts`, `catalog.ts`), así que exige pasar P27-1 de (a) a (c). Recomendación del agente: sí, porque hoy acierta el 8,7 %. Incluye corregir dos falsos positivos: «llama a un taxi» y «marcar … como …» se toman como llamadas.
 - **P17 — Método Brasa** (`PLAN.md` §7): aprobar el orden (0 + 1 → 2 + 3 → 4 → 5), elegir la seguridad de la memoria guardada (A sin cifrar / B cifrada /
   C no guardar) y si se descarga LFM2.5-8B-A1B (≈ 5 GB) para probar un MoE. Medidas del almacenamiento del teléfono en la misma entrada.
 - **Medir con `dotprod` (f-B):** el APK `PyroHorns-0.1.0-F1.5-p13-dotprod-prueba.apk` está en CI (`6f481b0`); falta la prueba Rápida en el teléfono con batería.
@@ -415,3 +419,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-26** · P26 aprobada por el usuario (1b, 2a, 3b, 4a) e implementada: nativo (umbral de voz adaptativo, normalización, vocabulario y filtros de whisper, calendario verificado y en JSON, reloj con confirmación, abrir un día del calendario, contactos para el dictado); TS (`cleanTranscript`, corrección por vocabulario y con el modelo local, validación de acciones, política de Automático, «Oí», respuesta vacía, `completeLocal`); esquema v5 (`messages.heard`). Typecheck, 18 suites de pruebas y bundle Android en verde. CI en verde (`9f0844d`) y APK copiado a `APK IA/apk/PyroHorns-0.1.0-F1.5-voz2-prueba.apk` (+ `.sha256`). Pendiente: móvil.
 - **2026-11-26** · Planificación de integraciones (P27–P30), sin código. Datos NLU: MASSIVE 1.0 con es-ES de 16.521 frases, 60 intenciones y licencia CC BY 4.0; SNIPS en inglés; Mycroft con 11 habilidades en español (formatos `.voc`/`.dialog`, no `.intent`); Leon sin español; Dialogflow sin los agentes prometidos. Notas: AppFlowy es AGPL-3.0 y el rol NOTES de Android exige la API 34 (el teléfono tiene Android 12). Archivos: AnExplorer es Apache-2.0 y su README no menciona nubes; SAF primero. IA: la planilla primero, con evaluación sobre MASSIVE. Documento: `docs/integraciones.md`. Quedan por leer en gnu.org las reglas GPL/AGPL (no accesible desde el entorno) y por comprobar en el teléfono los proveedores de SAF.
 - **2026-11-26** · Guía de decisiones de P27–P30 (recomendación e impacto de cada opción, dependencias y orden) en `docs/integraciones.md` §9. Datos nuevos verificados: `expo-file-system` 58 ya trae en Android el selector de carpetas con permiso persistente; AppAuth-Android (Apache-2.0), MSAL (MIT) y el SDK de Dropbox (MIT) son libres; PdfBox-Android es Apache-2.0; F-Droid no admite Google Play Services.
+- **2026-11-26** · El usuario aprueba P27–P30 con las opciones recomendadas. **P27-F1 hecho:** MASSIVE 1.0 descargado (39.500.415 bytes, SHA-256 `7df623fd…153f8`) en `APK IA/datasets/massive-1.0/`; solo se extrajo es-ES (16.521 frases, 60 intenciones, CC BY 4.0). Evaluador nuevo `scripts/eval-massive.ts` + `.mjs`. Resultado en test: la planilla acierta el 8,7 % de lo que la app hace y solo intercepta el 0,3 % del resto. Hay dos falsos positivos que corregir. El informe con ejemplos queda en local. Siguiente bloque: P28-F1 + P30-1 (diseño en `PLAN.md`); pendiente decidir F27-2.

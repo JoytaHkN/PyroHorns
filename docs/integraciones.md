@@ -304,3 +304,54 @@ Para cada decisión de P27–P30: la opción recomendada, **qué cambia** en el 
 - P29-1 (b) condiciona F-Droid: AppAuth, no Play Services.
 - **Orden sugerido:** 1) P27-F1, medir la planilla; 2) P28-F1 y P30-1, notas cifradas con búsqueda; 3) P29-F1, explorador con SAF; 4) P28-F5, Ajustes y predeterminadas; 5) P29-F2, OAuth, si lo quieres; 6) MEGA.
 - **Difíciles de deshacer:** P28-2 (dónde viven las notas), P28-5 (licencia), P29-1 (b) (registros y revisión de Google) y P27-1 (b) (la atribución se queda).
+
+## 10. Resultados de P27-F1: la planilla frente a MASSIVE (2026-11-26)
+
+**Datos** (fuera del repo, en `APK IA/datasets/massive-1.0/`; huellas en `SHA256SUMS`):
+- `amazon-massive-dataset-1.0.tar.gz`: 39.500.415 bytes, SHA-256 `7df623fd2d300a4d235d6ee5bd396c9a28258d3a0ccb29abdb054506eba153f8`. Solo se extrajeron `1.0/data/es-ES.jsonl` (SHA-256 `310462a79fa181ff83c643a8d356c7b8155fd37a25e80a77ba3ca9b29305c4a5`) y `1.0/LICENSE` (CC BY 4.0). Sin rutas sospechosas en el archivo.
+- Comprobado en el propio archivo: 16.521 frases (test 2.974 · train 11.514 · dev 2.033), 60 intenciones y 18 dominios.
+
+**Método:** `scripts/eval-massive.ts` (función pura) y `scripts/eval-massive.mjs` (lectura y escritura). Se ejecuta en la caché:
+
+```bash
+sh scripts/sync-build.sh node scripts/eval-massive.mjs \
+  "/sdcard/IA/Proyectos/APK IA/datasets/massive-1.0/1.0/data/es-ES.jsonl" \
+  "/sdcard/IA/Proyectos/APK IA/datasets/massive-1.0/informe-planilla-test.md" test
+```
+
+Cada frase pasa por `parseRoute` con una fecha fija (2026-11-26 10:00). Se cuenta como **acierto**, en las intenciones que la app hace: `alarm_set` → alarma, temporizador o pregunta; `calendar_set` → evento o pregunta; `datetime_query` → respuesta; `lists_createoradd` → tarea, nota o pregunta; `lists_query` → listar; `lists_remove` → completar; `email_querycontact` → correo o pregunta. En las demás, lo correcto es **dejarla pasar al modelo**; en `calendar_query`, abrir el calendario también se acepta. El informe con frases de ejemplo queda en local (`informe-planilla-test.md`) y no se sube: MASSIVE es CC BY 4.0 y aquí solo van cifras.
+
+**Resultados (partición test, 2.974 frases, 59 intenciones presentes):**
+
+- **La app las hace** (7 intenciones, 506 frases): acierta 44 (**8,7 %**), no las entiende y van al modelo 459 (90,7 %), acción equivocada 3 (0,6 %).
+- **La app no las hace** (52 intenciones, 2.468 frases): pasan al modelo 2.460 (99,7 %); la planilla intercepta **8 (0,3 %)**.
+
+| Intención que la app hace | Frases | Acierto | Al modelo | Salidas |
+|---|---|---|---|---|
+| calendar_set | 209 | 1,9 % | 96,7 % | ninguna 202 · pregunta 4 · llamada 2 · temporizador 1 |
+| datetime_query | 88 | 9,1 % | 90,9 % | ninguna 80 · respuesta 8 |
+| lists_remove | 52 | 1,9 % | 98,1 % | ninguna 51 · completar 1 |
+| lists_query | 51 | 0,0 % | 100,0 % | ninguna 51 |
+| alarm_set | 41 | 39,0 % | 61,0 % | ninguna 25 · pregunta 16 |
+| lists_createoradd | 39 | 35,9 % | 64,1 % | ninguna 25 · tarea 14 |
+| email_querycontact | 26 | 3,8 % | 96,2 % | ninguna 25 · correo 1 |
+
+| Intención que la app no hace (interceptadas) | Frases | Interceptadas | Salida |
+|---|---|---|---|
+| transport_taxi | 23 | 4 (17,4 %) | llamada |
+| music_likeness | 36 | 1 (2,8 %) | tarea |
+| takeaway_order | 22 | 1 (4,5 %) | llamada |
+| calendar_query | 126 | 1 (0,8 %) | respuesta |
+| email_query | 119 | 1 (0,8 %) | correo |
+
+**Lectura:**
+- La planilla es **prudente**: casi nunca se queda con lo que no le toca (0,3 %).
+- Pero **entiende pocas formas de decir las cosas** (8,7 %). En alarmas, los 16 aciertos son preguntas («¿a qué hora?»): no completó ninguna alarma, porque no lee horas dichas en palabras.
+- Patrones de fallo, descritos sin copiar frases del dataset:
+  - horas en palabras («a las siete de la mañana», «seis y media», «cinco p. m.»);
+  - verbos que no conoce («recuérdame», «añade un recordatorio», «pon una reunión», «enciende la alarma»);
+  - formas de preguntar («cuál es la hora actual», «cuál es la fecha») y la hora de otra ciudad;
+  - consultar una lista, o borrar o vaciar sus elementos;
+  - pedir el teléfono o la dirección de correo de un contacto, o buscarlo en los contactos.
+- **Intercepciones que hay que corregir:** «llama a un taxi» o «a un uber» se toma como llamada a un contacto (4), y «marcar … como …» también (1, dentro de `calendar_set`).
+- **Siguiente (F27-2):** mejorar la planilla con estas formas. Cambia la app (`rules.ts`, `slots.ts`, `catalog.ts`), así que P27-1 tendría que pasar de (a) a (c). Pendiente de decisión del usuario.

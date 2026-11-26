@@ -355,7 +355,7 @@ Pulido del chat real (F1.5, 2026-11-24):
   - **Límites.** Aquí no se pueden probar el micrófono, el calendario ni el Reloj: eso se comprueba en el móvil.
   - **Implementación (2026-11-26) y elecciones propias:** la planilla entiende la frase → no se llama al modelo para corregirla (más rápido y sin inventar); la corrección del modelo solo si hay un modelo del teléfono ya cargado y no hay respuesta en curso; el dictado con menos de tres palabras no se corrige con el modelo; «Oí: …» se guarda con el mensaje (esquema v5, columna `heard`); los eventos y temporizadores que propone el modelo esperan un toque en Automático, y notas, tareas, listas, llamadas, correos y la planilla válida siguen automáticos; con voz se lee también la pregunta de confirmación pendiente; el calendario se elige visible > principal > sincronizado y, si no hay ninguno visible, se usa uno oculto avisando; el tope de ganancia del dictado es 20×.
 
-- **P27. Datos de intenciones en español (MASSIVE, SNIPS, Mycroft, Leon)** — propuesta del 2026-11-26, **sin código**. Verificación completa en `docs/integraciones.md` §2.
+- **P27. Datos de intenciones en español (MASSIVE, SNIPS, Mycroft, Leon)** — **aprobada el 2026-11-26 con las opciones recomendadas** (1a, 2a, 3a, 4a, 5a). Verificación completa en `docs/integraciones.md` §2. **F27-1 hecho** (§10): la planilla acierta el 8,7 % de lo que la app hace y solo intercepta el 0,3 % de lo demás. F27-2 (mejorar la planilla) cambia la app: necesita pasar P27-1 a (c).
   - **Qué se comprobó:**
     - MASSIVE 1.0: es-ES con **16.521** frases (train 11.514 · dev 2.033 · test 2.974); **60 intenciones** y 18 dominios. Datos CC BY 4.0 (atribución obligatoria); código Apache-2.0; descarga de **39,5 MB** desde S3. Las 33 intenciones que citaste existen; el ejemplo del texto omite tres campos (`worker_id`, `slot_method`, `judgments`).
     - SNIPS (CC0): las frases son **en inglés**; no hay traducción al español en esa fuente.
@@ -376,7 +376,15 @@ Pulido del chat real (F1.5, 2026-11-24):
     5. Descarga de 39,5 MB en `APK IA/datasets/`: **(a) sí, con huella registrada**.
   - **Riesgos:** atribución CC BY; las traducciones de MASSIVE no son habla espontánea; el modelo local inventa datos (P15, P17), así que toda acción se confirma (S19).
   - **Pruebas:** script de evaluación reproducible, fuera de la app, con tabla de resultados. Los criterios de aceptación los fija el usuario.
-- **P28. Notas, bloc de notas y agenda: AppFlowy, versión propia y elección desde Ajustes** — propuesta del 2026-11-26, **sin código**. Verificación en `docs/integraciones.md` §3.
+  - **F27-2 (pendiente de pasar P27-1 a (c)): cambios concretos según `docs/integraciones.md` §10.**
+    - Horas dichas en palabras en `slots.ts` (`timeOf`): «a las siete», «siete y media», «menos cuarto», «de la mañana, tarde o noche», «p. m.» y «a. m.».
+    - Verbos en `rules.ts` y `catalog.ts`. Alarma: «pon», «añade», «crea», «activa» o «enciende» una alarma; «despiértame» sin hora pregunta la hora. Recordatorios: «recuérdame …» o «añade un recordatorio …» (evento o tarea, a decidir). Reuniones: «pon», «crea» o «añade» una reunión o cita.
+    - Preguntas: «cuál es la hora (actual)», «cuál es la fecha», «a qué fecha estamos». La hora de otra ciudad va al modelo con un aviso, porque la app solo sabe la hora local.
+    - Listas: «qué hay en mi lista (de …)», «léeme mi lista»; borrar o vaciar elementos (acción nueva o completar, a decidir).
+    - Contactos: «dame el teléfono de X», «la dirección de correo de X», «busca a X en los contactos» (ficha de contacto, a decidir).
+    - **Falsos positivos que corregir en `callRoute`:** «llama a un taxi» o «a un uber» (nombre con artículo indefinido o un servicio) y «marcar … como …» no son llamadas.
+    - **Criterio:** volver a medir con `scripts/eval-massive.mjs`, ajustando con la partición `dev` e informando con `test`, sin pasar del 0,3 % de intercepciones.
+- **P28. Notas, bloc de notas y agenda: AppFlowy, versión propia y elección desde Ajustes** — **aprobada el 2026-11-26 con las opciones recomendadas** (1b, con AppFlowy externa como complemento; 2a, 3a, 4a, 5a). Verificación en `docs/integraciones.md` §3.
   - **Qué se comprobó:**
     - AppFlowy es **AGPL-3.0** (Dart/Flutter), está en Google Play para Android 10 o superior, y su paquete de editor tiene licencia dual **AGPL-3.0 o MPL-2.0**.
     - PyroHorns es **GPL-3.0-only**. Combinar código AGPL exige decidir la licencia del conjunto. ⚠️ El texto de la sección 13 de la GPLv3 no se pudo leer (gnu.org inaccesible).
@@ -394,8 +402,15 @@ Pulido del chat real (F1.5, 2026-11-24):
     4. Predeterminadas: **(a) ajustes, aviso, pantalla del sistema y rol NOTES en Android 14 o superior**; (b) solo ajustes.
     5. Licencia: **(a) mantener GPL-3.0-only y no mezclar AGPL**; (b) revisar la licencia, decisión del titular y con asesoría.
   - **Fases:** F28-1 notas (texto y bloques básicos) sobre SQLCipher; F28-2 agenda propia con opción de sincronizar con el calendario del sistema; F28-3 enlaces y retroenlaces; F28-4 exportación e importación Markdown; F28-5 selector de apps en Ajustes y avisos.
+  - **Diseño para retomar F28-1 + P30-1** (propuesta del agente, sin código; siguiente bloque del orden aprobado):
+    - **Datos** (`src/db/schema.ts`, migración v6): `items` gana `title TEXT` y `updated_at INTEGER`; el cuerpo de la nota sigue en `text`, en Markdown. Índice `items_fts` (FTS5 con `content='items'`, sin distinguir tildes, como `messages_fts`) en el bloque FTS aparte, con sus disparadores y un `rebuild` al crearlo para indexar las notas que ya existen.
+    - **Tipos y almacén:** `AgendaItem` (`src/types/chat.ts`) con `title?` y `updatedAt?`. En `src/db/sql-repo.ts`: guardar y cargar los campos nuevos, y `searchItems(q)` con FTS y, si falta FTS5, con `LIKE` (como la búsqueda de conversaciones). `src/store/chat.ts` ya tiene `saveItem` y `removeItem`.
+    - **Pantallas:** `src/app/agenda.tsx` (hoy, solo una lista de 51 líneas) gana «Nueva nota» y un buscador. Pantalla nueva `src/app/note.tsx`: título, cuerpo en Markdown (texto multilínea), vista previa con `src/components/markdown.tsx` y borrar con confirmación. Las notas que crea el asistente se abren y editan igual.
+    - **Planilla e IA (P30-1):** intención `PyroSearchNotes` en `catalog.ts` («busca en mis notas …», «qué apunté sobre …»). Produce la acción `searchNotes` (`actions.ts`: tipo, `describeAction` y `problemOf` si la búsqueda es vaga), y `run.ts` devuelve las coincidencias con título y fragmento. Es de solo lectura, así que se ejecuta sola, como `list`, en `proposeActions` (`engine.ts`).
+    - **Pruebas:** migración v6 y búsqueda sin tildes (`tests/db.test.ts`), frases de búsqueda (`tests/catalog.test.ts`) y acción `searchNotes` (`tests/assistant.test.ts`).
+    - **Seguridad:** S7 (todo en la base cifrada), S9 (sin textos en los registros) y S19 (buscar no modifica nada). Hace falta un APK nuevo (CI) para probarlo en el móvil.
   - **Seguridad:** S7 (base cifrada), S9 (registros sin contenido), S10 (imágenes y enlaces), S11 (lo que llega de otras apps se revisa antes de guardarse), S19 (acciones confirmables).
-- **P29. Explorador de archivos y nubes (AnExplorer, Gestor de archivos +, Drive, Dropbox, OneDrive, MEGA)** — propuesta del 2026-11-26, **sin código**. Verificación en `docs/integraciones.md` §4.
+- **P29. Explorador de archivos y nubes (AnExplorer, Gestor de archivos +, Drive, Dropbox, OneDrive, MEGA)** — **aprobada el 2026-11-26 con las opciones recomendadas** (1a, 2a, 3a, 4a, 5a). Verificación en `docs/integraciones.md` §4.
   - **Qué se comprobó:**
     - AnExplorer es **Apache-2.0**; su README describe almacenamiento local, SD, USB y FTP, y **no menciona ninguna nube**.
     - Gestor de archivos + es propietario. Sus nubes, según fichas de terceros, son Drive, OneDrive, Dropbox, Box y Yandex (**no Mega**).
@@ -416,7 +431,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     5. Nubes: **(a) lectura por defecto y escritura solo al confirmar**; (b) sincronización automática (más riesgo).
   - **Seguridad:** S3 (modo de acceso), S5 (tokens en el almacén seguro), S10 y S11 (contenido externo), S9 (los registros no incluyen nombres de archivos ni contenido).
   - **Fases:** F29-1 explorador local y SAF (leer, copiar y mover con confirmación); F29-2 Dropbox, OneDrive y Drive por OAuth; F29-3 WebDAV; F29-4 MEGA.
-- **P30. Integración con nuestra IA: planilla, notas, agenda y archivos** — propuesta del 2026-11-26, **sin código**. Análisis en `docs/integraciones.md` §5.
+- **P30. Integración con nuestra IA: planilla, notas, agenda y archivos** — **aprobada el 2026-11-26 con las opciones recomendadas** (1a, 2a y 3a, esta con solo las unas 15 intenciones que la app ejecuta). Análisis en `docs/integraciones.md` §5.
   - **Arquitectura propuesta:**
     - La planilla sigue siendo la primera vía: «anota», «agenda», «abre el calendario» o «busca en mis notas» se resuelven sin modelo.
     - Las acciones de notas y agenda escriben en el almacén de P28 o en las apps del sistema, según Ajustes.
