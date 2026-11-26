@@ -6,6 +6,7 @@ import { Group, Item, PlasmaTag, SectionLabel } from '@/components/list';
 import { PlasmaGradient } from '@/components/plasma';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
+import { APP_BUILD } from '@/lib/app-build';
 import { errorSummary } from '@/lib/log';
 import { spanishVoiceAvailable, speakText } from '@/lib/voice/speak';
 import { VOICE_MODEL, installVoiceModel, voiceModelInstalled } from '@/lib/voice/model';
@@ -269,7 +270,7 @@ export default function Settings() {
           />
         </Group>
         <T size={12} tone="muted" style={{ textAlign: 'center', marginTop: 12 }}>
-          PyroHorns 0.1.0 · F1.1 · GPL-3.0
+          {APP_BUILD} · GPL-3.0
         </T>
       </ScrollView>
 

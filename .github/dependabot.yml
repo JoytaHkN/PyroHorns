@@ -10,6 +10,11 @@ updates:
     ignore:
       # React y React Native deben coincidir exactamente con las versiones de Expo SDK 58
       # (React Native 0.88 trae el renderizador de react 19.3.0). Se actualizan al cambiar de SDK.
+      # Versiones mayores aplazadas (P31-M10): cambian el compilador o la cadena de Babel.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@babel/core'
+        update-types: ['version-update:semver-major']
       - dependency-name: react
       - dependency-name: react-dom
       - dependency-name: react-native
@@ -41,3 +46,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # gradle/actions v6 usa una caché propietaria bajo los términos de Gradle: pendiente de decisión del titular.
+      - dependency-name: gradle/actions
+        versions: ['>=6']
+      - dependency-name: gradle/actions/*
+        versions: ['>=6']

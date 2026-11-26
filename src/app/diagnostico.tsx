@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 import { Card, SectionLabel } from '@/components/list';
 import { BackHeader, Screen } from '@/components/screen';
 import { T } from '@/components/text';
+import { APP_BUILD } from '@/lib/app-build';
 import { formatReport, hasCrash, parseDiagnostics, type Diagnostics } from '@/lib/diagnostics';
 import { usePalette } from '@/theme/use-palette';
 import { clearDiagnostics, readDiagnostics } from '@pyrohorns/llama';
@@ -31,7 +32,7 @@ export default function Diagnostico() {
             <SectionLabel>Informe</SectionLabel>
             <View style={{ backgroundColor: pal.surface, borderRadius: 14, borderWidth: 1, borderColor: pal.line, padding: 12 }}>
               <T size={12} selectable style={{ fontFamily: 'JetBrainsMono_400Regular', lineHeight: 17 }}>
-                {formatReport(diag)}
+                {formatReport(diag, APP_BUILD)}
               </T>
             </View>
             <Card center onPress={reload}>

@@ -28,5 +28,6 @@ const text = formatReport(crashed);
 check(text.includes('SIGNAL 11') && text.includes('Marca Modelo'), 'informe: rastro y dispositivo');
 check(text.includes('Fallo nativo') && text.includes('2000 MB') && text.includes('libpyrohorns_llama.so'), 'informe: motivo, RAM y traza nativa');
 check(formatReport(clean).includes('(ninguno)'), 'informe sin cierres');
+check(formatReport(clean, 'PyroHorns 0.1.0 (abc)').startsWith('PyroHorns 0.1.0 (abc)\n'), 'informe con la versión instalada');
 
 done();

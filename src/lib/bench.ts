@@ -422,13 +422,14 @@ export function latestRun(results: BenchResult[]): BenchResult[] {
 
 export function formatResults(
   allResults: BenchResult[],
-  meta: { device: string; at: number; cpu?: string; start?: DeviceStatus | null },
+  meta: { device: string; at: number; app?: string; cpu?: string; start?: DeviceStatus | null },
   models: LocalModel[] = LOCAL_MODELS,
 ): string {
   const results = latestRun(allResults);
   const name = (id: string) => models.find((m) => m.id === id)?.name ?? id;
   const lines: string[] = [
     `# Prueba de rendimiento PyroHorns · ${new Date(meta.at).toISOString().slice(0, 16).replace('T', ' ')}`,
+    ...(meta.app ? [`App al generar el informe: ${meta.app}`] : []),
     `Dispositivo: ${meta.device || 'desconocido'}`,
     meta.cpu ?? 'CPU: desconocida',
     `Compilación ggml-cpu: ${ENGINE_BUILD}`,

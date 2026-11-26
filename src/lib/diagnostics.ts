@@ -73,8 +73,8 @@ function when(ts: number): string {
 }
 
 /** Texto plano para leer en pantalla o pegar en un chat. */
-export function formatReport(d: Diagnostics): string {
-  const lines: string[] = [`Dispositivo: ${d.device || 'desconocido'} · Android SDK ${d.sdk}`, ''];
+export function formatReport(d: Diagnostics, app?: string): string {
+  const lines: string[] = [...(app ? [app] : []), `Dispositivo: ${d.device || 'desconocido'} · Android SDK ${d.sdk}`, ''];
   lines.push('— Último rastro de un cierre del motor —');
   lines.push(d.crashLog.trim() || '(ninguno)', '');
   lines.push('— Rastro de esta sesión —');

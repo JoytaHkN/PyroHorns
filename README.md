@@ -35,7 +35,7 @@ se prueban de verdad con `node:sqlite` (Node 22.13 o superior), con el mismo esq
 | Workflow | Cuándo | Qué hace |
 |---|---|---|
 | `ci.yml` | cada push y PR | tipos + pruebas |
-| `android.yml` | push a `main` o manual | APK arm64-v8a (firma de depuración) como artefacto |
+| `android.yml` | push a `main` o manual | APK arm64-v8a (firma de depuración) como artefacto; revisa su contenido (`scripts/check-apk.py`). `sh scripts/fetch-apk.sh <nombre>` lo descarga |
 | `release.yml` | tag `v*` | APK firmado con la clave de los secretos y publicado en Releases |
 | `pages.yml` | push a `main` o manual | PWA (visor online) en GitHub Pages |
 

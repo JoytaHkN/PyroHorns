@@ -18,6 +18,7 @@ import {
   type BenchConfig,
   type MmapMode,
 } from '@/lib/bench';
+import { APP_BUILD } from '@/lib/app-build';
 import { runBench, stopBench } from '@/lib/bench-runner';
 import { parseDiagnostics } from '@/lib/diagnostics';
 import { locateModel } from '@/lib/native';
@@ -77,6 +78,7 @@ export default function Benchmark() {
   const now = parseDeviceStatus(readDeviceStatus());
   const report = formatResults(results, {
     device,
+    app: APP_BUILD,
     cpu: describeCpu(readCpuInfo()),
     at: results[results.length - 1]?.at ?? Date.now(),
     start,
