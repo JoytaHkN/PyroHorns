@@ -27,7 +27,7 @@
 3. Si cambias decisiones (D1–D9, S1–S17), fases o riesgos: edita `PLAN.md` **y** su copia idéntica en
    `/sdcard/IA/Proyectos/APK IA/PLAN.md` (`cp PyroHorns/PLAN.md ../PLAN.md`).
 4. Si cambias reglas de entorno o procedimiento: edita `AGENTS.md` (`CLAUDE.md` y `GEMINI.md` lo importan).
-5. Si vendimizas código de terceros: actualiza `THIRD_PARTY_NOTICES.md`.
+5. Si vendimizas código de terceros: verifica su licencia (ver «Código y datos de terceros» en `AGENTS.md`) y actualiza `THIRD_PARTY_NOTICES.md`.
 6. Si algo queda sin decidir: muévelo a «Pendiente de decisión» en `ESTADO.md` y a la sección 7 de `PLAN.md`.
    Nunca lo presentes como definitivo.
 7. `git diff --check` → commit en español → `git push origin main`.

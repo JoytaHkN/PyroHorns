@@ -25,6 +25,7 @@
    2,5 s de silencio (doble toque para terminar); el calendario guarda y confirma en qué calendario quedó; la alarma y el
    temporizador abren el Reloj con los datos para confirmar; «abre el calendario del 17 de septiembre»; respuesta vacía
    con aviso; en Automático, el evento y el temporizador que propone el modelo esperan un toque.
+0b. **Planificadas P27–P30 (2026-11-26), sin código:** datos NLU (MASSIVE, SNIPS, Mycroft, Leon), notas y agenda (AppFlowy o versión propia, con selector en Ajustes), archivos y nubes (SAF primero) e integración con la IA. Verificación y fuentes en `docs/integraciones.md`. Esperan las decisiones de cada propuesta (`PLAN.md` §7).
 1. **F1.5 — prueba de inferencia en el móvil** (`PLAN.md` §5), EN CURSO (visto bueno del usuario, 2026-11-23):
    - Paso 1 ✅: `LlamaProvider` en TypeScript (`src/providers/llama.ts`) con fallback a
      `MockProvider` cuando el módulo nativo no esté disponible; integración en `src/lib/engine.ts`.
@@ -278,6 +279,10 @@
    la facturación), #6 uniwind 1.14, y #8 y #10 (esperar al siguiente Expo SDK).
 
 ## Pendiente de decisión del usuario
+- **P27 — datos NLU en español** (`PLAN.md` §7): uso de MASSIVE (solo evaluación o también plantillas con atribución), SNIPS (no), Mycroft y Leon (solo referencia o copiar las 11 habilidades `es-*`), NLU en la nube (no, por P25) y descarga de 39,5 MB en `APK IA/datasets/`.
+- **P28 — notas y agenda** (`PLAN.md` §7): camino (versión propia, AppFlowy como complemento), almacenamiento (SQLCipher con exportación Markdown, o carpeta Markdown), alcance estilo Obsidian/Notion, predeterminadas (en Android 12 no hay rol NOTES) y licencia (mantener GPL-3.0-only).
+- **P29 — archivos y nubes** (`PLAN.md` §7): SAF primero u OAuth directo, reimplementar o reutilizar código de AnExplorer, MEGA (más adelante o no) y permisos de acceso a archivos.
+- **P30 — integración con la IA** (`PLAN.md` §7): búsqueda en notas con FTS5, qué se indexa de los archivos y cómo usa el modelo local la lista de intenciones.
 - **P17 — Método Brasa** (`PLAN.md` §7): aprobar el orden (0 + 1 → 2 + 3 → 4 → 5), elegir la seguridad de la memoria guardada (A sin cifrar / B cifrada /
   C no guardar) y si se descarga LFM2.5-8B-A1B (≈ 5 GB) para probar un MoE. Medidas del almacenamiento del teléfono en la misma entrada.
 - **Medir con `dotprod` (f-B):** el APK `PyroHorns-0.1.0-F1.5-p13-dotprod-prueba.apk` está en CI (`6f481b0`); falta la prueba Rápida en el teléfono con batería.
@@ -407,3 +412,4 @@ Checklist completo de cierre, versión para PC y pasos de instalación: `docs/CO
 - **2026-11-26** · CI de la voz en verde (`61e94a8`): `libpyrohorns_whisper.so` (1,2 MB) exporta solo las funciones JNI; ningún símbolo de ggml sale de la biblioteca. Fuentes de plantillas revisadas: Home Assistant (es, CC-BY-4.0) incorporado; Rhasspy y Rasa sin plantillas en español accesibles.
 - **2026-11-26** · Informe de voz del móvil: causas comprobadas en el código (dictado sin corregir, corte a 1,2 s, «[Música]» enviado como mensaje, respuestas vacías, calendario y alarmas sin comprobar, acciones del modelo sin validar). Plan P26 en `PLAN.md` §7; sin código hasta el visto bueno.
 - **2026-11-26** · P26 aprobada por el usuario (1b, 2a, 3b, 4a) e implementada: nativo (umbral de voz adaptativo, normalización, vocabulario y filtros de whisper, calendario verificado y en JSON, reloj con confirmación, abrir un día del calendario, contactos para el dictado); TS (`cleanTranscript`, corrección por vocabulario y con el modelo local, validación de acciones, política de Automático, «Oí», respuesta vacía, `completeLocal`); esquema v5 (`messages.heard`). Typecheck, 18 suites de pruebas y bundle Android en verde. CI en verde (`9f0844d`) y APK copiado a `APK IA/apk/PyroHorns-0.1.0-F1.5-voz2-prueba.apk` (+ `.sha256`). Pendiente: móvil.
+- **2026-11-26** · Planificación de integraciones (P27–P30), sin código. Datos NLU: MASSIVE 1.0 con es-ES de 16.521 frases, 60 intenciones y licencia CC BY 4.0; SNIPS en inglés; Mycroft con 11 habilidades en español (formatos `.voc`/`.dialog`, no `.intent`); Leon sin español; Dialogflow sin los agentes prometidos. Notas: AppFlowy es AGPL-3.0 y el rol NOTES de Android exige la API 34 (el teléfono tiene Android 12). Archivos: AnExplorer es Apache-2.0 y su README no menciona nubes; SAF primero. IA: la planilla primero, con evaluación sobre MASSIVE. Documento: `docs/integraciones.md`. Quedan por leer en gnu.org las reglas GPL/AGPL (no accesible desde el entorno) y por comprobar en el teléfono los proveedores de SAF.

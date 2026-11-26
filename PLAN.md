@@ -1,6 +1,6 @@
 # PLAN — PyroHorns
 
-> **Versión 2.4** · 2026-11-24
+> **Versión 2.5** · 2026-11-26 (añade P27–P30: datos NLU, notas y agenda, archivos y nubes, integración con la IA; ver `docs/integraciones.md`)
 > Estado: F1 implementada (commit `c8234c0`). Todas las decisiones cerradas (D1–D8, S1–S19 y las dos dudas de seguridad). **F1 y F1.1 cerradas**: primer APK compilado por GitHub Actions y **probado por el usuario en el móvil: todo OK** (2026-11-23). Versión de prueba firmada `v0.1.0-alpha.1` publicada. **F1.5 en curso** (visto bueno del usuario, 2026-11-23). Siguen pendientes las propuestas de diseño (sección 7).
 > Proyecto: `/sdcard/IA/Proyectos/APK IA/`. El código está en `PyroHorns/` (repo git). Este plan vive en el repo (`PyroHorns/PLAN.md`), con una copia idéntica en la carpeta del proyecto.
 
@@ -354,6 +354,81 @@ Pulido del chat real (F1.5, 2026-11-24):
   - **Pruebas.** Automáticas: `cleanTranscript`, guardas de A3 (con un `complete` falso), `problemOf`, `dateFromText`, intención de `PyroOpenCalendar`, flujos del asistente (un evento del modelo queda pendiente), JSON de `addEvent`; `sh scripts/sync-build.sh` y bundle Android. En el móvil: dictar con pausas; música de fondo sin «[Música]»; «abre el calendario del 17 de septiembre»; «agenda … mañana a las 10» y comprobarlo en Calendario; «pon una alarma a las 7»; respuesta vacía.
   - **Límites.** Aquí no se pueden probar el micrófono, el calendario ni el Reloj: eso se comprueba en el móvil.
   - **Implementación (2026-11-26) y elecciones propias:** la planilla entiende la frase → no se llama al modelo para corregirla (más rápido y sin inventar); la corrección del modelo solo si hay un modelo del teléfono ya cargado y no hay respuesta en curso; el dictado con menos de tres palabras no se corrige con el modelo; «Oí: …» se guarda con el mensaje (esquema v5, columna `heard`); los eventos y temporizadores que propone el modelo esperan un toque en Automático, y notas, tareas, listas, llamadas, correos y la planilla válida siguen automáticos; con voz se lee también la pregunta de confirmación pendiente; el calendario se elige visible > principal > sincronizado y, si no hay ninguno visible, se usa uno oculto avisando; el tope de ganancia del dictado es 20×.
+
+- **P27. Datos de intenciones en español (MASSIVE, SNIPS, Mycroft, Leon)** — propuesta del 2026-11-26, **sin código**. Verificación completa en `docs/integraciones.md` §2.
+  - **Qué se comprobó:**
+    - MASSIVE 1.0: es-ES con **16.521** frases (train 11.514 · dev 2.033 · test 2.974); **60 intenciones** y 18 dominios. Datos CC BY 4.0 (atribución obligatoria); código Apache-2.0; descarga de **39,5 MB** desde S3. Las 33 intenciones que citaste existen; el ejemplo del texto omite tres campos (`worker_id`, `slot_method`, `judgments`).
+    - SNIPS (CC0): las frases son **en inglés**; no hay traducción al español en esa fuente.
+    - Mycroft: 11 de los 62 repositorios de habilidades tienen carpetas `es-*` (Apache-2.0), con ficheros `.voc`, `.dialog` y `.rx`, **no `.intent`**. Mycroft AI cerró en 2023 y el repositorio principal está archivado.
+    - Leon (MIT): sus habilidades nativas no tienen español (locales en inglés y francés).
+    - Dialogflow: la documentación no enumera agentes en español para domótica, alarmas ni navegación. Es un servicio de Google Cloud.
+    - Gemini o GPT con las intenciones en el prompt: técnicamente posible, pero envía el texto a la nube (choca con P25).
+  - **Propuesta por fases:**
+    - F27-1 (sin tocar la app): descargar MASSIVE en `APK IA/datasets/` (fuera del repo), registrar su huella SHA-256 (como S12) y medir la planilla con el test es-ES: cobertura y falsos positivos por intención. Intenciones que la app ya puede hacer: `alarm_set`, `calendar_set`, `lists_createoradd`, `datetime_query` y, en parte, `email_query`. El resto (música, clima, tráfico, domótica, preguntas) va al modelo o a internet, nunca a una acción.
+    - F27-2: completar la planilla con lo que muestra MASSIVE (horas dichas en palabras, como «nueve de la mañana»; sinónimos), con pruebas por cada cambio.
+    - F27-3: usar MASSIVE como conjunto de regresión de la planilla, fuera del APK. Si algo derivado entra en la app, atribución CC BY 4.0 en `THIRD_PARTY_NOTICES.md`.
+    - F27-4 (opcional): modelo local con las 60 intenciones en el prompt, precargado con `warm`. Medir el prefill antes de decidir.
+  - **Decisiones** (la recomendada en negrita):
+    1. Uso de MASSIVE: **(a) solo evaluación interna**; (b) plantillas derivadas dentro del APK, con atribución; (c) ambas, por fases.
+    2. SNIPS: **(a) no usar** (inglés); (b) solo como referencia.
+    3. Mycroft y Leon: **(a) solo como referencia de formatos**; (b) copiar plantillas de las 11 habilidades `es-*` tras revisar cada repositorio; (c) no usar.
+    4. NLU en la nube (Dialogflow, Gemini, GPT): **(a) no, por «sin nube» (P25)**; (b) opcional, con consentimiento explícito por uso.
+    5. Descarga de 39,5 MB en `APK IA/datasets/`: **(a) sí, con huella registrada**.
+  - **Riesgos:** atribución CC BY; las traducciones de MASSIVE no son habla espontánea; el modelo local inventa datos (P15, P17), así que toda acción se confirma (S19).
+  - **Pruebas:** script de evaluación reproducible, fuera de la app, con tabla de resultados. Los criterios de aceptación los fija el usuario.
+- **P28. Notas, bloc de notas y agenda: AppFlowy, versión propia y elección desde Ajustes** — propuesta del 2026-11-26, **sin código**. Verificación en `docs/integraciones.md` §3.
+  - **Qué se comprobó:**
+    - AppFlowy es **AGPL-3.0** (Dart/Flutter), está en Google Play para Android 10 o superior, y su paquete de editor tiene licencia dual **AGPL-3.0 o MPL-2.0**.
+    - PyroHorns es **GPL-3.0-only**. Combinar código AGPL exige decidir la licencia del conjunto. ⚠️ El texto de la sección 13 de la GPLv3 no se pudo leer (gnu.org inaccesible).
+    - Android define el rol **NOTES** desde la **API 34 (Android 14)**. El teléfono tiene Android 12: ahí no hay forma oficial de hacer predeterminada una app de notas. El rol, cuando existe, lo concede el usuario en un diálogo; no hay forma documentada de forzarlo.
+  - **Opciones de integración:**
+    - A. AppFlowy como app externa: el usuario la instala y PyroHorns le envía texto o la abre. No mezcla código, pero no queda dentro de la APK.
+    - B. **Versión propia en React Native**: notas en bloques o Markdown sobre SQLCipher (S7), agenda local y exportación a Markdown. Inspirada en AppFlowy, Obsidian y Notion, sin copiar código.
+    - C. Incrustar el editor Flutter de AppFlowy (add-to-app): motor Flutter dentro del APK y licencia AGPL o MPL. Complejidad alta.
+    - D. Copiar código de AppFlowy o de su editor: solo tras revisión legal.
+  - **Ajustes propuestos:** por categoría (agenda, notas, tareas), elegir «Sistema» o «PyroHorns». Al elegir PyroHorns, la app avisa qué se reemplaza y ofrece la pantalla de aplicaciones predeterminadas; en Android 14 o superior pide el rol NOTES.
+  - **Decisiones:**
+    1. Camino: **(b) versión propia**; (a) como complemento; (c) y (d) no sin revisión legal.
+    2. Almacenamiento: **(a) base cifrada SQLCipher (S7) con exportación Markdown**; (b) carpeta Markdown tipo Obsidian, sin cifrar, vía SAF; (c) ambas: cifrada por defecto y bóveda Markdown opcional.
+    3. Alcance «como Obsidian o Notion» (interpretación por confirmar): **(a) enlaces entre notas (retroenlaces), bloques y tablas sencillas**; (b) además, tarjetas de estudio; (c) solo texto por ahora.
+    4. Predeterminadas: **(a) ajustes, aviso, pantalla del sistema y rol NOTES en Android 14 o superior**; (b) solo ajustes.
+    5. Licencia: **(a) mantener GPL-3.0-only y no mezclar AGPL**; (b) revisar la licencia, decisión del titular y con asesoría.
+  - **Fases:** F28-1 notas (texto y bloques básicos) sobre SQLCipher; F28-2 agenda propia con opción de sincronizar con el calendario del sistema; F28-3 enlaces y retroenlaces; F28-4 exportación e importación Markdown; F28-5 selector de apps en Ajustes y avisos.
+  - **Seguridad:** S7 (base cifrada), S9 (registros sin contenido), S10 (imágenes y enlaces), S11 (lo que llega de otras apps se revisa antes de guardarse), S19 (acciones confirmables).
+- **P29. Explorador de archivos y nubes (AnExplorer, Gestor de archivos +, Drive, Dropbox, OneDrive, MEGA)** — propuesta del 2026-11-26, **sin código**. Verificación en `docs/integraciones.md` §4.
+  - **Qué se comprobó:**
+    - AnExplorer es **Apache-2.0**; su README describe almacenamiento local, SD, USB y FTP, y **no menciona ninguna nube**.
+    - Gestor de archivos + es propietario. Sus nubes, según fichas de terceros, son Drive, OneDrive, Dropbox, Box y Yandex (**no Mega**).
+    - MEGA SDK es **BSD-2-Clause** (C++, con ejemplo para Android).
+    - SAF expone archivos mediante `DocumentsProvider`; que Drive, Dropbox y OneDrive lo hagan está por comprobar en el teléfono.
+    - Dropbox recomienda PKCE para apps móviles. OneDrive usa `Files.ReadWrite` con MSAL. Drive tiene alcances restringidos que pueden tardar semanas en revisarse.
+  - **Opciones:**
+    - A. **SAF primero**: el usuario elige la carpeta o el archivo en el selector del sistema; la app no guarda credenciales (fase 1).
+    - B. APIs directas con OAuth (Drive con `drive.file`, Dropbox con PKCE, OneDrive con Graph): fase 2. Tokens en el almacén seguro (S5); registro en Google Cloud (con la huella SHA-1 del firmante), en Dropbox y en Azure.
+    - C. WebDAV (Nextcloud y similares): fase 2b, no verificado en esta sesión.
+    - D. MEGA con su SDK por JNI: fase 3, la más costosa.
+    - E. Código de AnExplorer (Apache-2.0, con su NOTICE) para la navegación local, o reimplementarla usando AnExplorer como referencia.
+  - **Decisiones:**
+    1. Fase 1: **(a) SAF**; (b) OAuth directo desde el principio.
+    2. Acceso a archivos: **(a) SAF, sin «todo el almacenamiento»**; (b) además, el modo «todo el almacenamiento» que ya existe (S3), solo si se elige en Ajustes.
+    3. Código de AnExplorer: **(a) reimplementar, con AnExplorer como referencia**; (b) reutilizar con atribución Apache-2.0.
+    4. MEGA: **(a) más adelante (fase 3)**; (b) ahora; (c) no.
+    5. Nubes: **(a) lectura por defecto y escritura solo al confirmar**; (b) sincronización automática (más riesgo).
+  - **Seguridad:** S3 (modo de acceso), S5 (tokens en el almacén seguro), S10 y S11 (contenido externo), S9 (los registros no incluyen nombres de archivos ni contenido).
+  - **Fases:** F29-1 explorador local y SAF (leer, copiar y mover con confirmación); F29-2 Dropbox, OneDrive y Drive por OAuth; F29-3 WebDAV; F29-4 MEGA.
+- **P30. Integración con nuestra IA: planilla, notas, agenda y archivos** — propuesta del 2026-11-26, **sin código**. Análisis en `docs/integraciones.md` §5.
+  - **Arquitectura propuesta:**
+    - La planilla sigue siendo la primera vía: «anota», «agenda», «abre el calendario» o «busca en mis notas» se resuelven sin modelo.
+    - Las acciones de notas y agenda escriben en el almacén de P28 o en las apps del sistema, según Ajustes.
+    - El modelo local responde o propone, pero no ejecuta: toda acción se confirma o se deshace (S19).
+    - Búsqueda: FTS5 sobre las notas (como `messages_fts`), sin modelo; recuperación semántica con embeddings más adelante (F4).
+    - Archivos (P29): indexar nombres y metadatos; el texto completo solo de los archivos que el usuario elija, con límite de tamaño. Memoria de referencia: LFM3 ≈ 2,6 GB y Nemotron ≈ 6 GB (P13).
+  - **Riesgos y medidas:** el modelo local ha inventado datos (P15, P17). Con 60 intenciones en el prompt el prefill crece (estimación de 1.000 a 1.500 tokens; hay que medirlo). El contenido de notas y archivos se trata como datos, no como instrucciones (S4, S18).
+  - **Decisiones:**
+    1. Búsqueda en notas: **(a) FTS5 ahora, sin modelo**; (b) embeddings en F4.
+    2. Indexar archivos: **(a) solo nombres y metadatos**; (b) texto completo de los archivos elegidos, con límite; (c) no indexar.
+    3. Intenciones fuera de la planilla: **(a) modelo local con la lista de intenciones, cacheada, tras medir**; (b) solo responder, sin acciones; (c) nube con consentimiento por uso.
+  - **Evaluación:** MASSIVE (P27-F1) y pruebas propias en el teléfono: cobertura, falsos positivos y latencia.
 
 ## 8. Riesgos
 

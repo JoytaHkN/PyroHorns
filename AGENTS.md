@@ -7,12 +7,14 @@ necesario está en este repo**, no en la memoria de ningún agente.
 ## Al empezar (obligatorio)
 1. Lee `docs/ESTADO.md` (qué está hecho y qué sigue), `PLAN.md` (decisiones D1–D8, seguridad
    S1–S19, fases) y `docs/CONTINUIDAD.md` (checklist de cierre y prompts para móvil y PC).
+   Si el trabajo toca datos de intenciones, notas, agenda, archivos o nubes, lee también `docs/integraciones.md`.
 2. Ejecuta `git log --oneline -10` y `git status`: puede haber trabajo hecho desde otro agente.
 3. Responde siempre en español, con explicaciones claras (el usuario trabaja desde el móvil).
 
 ## Reglas del usuario
 - **Planes antes que código.** Si cambia el alcance o hay una decisión abierta, propón y espera su
   visto bueno. No des por definitivo nada que haya dejado pendiente.
+- **Código y datos de terceros.** Antes de copiar, enlazar o empaquetar código o datos ajenos, verifica su licencia (`gh api repos/<dueño>/<repo> --jq .license`, o su fichero LICENSE/NOTICE) y compárala con la de PyroHorns (GPL-3.0-only). Lo que sea AGPL, tenga licencia dudosa o no tenga ninguna no se integra sin decisión del titular. Los datos grandes van fuera del repo (`APK IA/datasets/`), con su huella SHA-256 y, si se usan en la app, su atribución en `THIRD_PARTY_NOTICES.md`.
 - **Seguridad: solo lo elegido.** Aplica únicamente las medidas S1–S19 de `PLAN.md` §4. No añadas
   restricciones ni avisos por tu cuenta; si crees que hace falta uno nuevo, preséntalo como opciones
   (de la más libre a la más protegida) y que decida.
