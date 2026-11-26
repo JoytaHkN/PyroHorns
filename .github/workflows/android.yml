@@ -41,6 +41,9 @@ jobs:
         run: |
           command -v ccache || { sudo apt-get update -qq && sudo apt-get install -y -qq ccache; }
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+          # El NDK se reinstala en cada ejecución: identificar el compilador por su fecha (por defecto) nunca acertaba.
+          echo "CCACHE_COMPILERCHECK=%compiler% --version" >> "$GITHUB_ENV"
+          echo "CCACHE_MAXSIZE=500M" >> "$GITHUB_ENV"
           echo "CMAKE_C_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
           echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache" >> "$GITHUB_ENV"
       - uses: actions/cache@v6
@@ -51,6 +54,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Generar el proyecto Android
         run: npx expo prebuild --platform android --no-install
+      - run: ccache --zero-stats
       - name: Compilar APK (arm64-v8a)
         working-directory: android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
