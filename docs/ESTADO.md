@@ -11,12 +11,13 @@
 - **Hito en curso: v0.2 «Asistente local fiable»** (`PLAN.md` §5). Después, v0.3 «Notas y archivos».
 - En la app: chat local con 12+ modelos GGUF, memoria de conversación, internet (DuckDuckGo, botón), agente en la
   nube, asistente (notas, tareas, calendario, alarmas), planilla de intenciones y voz sin nube (whisper.cpp).
-- **P31 aprobada el 2026-11-26** («todo lo recomendado», M1–M10). M8 pendiente de confirmación expresa.
+- **P31 aprobada el 2026-11-26** («todo lo recomendado» y **M8-b**).
+- **Desde el APK del commit de M8 la firma es la de prelanzamiento:** pasar desde uno anterior exige desinstalar una vez.
 - Repo https://github.com/JoytaHkN/PyroHorns · PWA https://joytahkn.github.io/PyroHorns/ · pre-release `v0.1.0-alpha.1`.
 
 ## Siguiente paso (orden)
-1. **Bloque en curso, P31 «arreglos sin riesgo»:** M9 documentación, M10 Dependabot, M4 versión visible y M5-b
-   comprobaciones del APK en CI.
+1. **Bloque en curso, P31 «arreglos sin riesgo»:** M9 documentación, M10 Dependabot, M4 versión visible, M5-b
+   comprobaciones del APK en CI y M8-b firma.
 2. **Usuario:** probar el APK más reciente con `docs/pruebas-movil.md`.
 3. **M7 + Autoprueba (M3-c):** probar la migración de la base desde cada versión y copiarla antes de migrar; pantalla
    «Autoprueba» en Ajustes.
@@ -29,8 +30,6 @@
 con el APK del bloque 1. El atraso anterior (`docs/pruebas-movil.md`) se prueba antes de empezar v0.3.
 
 ## Pendiente de decisión del usuario
-- **M8 (firma de los APK de la CI):** hoy usan la clave de depuración de Expo, que es pública. (a) seguir así;
-  (b) firmarlos con la clave de prelanzamiento: obliga a desinstalar una vez y **borra las conversaciones de prueba**.
 - **gradle/actions v6:** su caché es propietaria y exige aceptar los términos de Gradle. Se usa la v5.
 - **Criterios de aceptación de v0.2** (propuestos en `PLAN.md` §5).
 - **F27-2:** mejorar la planilla con lo aprendido de MASSIVE (hoy acierta el 8,7 %). Recomendación: sí.

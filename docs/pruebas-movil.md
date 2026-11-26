@@ -4,6 +4,11 @@
 > («falla 3 y 7») y, si la app se cierra, con el informe de Ajustes → Diagnóstico del motor.
 > Todo está incluido en el APK más reciente de `APK IA/apk/` (los bloques se acumulan).
 
+## Antes de instalar (una sola vez, P31-M8)
+El APK nuevo lleva otra firma: **hay que desinstalar la app**, y se borra todo lo que guarda dentro: conversaciones,
+notas y tareas, ajustes, claves de la nube, modelos importados a la carpeta de la app y el modelo de voz.
+Copia antes lo que quieras conservar. Los GGUF de `APK IA/` no se tocan. Quien tenga `v0.1.0-alpha.1` no necesita desinstalar.
+
 ## Voz y acciones (P25, P26)
 1. [ ] Doble toque y dictar una frase con una pausa de 1–2 s → no corta; corta a los 2,5 s de silencio o con doble toque.
 2. [ ] Dictar con música de fondo → no se envía «[Música]»; si no hay voz, avisa «No te escuché».

@@ -88,7 +88,7 @@ Solo se aplican estas medidas. Ninguna otra.
 | S13 | **B** | Aceptación de uso responsable la primera vez que se abre un modo Red Cyber | F3 |
 | S14 | **Termux integrado** | Termux forma parte del código de PyroHorns: no hace falta la app Termux ni permisos extra (detalle en F5) | F5 |
 | S15 | **B** | Los botones de aprobación ignoran los toques cuando otra app los tapa | F3 |
-| S16 | **A → B** | Clave de firma en los secretos de GitHub; compilación reproducible antes de entrar en F-Droid. Las versiones de prueba se firman con una clave de prelanzamiento generada en el móvil (`APK IA/firma-prelanzamiento/`, fuera del repo). La **v1** usará una clave nueva creada en el PC: habrá que desinstalar la versión de prueba antes de instalarla | F1.1 / antes de F-Droid |
+| S16 | **A → B** | Clave de firma en los secretos de GitHub; compilación reproducible antes de entrar en F-Droid. Las versiones de prueba se firman con una clave de prelanzamiento generada en el móvil (`APK IA/firma-prelanzamiento/`, fuera del repo). Desde el 2026-11-26 (P31-M8-b) los APK de `android.yml` llevan esa misma firma. La **v1** usará una clave nueva creada en el PC: habrá que desinstalar la versión de prueba antes de instalarla | F1.1 / antes de F-Droid |
 | S17 | **B** | Dependabot propone actualizaciones (npm, Gradle, Actions) y se revisan | F1.1 |
 | S18 | **B** | Búsqueda en internet: se pide al modelo que trate los resultados como información y no siga instrucciones que vengan en ellos (elegido por el usuario el 2026-11-25; reduce el riesgo, no lo elimina) | F1.5 |
 | S19 | **Elegible** | Acciones del asistente: automáticas (por defecto, elegido por el usuario el 2026-11-25) con «Deshacer», confirmadas con un toque, o apagadas. Voz: cuando haya reconocimiento (F4). Solo se ejecutan si el propio mensaje del usuario las pide | F1.5 |
@@ -466,7 +466,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     3. Intenciones fuera de la planilla: **(a) modelo local con la lista de intenciones, cacheada, tras medir**; (b) solo responder, sin acciones; (c) nube con consentimiento por uso.
   - **Evaluación:** MASSIVE (P27-F1) y pruebas propias en el teléfono: cobertura, falsos positivos y latencia.
 
-- **P31. Evaluación del plan (2026-11-26)** — **aprobada («todo lo recomendado»)**, salvo M8, que necesita confirmación expresa.
+- **P31. Evaluación del plan (2026-11-26)** — **aprobada («todo lo recomendado»)**, M8-b elegida aparte.
   - **Causas detectadas de corregir sobre la marcha:** F1.5 absorbió P16–P30 sin cerrarse; el móvil era la única prueba de
     integración; parches por modelo en vez de mecanismos generales; la regla de memoria no se aplica en el chat; sin pruebas de
     actualización de datos; documentación desfasada y muy larga.
@@ -479,7 +479,7 @@ Pulido del chat real (F1.5, 2026-11-24):
   - **M6-b** núcleo del motor **antes de P28** (cambia el orden aprobado): regla de memoria en el chat, GBNF/JSON, plantillas Jinja,
     tokenizador real y compactado.
   - **M7-b** probar la migración desde cada versión con datos y copiar la base antes de migrar.
-  - **M8** firma de los APK de la CI: **pendiente** (b exige desinstalar y borra las conversaciones de prueba).
+  - **M8-b** (elegida el 2026-11-26): los APK de la CI se firman con la clave de prelanzamiento (S16); exige desinstalar una vez.
   - **M9-b** ESTADO ≤ 120 líneas; historial y medidas aparte. **M10-b** Dependabot al día; sin versiones mayores de TypeScript y Babel.
   - **Excepción a M10:** `gradle/actions` se queda en v5; la v6 usa una caché propietaria bajo los términos de Gradle.
 
