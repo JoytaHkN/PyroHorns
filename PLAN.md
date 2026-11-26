@@ -368,7 +368,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     - F27-2: completar la planilla con lo que muestra MASSIVE (horas dichas en palabras, como «nueve de la mañana»; sinónimos), con pruebas por cada cambio.
     - F27-3: usar MASSIVE como conjunto de regresión de la planilla, fuera del APK. Si algo derivado entra en la app, atribución CC BY 4.0 en `THIRD_PARTY_NOTICES.md`.
     - F27-4 (opcional): modelo local con las 60 intenciones en el prompt, precargado con `warm`. Medir el prefill antes de decidir.
-  - **Decisiones** (la recomendada en negrita):
+  - **Decisiones** (la recomendada en negrita; qué cambia y cómo afecta cada opción: `docs/integraciones.md` §9):
     1. Uso de MASSIVE: **(a) solo evaluación interna**; (b) plantillas derivadas dentro del APK, con atribución; (c) ambas, por fases.
     2. SNIPS: **(a) no usar** (inglés); (b) solo como referencia.
     3. Mycroft y Leon: **(a) solo como referencia de formatos**; (b) copiar plantillas de las 11 habilidades `es-*` tras revisar cada repositorio; (c) no usar.
@@ -387,7 +387,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     - C. Incrustar el editor Flutter de AppFlowy (add-to-app): motor Flutter dentro del APK y licencia AGPL o MPL. Complejidad alta.
     - D. Copiar código de AppFlowy o de su editor: solo tras revisión legal.
   - **Ajustes propuestos:** por categoría (agenda, notas, tareas), elegir «Sistema» o «PyroHorns». Al elegir PyroHorns, la app avisa qué se reemplaza y ofrece la pantalla de aplicaciones predeterminadas; en Android 14 o superior pide el rol NOTES.
-  - **Decisiones:**
+  - **Decisiones** (qué cambia y cómo afecta cada opción: `docs/integraciones.md` §9):
     1. Camino: **(b) versión propia**; (a) como complemento; (c) y (d) no sin revisión legal.
     2. Almacenamiento: **(a) base cifrada SQLCipher (S7) con exportación Markdown**; (b) carpeta Markdown tipo Obsidian, sin cifrar, vía SAF; (c) ambas: cifrada por defecto y bóveda Markdown opcional.
     3. Alcance «como Obsidian o Notion» (interpretación por confirmar): **(a) enlaces entre notas (retroenlaces), bloques y tablas sencillas**; (b) además, tarjetas de estudio; (c) solo texto por ahora.
@@ -408,7 +408,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     - C. WebDAV (Nextcloud y similares): fase 2b, no verificado en esta sesión.
     - D. MEGA con su SDK por JNI: fase 3, la más costosa.
     - E. Código de AnExplorer (Apache-2.0, con su NOTICE) para la navegación local, o reimplementarla usando AnExplorer como referencia.
-  - **Decisiones:**
+  - **Decisiones** (qué cambia y cómo afecta cada opción: `docs/integraciones.md` §9):
     1. Fase 1: **(a) SAF**; (b) OAuth directo desde el principio.
     2. Acceso a archivos: **(a) SAF, sin «todo el almacenamiento»**; (b) además, el modo «todo el almacenamiento» que ya existe (S3), solo si se elige en Ajustes.
     3. Código de AnExplorer: **(a) reimplementar, con AnExplorer como referencia**; (b) reutilizar con atribución Apache-2.0.
@@ -424,7 +424,7 @@ Pulido del chat real (F1.5, 2026-11-24):
     - Búsqueda: FTS5 sobre las notas (como `messages_fts`), sin modelo; recuperación semántica con embeddings más adelante (F4).
     - Archivos (P29): indexar nombres y metadatos; el texto completo solo de los archivos que el usuario elija, con límite de tamaño. Memoria de referencia: LFM3 ≈ 2,6 GB y Nemotron ≈ 6 GB (P13).
   - **Riesgos y medidas:** el modelo local ha inventado datos (P15, P17). Con 60 intenciones en el prompt el prefill crece (estimación de 1.000 a 1.500 tokens; hay que medirlo). El contenido de notas y archivos se trata como datos, no como instrucciones (S4, S18).
-  - **Decisiones:**
+  - **Decisiones** (qué cambia y cómo afecta cada opción: `docs/integraciones.md` §9):
     1. Búsqueda en notas: **(a) FTS5 ahora, sin modelo**; (b) embeddings en F4.
     2. Indexar archivos: **(a) solo nombres y metadatos**; (b) texto completo de los archivos elegidos, con límite; (c) no indexar.
     3. Intenciones fuera de la planilla: **(a) modelo local con la lista de intenciones, cacheada, tras medir**; (b) solo responder, sin acciones; (c) nube con consentimiento por uso.

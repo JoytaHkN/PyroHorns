@@ -196,3 +196,111 @@ gh api "search/repositories?q=org:MycroftAI+skill&per_page=100" --jq '.items[].n
 ```
 
 Nota: el tar.gz de MASSIVE (≈ 39,5 MB) no se ha descargado. Se guardará fuera del repositorio, en `APK IA/datasets/`, con su huella SHA-256 registrada (como S12), cuando se apruebe P27-F1.
+
+## 9. Guía de decisiones: recomendación e impacto
+
+Para cada decisión de P27–P30: la opción recomendada, **qué cambia** en el código y **cómo afecta** (seguridad, licencias, tamaño, distribución, esfuerzo y si se puede deshacer). El esfuerzo es relativo entre opciones (pequeño, medio, grande); no es una estimación de horas.
+
+**Datos verificados para esta guía (2026-11-26):**
+- ✅ `expo-file-system` 58.0.14, ya instalado, abre el selector de archivos del sistema (`File.pickFileAsync`, usado al importar GGUF en `src/lib/model-import.ts`), y su código Android incluye el selector de carpetas (`ACTION_OPEN_DOCUMENT_TREE`) con permiso persistente. Falta confirmar la función JavaScript que lo expone.
+- ✅ Bibliotecas libres de inicio de sesión: AppAuth-Android (Apache-2.0), MSAL para Android (MIT), SDK de Dropbox para Java (MIT). Para extraer texto de PDF: PdfBox-Android (Apache-2.0; último cambio en marzo de 2024).
+- ⚠️ La política de inclusión de F-Droid prohíbe bibliotecas propietarias como Google Play Services, y marca con «antifunciones» (sin excluir la app) ciertos usos. La etiqueta que correspondería por usar nubes no libres está por confirmar en `f-droid.org/en/docs/Inclusion_Policy`. Consecuencia: Google Drive por OAuth tendría que ir con AppAuth, no con el inicio de sesión de Google.
+- ✅ `app.json` ya usa un plugin de configuración propio (`plugins/with-legacy-packaging.js`): es la vía para añadir filtros de intent al manifiesto.
+
+### P27 · Datos de intenciones
+
+**P27-1 · Uso de MASSIVE.** Recomendado: **(a) solo evaluación interna.**
+- (a) Evaluación interna. **Qué cambia:** un script, fuera del APK, lee `es-ES.jsonl` y pasa cada frase por `parseRoute`, como hacen las pruebas; los resultados se anotan aquí. **Cómo afecta:** la app no cambia y no hay atribución dentro de ella. Esfuerzo pequeño. Se puede deshacer.
+- (b) Plantillas derivadas dentro del APK. **Qué cambia:** frases y sinónimos nuevos en `catalog.ts`, `rules.ts` y `slots.ts`, con sus pruebas, y atribución CC BY 4.0 en `THIRD_PARTY_NOTICES.md`. **Cómo afecta:** se resuelven más órdenes sin modelo, pero sube el riesgo de que la planilla capture preguntas que hoy van al modelo; sin la medición de (a), ese riesgo no se controla. Esfuerzo medio. Se deshace quitando las plantillas.
+- (c) Ambas: (a) primero y, con sus cifras, (b).
+- Ten en cuenta: MASSIVE es español de España traducido del inglés; pueden faltar expresiones de Latinoamérica.
+
+**P27-2 · SNIPS.** Recomendado: **(a) no usar.** Con (a) no cambia nada; con (b) solo cambia la documentación, y no aporta español.
+
+**P27-3 · Mycroft y Leon.** Recomendado: **(a) solo referencia de formatos.**
+- (a) Referencia. La app no cambia; sus vocabularios `.voc` sirven como ideas de sinónimos.
+- (b) Copiar las 11 habilidades `es-*`. **Qué cambia:** convertir `.voc`, `.rx` y `.dialog` a la sintaxis de `template.ts` (no son compatibles) y añadir los avisos Apache-2.0. **Cómo afecta:** cubren sobre todo clima, reproducción, hora, fecha, temporizador e IP; la app no ejecuta clima ni reproducción, y hora, fecha y temporizador ya están en la planilla. Esfuerzo medio para poco beneficio. Se puede deshacer.
+- (c) No usar. Nada cambia.
+
+**P27-4 · NLU en la nube (Dialogflow, Gemini, GPT).** Recomendado: **(a) no.**
+- (a) No. Se mantiene P25 (voz sin nube) y el uso sin conexión.
+- (b) Opcional con consentimiento. **Qué cambia:** un ajuste nuevo («entender órdenes con la nube») que reutiliza `src/providers/cloud.ts` y las claves del almacén seguro (S5). **Cómo afecta:** cada orden enviaría el texto (y los nombres de contactos, si se incluyen) a un tercero; necesita conexión, añade latencia y puede tener coste; en F-Droid podría llevar una antifunción. Esfuerzo medio. Se deshace apagando el ajuste.
+
+**P27-5 · Descargar MASSIVE (39,5 MB).** Recomendado: **(a) sí.**
+- (a) Sí. El archivo queda en `APK IA/datasets/massive-1.0/`, fuera del repo y del APK, con su huella SHA-256 anotada aquí. La app no cambia.
+- (b) No. Sin los datos no se puede medir la planilla: P27-F1 queda bloqueada.
+
+### P28 · Notas, bloc de notas y agenda
+
+**P28-1 · Camino.** Recomendado: **(b) versión propia**, con (a) como complemento.
+- (b) Versión propia. **Qué cambia:** pantallas nuevas (lista, editor, agenda) en `src/app/`, tablas nuevas en la base cifrada (migración v6) para notas y enlaces, y la vista Markdown reutiliza `src/components/markdown.tsx`. **Cómo afecta:** la planilla y la IA escriben y buscan directamente en las notas (P30); licencia limpia (GPL); el APK casi no crece. Esfuerzo grande, por fases.
+- (a) AppFlowy como app externa. **Qué cambia:** un botón «Abrir en AppFlowy» o «Enviar a AppFlowy» (intent al paquete `io.appflowy.appflowy`; que acepte texto compartido está por comprobar). **Cómo afecta:** esas notas viven en AppFlowy, fuera de PyroHorns; la planilla no escribe en ellas y la IA no puede buscarlas. Esfuerzo pequeño.
+- (c) Editor de AppFlowy incrustado (Flutter). **Qué cambia:** el motor de Flutter dentro del APK y dos sistemas de interfaz en la misma app. **Cómo afecta:** APK mucho mayor (por medir), CI más lento, licencia AGPL o MPL. Esfuerzo muy grande. No recomendado.
+- (d) Copiar código de AppFlowy. Está en Dart y Rust: no se reutiliza en React Native sin reescribirlo, y es AGPL. No recomendado.
+
+**P28-2 · Almacenamiento.** Recomendado: **(a) base cifrada con exportación a Markdown.**
+- (a) SQLCipher y exportación. **Cómo afecta:** cumple S7 (cifrado) y S8 (copias con contraseña); la búsqueda FTS5 es inmediata (P30-1); exportar a una carpeta elegida sirve para Obsidian o para subir a la nube. No permite editar a la vez desde Obsidian. Esfuerzo medio. Se deshace exportando.
+- (b) Carpeta Markdown sin cifrar (bóveda tipo Obsidian). **Cómo afecta:** las notas quedan en texto plano, fuera de S7 (es una decisión de seguridad); compatible con Obsidian; si la carpeta está en Drive, Dropbox u OneDrive, la sincroniza su app (si el proveedor permite elegir carpetas: comprobar); más lento por SAF y con conflictos si otra app edita a la vez; buscar exige indexar los archivos. Esfuerzo medio-grande. **Difícil de deshacer** sin una importación.
+- (c) Ambas. Cifrada por defecto y bóveda opcional: dos almacenes y su sincronización, el doble de código. Solo después de (a).
+
+**P28-3 · Alcance «como Obsidian o Notion».** Recomendado: **(a) enlaces, bloques y tablas.**
+- (a) **Qué cambia:** sintaxis `[[nota]]` con retroenlaces (tabla de enlaces), bloques (títulos, listas, casillas, citas, código) y tablas Markdown sencillas, con una barra de formato en el editor. Esfuerzo medio-grande.
+- (b) Lo anterior más tarjetas de estudio: tarjetas de pregunta y respuesta sacadas de las notas, repaso espaciado (tipo SM-2), pantalla de repaso y recordatorios. Esfuerzo grande; es la opción más útil para estudiar.
+- (c) Solo texto: ampliar la pantalla actual «Notas y tareas». Lo más rápido, sin enlaces.
+
+**P28-4 · Aplicaciones predeterminadas.** Recomendado: **(a) ajustes, aviso, pantalla del sistema y rol NOTES en Android 14+.**
+- (a) **Qué cambia:** filtros de intent en el manifiesto (`ACTION_SEND` de texto; `CREATE_NOTE`, con `showWhenLocked` y `turnScreenOn`, para el rol NOTES) mediante un plugin de configuración; petición del rol con `RoleManager` solo en API 34 o superior; selector por categoría en Ajustes con el aviso de qué se reemplaza. **Cómo afecta:** exige recompilar el APK en CI; en tu Android 12 solo funciona «Siempre» en el selector del sistema; lo que llegue compartido se muestra para revisarlo antes de guardarlo (S11).
+- (b) Solo ajustes. Sin tocar el manifiesto: la app decide dónde guardar (sistema o propia) y nada cambia fuera de ella.
+
+**P28-5 · Licencia del proyecto.** Recomendado: **(a) mantener GPL-3.0-only.**
+- (a) Se puede incorporar código Apache-2.0, MIT, BSD-2 y MPL-2.0 (este último por archivo), con sus avisos. AppFlowy, solo como referencia o como app externa.
+- (b) Revisar la licencia (por ejemplo, pasar a AGPL-3.0 para incorporar AppFlowy). Las obligaciones AGPL alcanzarían a todo el conjunto; hace falta el acuerdo de todos los titulares del código y asesoría. **Prácticamente irreversible** una vez publicado.
+
+### P29 · Archivos y nubes
+
+**P29-1 · Primera fase.** Recomendado: **(a) SAF.**
+- (a) SAF. **Qué cambia:** se reutiliza `expo-file-system` (archivos ya; carpetas con permiso persistente en su código Android). **Cómo afecta:** la app no guarda cuentas ni tokens; aparecen Drive, Dropbox u OneDrive si sus apps exponen un `DocumentsProvider` (comprobar en el teléfono; algunos no permiten elegir carpetas); el usuario elige cada archivo o carpeta y no hay un listado general de la nube. Esfuerzo pequeño-medio.
+- (b) OAuth desde el principio. **Qué cambia:** registros en Google Cloud (cliente Android con la huella SHA-1 de la firma; si F-Droid firmara con otra clave, habría que registrar las dos), en Dropbox y en Azure; bibliotecas AppAuth, MSAL y SDK de Dropbox (libres), no el inicio de sesión de Google (Play Services); tokens en el almacén seguro (S5). **Cómo afecta:** Google revisa los alcances sensibles o restringidos (puede tardar semanas) y el APK crece. Esfuerzo grande. Se deshace retirando las cuentas y revocando los registros.
+
+**P29-2 · Acceso a archivos.** Recomendado: **(a) SAF, sin «todo el almacenamiento».**
+- (a) Mínimo privilegio. `MANAGE_EXTERNAL_STORAGE` sigue declarado para los modelos (D9), pero el explorador no lo usa.
+- (b) Además «todo el almacenamiento» (S3 ya lo permite si lo eliges): navegación por rutas como un gestor clásico (memoria interna, SD, USB), más rápida; la app puede leer todo.
+
+**P29-3 · Código de AnExplorer.** Recomendado: **(a) reimplementar.**
+- (a) Interfaz en React Native coherente con la app; lógica en `expo-file-system` y, si hace falta, en el módulo nativo; código propio.
+- (b) Reutilizar su Java (Apache-2.0). Hay que conservar sus avisos en `THIRD_PARTY_NOTICES.md`; su interfaz son Activities y Fragments, no React Native, así que habría que adaptarla mucho o integrarla como pantallas nativas aparte. Interesa sobre todo para USB-OTG y su servidor FTP.
+
+**P29-4 · MEGA.** Recomendado: **(a) más adelante.**
+- (a) Nada ahora. Si la app de MEGA aparece en el selector del sistema, se podría usar por SAF sin SDK (comprobar).
+- (b) Ahora. SDK en C++ (BSD-2) con enlaces Java vía SWIG: otro proyecto CMake (como `whisper_ext`), CI más largo, APK mayor (por medir) e inicio de sesión de MEGA, con 2FA, dentro de la app (S5). Esfuerzo grande.
+- (c) No. Nada cambia.
+
+**P29-5 · Escritura en la nube.** Recomendado: **(a) leer por defecto y escribir al confirmar.**
+- (a) Cada subida, borrado o sobrescritura pide confirmación (como S19); no hay trabajo en segundo plano.
+- (b) Sincronización automática: servicio en segundo plano (WorkManager), resolución de conflictos, más batería y datos, y riesgo de perder cambios en un conflicto. Mucho más código y pruebas.
+
+### P30 · Integración con la IA
+
+**P30-1 · Búsqueda en notas.** Recomendado: **(a) FTS5 ahora.**
+- (a) Tabla virtual `notes_fts` con disparadores, como `messages_fts` (migración nueva), e intención «busca en mis notas …» en la planilla; responde sin modelo y sin conexión. Esfuerzo pequeño-medio. Depende de P28-2 (a).
+- (b) Embeddings (F4): un modelo GGUF de embeddings (por elegir; cientos de MB) que corre con llama.cpp en el teléfono, más almacenamiento de vectores y cálculo al guardar. Entiende preguntas por su significado. Esfuerzo grande; más batería y espacio.
+
+**P30-2 · Indexar archivos.** Recomendado: **(a) nombres y metadatos.**
+- (a) Una tabla (URI, nombre, tipo, tamaño, fecha) en la base cifrada; «busca el archivo …» desde la planilla. Esfuerzo pequeño.
+- (b) Texto completo de los archivos elegidos, con límite. Extraer el texto: TXT y Markdown directamente; PDF necesita una biblioteca (por ejemplo PdfBox-Android, Apache-2.0, poco activa desde 2024). El texto queda en la base cifrada (S7) y lo que llegue al modelo se trata como datos (S4, S18). Esfuerzo medio-grande; más espacio.
+- (c) No indexar: la IA no ve los archivos.
+
+**P30-3 · Intenciones fuera de la planilla.** Recomendado: **(a), con un ajuste.**
+- (a) Modelo local con la lista de intenciones, tras medir. Ajuste recomendado: listar solo las intenciones que la app ejecuta (unas 15), no las 60 de MASSIVE. Hay dos formas: en el prompt de sistema (se procesa una vez al cargar, con `warm`, pero ocupa contexto en todas las conversaciones) o junto al mensaje cuando parece una orden (como hoy `assistContext`; se paga en cada mensaje). La app sigue validando (`problemOf`) y confirmando (S19).
+- (b) Solo responder. Hoy el modelo ya puede proponer acciones con bloques (P20), y desde P26 el evento, la alarma y el temporizador esperan un toque. Con (b) se quitaría esa vía para lo que la planilla no entienda: más seguro, menos útil.
+- (c) Nube con consentimiento: comprende mejor, pero el texto sale del teléfono; reutiliza los proveedores de nube (P19, P23) y S5. Choca con P25 en la voz salvo excepción.
+
+### Dependencias y orden recomendado
+
+- P27-F1 solo depende de P27-5 (la descarga).
+- P28-1 (b) con P28-2 (a) hacen posible P30-1. Con P28-1 (a), P30 no alcanza esas notas.
+- P29-1 (a) sirve para la exportación de P28-2 y para el índice de P30-2.
+- P28-5 decide si P28-1 (c) o (d) son posibles.
+- P29-1 (b) condiciona F-Droid: AppAuth, no Play Services.
+- **Orden sugerido:** 1) P27-F1, medir la planilla; 2) P28-F1 y P30-1, notas cifradas con búsqueda; 3) P29-F1, explorador con SAF; 4) P28-F5, Ajustes y predeterminadas; 5) P29-F2, OAuth, si lo quieres; 6) MEGA.
+- **Difíciles de deshacer:** P28-2 (dónde viven las notas), P28-5 (licencia), P29-1 (b) (registros y revisión de Google) y P27-1 (b) (la atribución se queda).
