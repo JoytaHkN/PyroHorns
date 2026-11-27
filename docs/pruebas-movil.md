@@ -2,7 +2,7 @@
 
 > Una casilla por comprobación, con el resultado esperado. Contesta al agente con los números que fallen
 > («falla 3 y 7») y, si la app se cierra, con el informe de Ajustes → Diagnóstico del motor.
-> Todo está incluido en el APK más reciente de `APK IA/apk/` (los bloques se acumulan).
+> Todo está incluido en `APK IA/apk/PyroHorns-0.1.0-v0.2-p31-prueba.apk` (los bloques se acumulan).
 
 ## Antes de instalar (una sola vez, P31-M8)
 El APK nuevo lleva otra firma: **hay que desinstalar la app**, y se borra todo lo que guarda dentro: conversaciones,
@@ -36,4 +36,5 @@ Copia antes lo que quieras conservar. Los GGUF de `APK IA/` no se tocan. Quien t
 18. [ ] Selector de agente → agrupa por empresa; sin clave, avisa y lleva a Ajustes.
 
 ## Versión instalada (P31, M4)
-19. [ ] Ajustes, al final → muestra el número de compilación y el commit del APK.
+19. [ ] Ajustes, al final → «PyroHorns 0.1.0 (compilación 97 · c397791 · 2026-11-27) · GPL-3.0».
+20. [ ] El APK se instala y abre; tras instalarlo, volver a importar un modelo y descargar el modelo de voz funciona.

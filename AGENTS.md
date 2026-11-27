@@ -5,7 +5,7 @@ este repositorio. El usuario cambia de agente cuando se le acaban los créditos:
 necesario está en este repo**, no en la memoria de ningún agente.
 
 ## Al empezar (obligatorio)
-1. Lee `docs/ESTADO.md` (qué está hecho y qué sigue), `PLAN.md` (decisiones D1–D8, seguridad
+1. Lee `docs/ESTADO.md` (qué está hecho y qué sigue), `PLAN.md` (decisiones D1–D9, seguridad
    S1–S19, fases) y `docs/CONTINUIDAD.md` (checklist de cierre y prompts para móvil y PC).
    Si el trabajo toca datos de intenciones, notas, agenda, archivos o nubes, lee también `docs/integraciones.md`.
 2. Ejecuta `git log --oneline -10` y `git status`: puede haber trabajo hecho desde otro agente.
