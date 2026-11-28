@@ -63,3 +63,10 @@
      frente a 25 con 8. Phi-3.5: gen 5,2–6,3 (1K) y 2,1–3,9 (3,7K). Nemotron: prefill 30–33, gen 4,7–6,1 (1K) y 2,4–2,7 (3,7K). **Solo LFM3 (y Qwen3 a 1K) cumple ≥ 10 tok/s; ningún modelo cumple el TTFT.** 17 de 20 mediciones en caliente, sin caída visible.
      **La columna de RAM pico no es fiable en esta ejecución** (6395 MB en todos los modelos, 6720 en Nemotron): el proceso ya tenía memoria retenida de cargas anteriores (el asignador no la devuelve) y el pico se reinicia al valor actual.
      Para medir RAM hay que cerrar la app del todo antes de empezar. Propuesta pendiente: guardar la RSS base antes de cada prueba y mostrar el incremento.
+
+## Chat en el teléfono, compilación 97 con variantes de CPU (2026-11-28, LMR-LX9, informe del Diagnóstico)
+- Variante elegida en ejecución: `DOTPROD = 1`, `MATMUL_INT8 = 1` (i8mm), `FP16_VA = 1`. Confirma las variantes de ggml.
+- **Nemotron 3 Nano 4B** (`nemotron_h`, 8K): carga ≈ 4–5 s (lectura en bloques 1,7–2,2 s); instrucción de sistema (119 tokens)
+  en 9,0–11,7 s (≈ 10–13 tok/s de prefill); generación ≈ 4–5 tok/s; RAM del proceso hasta ≈ 3,9 GB (motivos de cierre de Android).
+- **Qwen3 1.7B** (8K): carga ≈ 4,4 s; instrucción (124 tokens) en 3,2 s (≈ 38 tok/s).
+- Una sola muestra por cifra, desde el chat; no son comparables con la prueba P13.

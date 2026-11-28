@@ -483,6 +483,26 @@ Pulido del chat real (F1.5, 2026-11-24):
   - **M9-b** ESTADO ≤ 120 líneas; historial y medidas aparte. **M10-b** Dependabot al día; sin versiones mayores de TypeScript y Babel.
   - **Excepción a M10:** `gradle/actions` se queda en v5; la v6 usa una caché propietaria bajo los términos de Gradle.
 
+- **P32. Fallos de la primera prueba con la compilación 97 (2026-11-28)** — **pendiente de decisión**.
+  1. **Respuesta copiada del ejemplo** («Primera respuesta / Segunda respuesta», Nemotron 3 Nano 4B). Causa: `system-prompt.ts` pone
+     ese ejemplo literal. Opciones: **(a) quitar la instrucción de opciones en los modelos del teléfono** (la detección «pregunta +
+     lista» de `options.ts` sigue); (b) redactar el ejemplo de otra forma; (c) descartar un bloque que sea igual al ejemplo.
+  2. **Llamadas con nombres cortos o mal oídos** abren el marcador con otro contacto («llama a» + una letra busca por esa inicial).
+     Causa: el filtro de contactos de Android busca por comienzo de palabra y se toma el primero con número (`device.ts`).
+     Opciones: (a) como ahora; **(b) abrir directo solo si coincide una palabra completa; si no, mostrar los candidatos para tocar; con
+     una sola letra, preguntar**; (c) confirmar siempre el contacto.
+  3. **Dictado de nombres.** Los 25 nombres de pista se ordenan por `TIMES_CONTACTED`, que desde Android 10 ya no se registra
+     ([cambios de privacidad](https://developer.android.com/about/versions/10/privacy/changes)). Opciones: (a) como ahora;
+     **(b) primero los favoritos del teléfono**; (c) además, un modelo de whisper mayor (más lento; sin medir).
+  4. **Título del evento** con coma final y «de» («Dentista,», «de Antista,», reproducido). Arreglo: limpiar puntuación y «de» inicial.
+  5. **Burbuja vacía** cuando no hay texto (`message.tsx`). Arreglo: no dibujarla.
+  6. **Búsqueda:** LFM3 pega la lista de resultados. Arreglo: pedir en `web-search.ts` una respuesta con sus palabras (hay que probarlo).
+  7. **Diagnóstico:** cualquier sesión sin terminar en reposo se guarda como «cierre del motor». Arreglo: contrastar con el motivo
+     de Android y mostrar hora local.
+  8. **Texto fijo sobre el acceso de la cuenta** en la pantalla de la nube (`cloud-catalog.ts`, `build-cloud-catalog.py`). Arreglo: quitar la frase.
+  9. **Inicio con teclado:** el contenido centrado no se desplaza (`chat.tsx`). Arreglo: hacerlo desplazable.
+  - **Alcance:** **(A) los nueve en un bloque, antes de M7**; (B) solo 1, 2, 4, 5 y 8 ahora; (C) seguir con M7 y dejarlos anotados.
+
 ## 8. Riesgos
 
 | Riesgo | Fase | Respuesta |
