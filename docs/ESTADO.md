@@ -19,8 +19,8 @@
 
 ## Siguiente paso (orden)
 1. ✅ **P31, bloque 1** (`c397791`): M9, M10, M4, M5-b y M8-b. CI en verde; APK comprobado y firmado.
-2. **P32 implementada** (nueve arreglos; `PLAN.md` §7). **Usuario:** probar el APK nuevo, casillas 21–29. Sin probar o a medias
-   de antes: 1, 2, 6, 7, 8, 9, 13, 15, 17 y 18.
+2. **P32 y P33 implementadas** (`PLAN.md` §7). **Usuario:** probar el APK nuevo, casillas 21–34. Sin probar o a medias de
+   antes: 1, 2, 6, 7, 8, 9, 13, 15, 17 y 18.
 3. **M7 + Autoprueba (M3-c):** probar la migración de la base desde cada versión y copiarla antes de migrar; pantalla
    «Autoprueba» en Ajustes.
 4. **M6, núcleo del motor:** regla de memoria al cargar en el chat, salida restringida (GBNF/JSON), plantillas Jinja de
@@ -28,8 +28,8 @@
 5. **M2:** 10–20 pruebas en español por modo; con los resultados se revisa D1.
 6. **v0.3:** P28-F1 + P30-1 (diseño en `PLAN.md`, P28), P29-F1 (SAF) y P28-F5.
 
-**Límite de pruebas (M3-c):** como máximo 3 bloques que cambien el APK sin probar en el móvil. **Va 2 de 3** (parches de
-dependencias y P32). Las casillas sin probar se hacen antes de empezar v0.3.
+**Límite de pruebas (M3-c):** como máximo 3 bloques que cambien el APK sin probar en el móvil. **Va 3 de 3** (parches de
+dependencias, P32 y P33): no se empieza otro bloque que cambie el APK sin probar en el móvil. Las casillas sin probar se hacen antes de empezar v0.3.
 
 ## Pendiente de decisión del usuario
 - **PR #6 (uniwind 1.14):** CI en verde; afecta a los estilos. Recomendación: después de los arreglos de P32.

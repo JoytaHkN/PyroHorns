@@ -507,6 +507,15 @@ Pulido del chat real (F1.5, 2026-11-24):
     «Generando… N palabras». Diferencia comprobada en los metadatos del GGUF: su plantilla cierra el razonamiento con `<think></think>` y
     `llama-jni.cpp` añade `<think>\n\n</think>\n\n` (Profundo apagado). Se resuelve en M6 (plantillas Jinja), no con otro parche.
 
+- **P33. Pedido del 2026-11-28** — implementado, pendiente de probar en el móvil.
+  1. **Nube en menús desplegables:** en el selector de agente, «sin clave» y «con clave» plegados y dentro cada empresa; en
+     Agente en la nube, cada proveedor plegado.
+  2. **«Notas» en el menú lateral**, debajo de Termux (abre Notas y tareas).
+  3. **Cortar el dictado:** «el doble toque no funciona; hay que esperar al corte automático». Causa **sin confirmar** (no se puede
+     ejecutar la app aquí). La grabación revisa la orden cada 100 ms; lo que sí se ve en el código es que «Escuchando…» seguía en
+     pantalla mientras transcribía. Hecho: orden de parar síncrona, «Transcribiendo…» en el acto, el aviso y el botón del micrófono
+     también cortan. El botón del micrófono estaba sin conectar («Llega en la fase F4»): ahora empieza y termina el dictado.
+
 ## 8. Riesgos
 
 | Riesgo | Fase | Respuesta |

@@ -11,6 +11,9 @@ interface EngineState {
   /** true mientras el micrófono escucha (doble toque en el chat). */
   listening: boolean;
   setListening: (v: boolean) => void;
+  /** Ya se cortó la grabación y se está pasando a texto. */
+  transcribing: boolean;
+  setTranscribing: (v: boolean) => void;
   setNative: (v: boolean) => void;
   setLoading: (v: boolean) => void;
 }
@@ -21,7 +24,9 @@ export const useEngine = create<EngineState>((set) => ({
   searching: false,
   setSearching: (searching) => set({ searching }),
   listening: false,
-  setListening: (listening) => set({ listening }),
+  setListening: (listening) => set({ listening, transcribing: false }),
+  transcribing: false,
+  setTranscribing: (transcribing) => set({ transcribing }),
   setNative: (native) => set({ native }),
   setLoading: (loading) => set({ loading }),
 }));

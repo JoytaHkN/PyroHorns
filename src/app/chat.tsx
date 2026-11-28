@@ -68,15 +68,17 @@ export default function ChatScreen() {
   // Voz (P25): doble toque en el chat para hablar; otro doble toque para terminar (lo dicho se transcribe y se envía).
   const { toast } = useToast();
   const listening = useEngine((s) => s.listening);
+  const transcribing = useEngine((s) => s.transcribing);
   const lastTouch = useRef(0);
   const listenStart = useRef(0);
-  const onDoubleTap = () => {
-    if (useEngine.getState().listening) {
-      // El doble toque que acaba de abrir la escucha no la cierra: pasado un instante, sí (P26-B).
-      if (Date.now() - listenStart.current < 1500) return;
-      void stopMic();
-      return;
-    }
+  // Cortar ya: se avisa en el acto, porque pasar a texto tarda unos segundos y parecía que no había cortado (P33).
+  const stopVoice = () => {
+    const engine = useEngine.getState();
+    if (!engine.listening || engine.transcribing) return;
+    engine.setTranscribing(true);
+    void stopMic();
+  };
+  const startVoice = () => {
     if (!voiceModelInstalled()) {
       toast.show({ label: 'Voz sin instalar', description: 'Instálala en Ajustes → Voz (una vez, 60 MB).' });
       return;
@@ -101,6 +103,13 @@ export default function ChatScreen() {
         toast.show({ variant: 'danger', label: 'No se pudo escuchar', description: errorSummary(e) });
       });
   };
+  const onDoubleTap = () => {
+    if (!useEngine.getState().listening) startVoice();
+    // El doble toque que acaba de abrir la escucha no la cierra: pasado un instante, sí (P26-B).
+    else if (Date.now() - listenStart.current >= 1500) stopVoice();
+  };
+  // El botón del micrófono: un toque empieza y otro termina.
+  const onMic = () => (useEngine.getState().listening ? stopVoice() : startVoice());
   const onTouchEnd = () => {
     const now = Date.now();
     if (now - lastTouch.current < 350) {
@@ -225,15 +234,20 @@ export default function ChatScreen() {
         </View>
 
         {listening ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 4 }}>
+          <Pressable
+            onPress={stopVoice}
+            accessibilityRole="button"
+            accessibilityLabel="Terminar de dictar"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 16, marginBottom: 4, paddingVertical: 8 }}
+          >
             <Orb size={10} active />
             <T size={12} tone="muted">
-              Escuchando… toca dos veces para terminar.
+              {transcribing ? 'Transcribiendo…' : 'Escuchando… toca aquí, el micrófono o dos veces la conversación para terminar.'}
             </T>
-          </View>
+          </Pressable>
         ) : null}
 
-        <Composer busy={busy} onSend={(t, w, c) => onSend(t, w, c)} onStop={() => conv && stop(conv.id)} onOpenAgent={() => setPicker(true)} />
+        <Composer listening={listening} onMic={onMic} busy={busy} onSend={(t, w, c) => onSend(t, w, c)} onStop={() => conv && stop(conv.id)} onOpenAgent={() => setPicker(true)} />
       </KeyboardAvoidingView>
 
       <Drawer open={drawer} onClose={() => setDrawer(false)} onNew={() => select(null)} onAskDelete={setToDelete} />

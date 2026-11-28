@@ -209,7 +209,7 @@ export default function Settings() {
           <Item icon="chat" title="Probar la voz" subtitle="Lee una frase con la voz del sistema" onPress={() => void testVoice()} />
         </Group>
         <T size={12} tone="muted">
-          En el chat, toca dos veces la pantalla para hablar y otra vez para terminar. Lo que digas se transcribe aquí, sin conexión.
+          En el chat, toca dos veces la conversación (o el micrófono) para hablar y otra vez para terminar. Lo que digas se transcribe aquí, sin conexión.
         </T>
 
         <SectionLabel>Asistente</SectionLabel>

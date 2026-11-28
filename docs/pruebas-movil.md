@@ -61,6 +61,13 @@ Antes de la 23, marca como favorito en Contactos a quien vayas a nombrar.
 28. [ ] Ajustes → Agente en la nube → ya no aparece la frase sobre tu cuenta.
 29. [ ] Chat nuevo con el teclado abierto → la mascota no tapa la barra superior.
 
+## Pedido del 2026-11-28 (P33)
+30. [ ] Selector de agente → la nube sale plegada («sin clave» y «con clave»); al tocar, empresas plegadas y al tocar una, sus modelos.
+31. [ ] Ajustes → Agente en la nube → cada proveedor es una línea que se abre al tocar.
+32. [ ] Menú lateral → «Notas», debajo de Termux, abre Notas y tareas.
+33. [ ] Dictando, doble toque en la conversación → pone «Transcribiendo…» al instante (di si tarda en ponerlo).
+34. [ ] El botón del micrófono empieza el dictado y otro toque lo termina; tocar el aviso «Escuchando…» también lo termina.
+
 ## Otros fallos vistos el 2026-11-28 (compilación 97)
 - Burbuja vacía encima de las tarjetas de acción y de las opciones (P32-5).
 - Diagnóstico: llama «cierre del motor» a un cierre hecho por ti a mitad de respuesta, y muestra las horas en UTC (P32-7).

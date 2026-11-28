@@ -95,7 +95,7 @@ export function Drawer({ open, onClose, onNew, onAskDelete }: Props) {
   );
 
   if (!mounted) return null;
-  const go = (path: '/projects' | '/models' | '/settings' | '/terminal/alpine' | '/terminal/termux') => {
+  const go = (path: '/projects' | '/models' | '/settings' | '/agenda' | '/terminal/alpine' | '/terminal/termux') => {
     onClose();
     router.push(path);
   };
@@ -156,6 +156,7 @@ export function Drawer({ open, onClose, onNew, onAskDelete }: Props) {
           <NavRow icon="chip" label="Modelos GGUF" onPress={() => go('/models')} />
           <NavRow icon="term" label="Terminal Alpine" onPress={() => go('/terminal/alpine')} />
           <NavRow icon="box" label="Termux" onPress={() => go('/terminal/termux')} />
+          <NavRow icon="tasks" label="Notas" onPress={() => go('/agenda')} />
           <NavRow icon="gear" label="Ajustes" onPress={() => go('/settings')} />
           <T weight="semibold" size={12} tone="muted" style={{ textTransform: 'uppercase', letterSpacing: 1, marginTop: 14, marginBottom: 4, paddingHorizontal: 12 }}>
             Recientes

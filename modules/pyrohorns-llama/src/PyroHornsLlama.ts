@@ -28,7 +28,7 @@ declare class PyroHornsLlamaModule extends NativeModule<{ onEvent: (event: Llama
   complete(handle: number, roles: string[], contents: string[], threads: number, noThink: boolean, maxTokens: number): Promise<string>;
   requestMicrophonePermission(): Promise<{ granted: boolean }>;
   listenOnce(modelPath: string, threads: number, maxSeconds: number, silenceSeconds: number, prompt: string): Promise<string>;
-  stopListening(): Promise<void>;
+  stopListening(): void;
   fileSha256(path: string): Promise<string>;
   requestContactsPermission(): Promise<{ granted: boolean }>;
   searchContacts(name: string): Promise<string>;

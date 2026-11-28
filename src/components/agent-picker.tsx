@@ -1,4 +1,5 @@
 import { Button, Dialog, Switch } from 'heroui-native';
+import { useState } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { MODES, modeById, modelForMode } from '@/data/agents';
@@ -8,7 +9,7 @@ import { formatTokens } from '@/lib/context';
 import { activeModelId, useSettings } from '@/store/settings';
 import { usePalette } from '@/theme/use-palette';
 import { Icon } from './icons';
-import { SectionLabel } from './list';
+import { Collapsible, SectionLabel } from './list';
 import { PlasmaGradient } from './plasma';
 import { T } from './text';
 
@@ -39,25 +40,32 @@ function Pill({ on, label, onPress, icon }: { on: boolean; label: string; onPres
   );
 }
 
-/** Una empresa de la nube con sus modelos. */
+/** Una empresa de la nube con sus modelos, plegada hasta que se toca. */
 function CloudGroup({
   name,
   note,
   models,
   active,
   onPick,
+  open,
+  onToggle,
 }: {
   name: string;
   note: string;
   models: { id: string; name: string }[];
   active: string | null;
   onPick: (id: string | null) => void;
+  open: boolean;
+  onToggle: () => void;
 }) {
+  const chosen = models.find((m) => m.id === active);
   return (
-    <View style={{ gap: 6 }}>
-      <T size={13} weight="semibold">
-        {name}
-      </T>
+    <Collapsible
+      title={name}
+      detail={chosen ? `Elegido: ${chosen.name}` : `${models.length} ${models.length === 1 ? 'modelo' : 'modelos'}`}
+      open={open}
+      onToggle={onToggle}
+    >
       <T size={11} tone="muted">
         {note}
       </T>
@@ -66,7 +74,7 @@ function CloudGroup({
           <Pill key={m.id} icon="cloud" label={m.name} on={active === m.id} onPress={() => onPick(active === m.id ? null : m.id)} />
         ))}
       </View>
-    </View>
+    </Collapsible>
   );
 }
 
@@ -82,6 +90,16 @@ export function AgentPicker({ open, onOpenChange }: { open: boolean; onOpenChang
   );
   const withoutKey = companies.filter((g) => g.c.keyless).sort((a, b) => byName(a.c, b.c));
   const withKey = companies.filter((g) => !g.c.keyless).sort((a, b) => byName(a.c, b.c));
+  // Todo plegado, salvo donde está el modelo de la nube que ya tengas elegido.
+  const [expanded, setExpanded] = useState<string[]>(() => {
+    const g = companies.find((x) => x.models.some((m) => m.id === s.modelOverride));
+    return g ? [g.c.keyless ? 'sin-clave' : 'con-clave', g.c.id] : [];
+  });
+  const toggle = (key: string) => setExpanded((keys) => (keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key]));
+  const sections = [
+    { key: 'sin-clave', title: 'Nube · sin clave', hint: '', groups: withoutKey },
+    { key: 'con-clave', title: 'Nube · con clave', hint: ' · la clave se pone en Ajustes → Agente en la nube', groups: withKey },
+  ];
   // La lista se desplaza dentro del diálogo: altura según la pantalla (con la fija de 480 px el botón «Listo» tapaba los modelos).
   const { height } = useWindowDimensions();
   return (
@@ -139,15 +157,36 @@ export function AgentPicker({ open, onOpenChange }: { open: boolean; onOpenChang
               ))}
             </View>
 
-            <SectionLabel>Nube · sin clave</SectionLabel>
-            {withoutKey.map((g) => (
-              <CloudGroup key={g.c.id} name={g.c.name} note={g.c.free} models={g.models} active={s.modelOverride} onPick={s.setModelOverride} />
-            ))}
-
-            <SectionLabel>Nube · con clave (Ajustes → Agente en la nube)</SectionLabel>
-            {withKey.map((g) => (
-              <CloudGroup key={g.c.id} name={g.c.name} note={g.c.free} models={g.models} active={s.modelOverride} onPick={s.setModelOverride} />
-            ))}
+            <SectionLabel>Nube</SectionLabel>
+            {sections.map((section) => {
+              const chosen = section.groups.flatMap((g) => g.models).find((m) => m.id === s.modelOverride);
+              return (
+                <Collapsible
+                  key={section.key}
+                  title={section.title}
+                  detail={
+                    chosen
+                      ? `Elegido: ${chosen.name}`
+                      : `${section.groups.length} ${section.groups.length === 1 ? 'empresa' : 'empresas'}${section.hint}`
+                  }
+                  open={expanded.includes(section.key)}
+                  onToggle={() => toggle(section.key)}
+                >
+                  {section.groups.map((g) => (
+                    <CloudGroup
+                      key={g.c.id}
+                      name={g.c.name}
+                      note={g.c.free}
+                      models={g.models}
+                      active={s.modelOverride}
+                      onPick={s.setModelOverride}
+                      open={expanded.includes(g.c.id)}
+                      onToggle={() => toggle(g.c.id)}
+                    />
+                  ))}
+                </Collapsible>
+              );
+            })}
           </ScrollView>
           <Button className="mt-4" onPress={() => onOpenChange(false)}>
             <Button.Label>Listo</Button.Label>

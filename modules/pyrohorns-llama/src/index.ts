@@ -187,7 +187,7 @@ export async function openCalendarAt(millis: number): Promise<void> {
 }
 
 export async function stopListening(): Promise<void> {
-  await Native.stopListening();
+  Native.stopListening();
 }
 
 /** SHA-256 de un archivo en hexadecimal (para verificar la descarga del modelo). */

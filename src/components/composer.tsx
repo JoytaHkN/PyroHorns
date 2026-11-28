@@ -1,4 +1,3 @@
-import { useToast } from 'heroui-native';
 import { useState } from 'react';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { modeById } from '@/data/agents';
@@ -18,11 +17,13 @@ interface Props {
   onSend: (text: string, web: boolean, cloud: boolean) => void;
   onStop: () => void;
   onOpenAgent: () => void;
+  listening: boolean;
+  /** Empieza o termina el dictado. */
+  onMic: () => void;
 }
 
-export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
+export function Composer({ busy, onSend, onStop, onOpenAgent, listening, onMic }: Props) {
   const pal = usePalette();
-  const { toast } = useToast();
   const [text, setText] = useState('');
   const [web, setWeb] = useState(false);
   const [cloud, setCloud] = useState(false);
@@ -168,11 +169,12 @@ export function Composer({ busy, onSend, onStop, onOpenAgent }: Props) {
         <View style={{ flex: 1 }} />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Dictar por voz"
-          onPress={() => toast.show({ label: 'Voz sin conexión', description: 'Llega en la fase F4 (whisper.cpp).' })}
-          style={{ width: 38, height: 38, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel={listening ? 'Terminar de dictar' : 'Dictar por voz'}
+          accessibilityState={{ selected: listening }}
+          onPress={onMic}
+          style={{ width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: listening ? pal.surface2 : 'transparent' }}
         >
-          <Icon name="mic" size={20} color={pal.muted} />
+          {listening ? <Icon name="stop" size={20} plasma /> : <Icon name="mic" size={20} color={pal.muted} />}
         </Pressable>
         <Pressable
           onPress={busy ? onStop : submit}

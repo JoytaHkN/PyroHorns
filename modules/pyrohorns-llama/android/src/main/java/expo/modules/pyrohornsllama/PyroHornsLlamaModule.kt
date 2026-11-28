@@ -79,6 +79,8 @@ class PyroHornsLlamaModule : Module() {
 
   // Escucha hasta el silencio tras hablar, hasta que se pulse parar o hasta el tiempo máximo; luego transcribe en español.
   private fun listenAndTranscribe(modelPath: String, threads: Int, maxSeconds: Double, silenceSeconds: Double, prompt: String): String {
+    // Se reinicia al empezar: una orden de parar que llegue mientras se prepara el micrófono no se pierde (P33).
+    stopListening.set(false)
     val context = appCtx()
     check(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
       "Sin permiso de micrófono."
@@ -97,7 +99,6 @@ class PyroHornsLlamaModule : Module() {
     )
     check(recorder.state == AudioRecord.STATE_INITIALIZED) { "No se pudo abrir el micrófono." }
     val chunk = ShortArray(rate / 10) // 100 ms
-    stopListening.set(false)
     var n = 0
     var heardSpeech = false
     var silentMs = 0.0
@@ -454,7 +455,8 @@ class PyroHornsLlamaModule : Module() {
       }
     }
 
-    AsyncFunction("stopListening") {
+    // Síncrona: solo levanta una marca y no espera turno en la cola de funciones del módulo.
+    Function("stopListening") {
       stopListening.set(true)
     }
 

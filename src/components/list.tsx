@@ -73,6 +73,55 @@ export function Item({ icon, title, subtitle, end, children, onPress, onLongPres
   );
 }
 
+/** Menú desplegable: la cabecera se toca para ver u ocultar su contenido (P33). */
+export function Collapsible({
+  title,
+  detail,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  detail?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const pal = usePalette();
+  return (
+    <View style={{ borderRadius: 14, borderWidth: 1, borderColor: pal.line, overflow: 'hidden' }}>
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={({ pressed }) => ({
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          backgroundColor: pressed ? pal.surface2 : 'transparent',
+        })}
+      >
+        <View style={{ flex: 1, gap: 2 }}>
+          <T size={14} weight="semibold">
+            {title}
+          </T>
+          {detail ? (
+            <T size={11} tone="muted">
+              {detail}
+            </T>
+          ) : null}
+        </View>
+        <T size={16} tone="muted">
+          {open ? '▾' : '▸'}
+        </T>
+      </Pressable>
+      {open ? <View style={{ paddingHorizontal: 10, paddingBottom: 10, gap: 8 }}>{children}</View> : null}
+    </View>
+  );
+}
+
 /** Etiqueta con degradado Plasma ("Activo", "Nuevo"). */
 export function PlasmaTag({ children }: { children: string }) {
   return (

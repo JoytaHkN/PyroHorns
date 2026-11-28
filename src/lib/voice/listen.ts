@@ -17,14 +17,22 @@ export interface Heard {
   names: string[];
 }
 
+/** El usuario cortó antes de que el micrófono llegara a abrirse. */
+let stopped = false;
+
 export async function listen(): Promise<Heard> {
+  stopped = false;
   if (!(await requestMicrophonePermission())) {
     throw new Error('Sin permiso de micrófono: concédelo en Ajustes del teléfono.');
   }
   const names = await contactNames(CONTACTS).catch(() => [] as string[]);
+  if (stopped) return { raw: '', names };
   const raw = await listenOnce(voiceModelPath(), THREADS, MAX_SECONDS, SILENCE_SECONDS, whisperPrompt(names));
   return { raw, names };
 }
 
 /** Termina la escucha actual: lo dicho hasta ahora se transcribe. */
-export const stopMic = () => stopListening();
+export const stopMic = () => {
+  stopped = true;
+  return stopListening();
+};
