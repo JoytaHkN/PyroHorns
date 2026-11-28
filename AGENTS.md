@@ -33,6 +33,8 @@ necesario está en este repo**, no en la memoria de ningún agente.
   caché `/workspace/pyrohorns-build`, que nunca se edita a mano.
 - **Verificar:** `sh scripts/sync-build.sh` (comprobar tipos + pruebas). Para otro comando en la caché:
   `sh scripts/sync-build.sh npx expo export --platform web`.
+- Si `npm ci` falla en la caché con `EPERM … unlink` (enlace roto de PRoot), mueve `/workspace/pyrohorns-build/node_modules`
+  a `/workspace/.papelera-pyrohorns/` y repite. Mira la salida: un `echo` posterior puede ocultar el código de error.
 - El APK **no** se compila en el móvil (hermesc y el Android SDK solo existen para x86-64; Java no
   arranca). Lo compila GitHub Actions al hacer push a `main`.
 - git en `/sdcard` ya está configurado (`core.createObject=rename` y `safe.directory`). No muevas
