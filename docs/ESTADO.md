@@ -15,6 +15,8 @@
 - **Probado en el móvil (2026-11-28):** compilación 97 (`c397791`), `APK IA/apk/PyroHorns-0.1.0-v0.2-p31-prueba.apk`. Resultado en
   `docs/pruebas-movil.md`; los fallos son **P32** (`PLAN.md` §7).
 - Fusionados los parches #15, #16 y #17 (`0add510`). Solo queda abierto #6.
+- **APK para probar:** `APK IA/apk/PyroHorns-0.1.0-v0.2-p33-prueba.apk` (+ `.sha256`): compilación 105, `d166043`, con P32 y
+  P33. Misma firma: se instala encima sin perder datos. CI en verde y contenido comprobado; **sin probar en el móvil**.
 - Repo https://github.com/JoytaHkN/PyroHorns · PWA https://joytahkn.github.io/PyroHorns/ · pre-release `v0.1.0-alpha.1`.
 
 ## Siguiente paso (orden)

@@ -2,7 +2,7 @@
 
 > Una casilla por comprobación, con el resultado esperado. Contesta al agente con los números que fallen
 > («falla 3 y 7») y, si la app se cierra, con el informe de Ajustes → Diagnóstico del motor.
-> Todo está incluido en `APK IA/apk/PyroHorns-0.1.0-v0.2-p31-prueba.apk` (los bloques se acumulan).
+> Todo está incluido en `APK IA/apk/PyroHorns-0.1.0-v0.2-p33-prueba.apk` (compilación 105 · d166043); se instala encima de la 97.
 
 ## Antes de instalar (una sola vez, P31-M8)
 El APK nuevo lleva otra firma: **hay que desinstalar la app**, y se borra todo lo que guarda dentro: conversaciones,
