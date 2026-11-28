@@ -34,7 +34,7 @@ export const CLOUD_COMPANIES: CloudCompany[] = [
   {
     id: "nvidia", name: "NVIDIA", keyless: false,
     chatUrl: "https://integrate.api.nvidia.com/v1/chat/completions", keyPage: "https://build.nvidia.com",
-    free: "Prototipado con cuenta verificada (NVIDIA Developer Program). Tu cuenta aún no tiene acceso.",
+    free: "Prototipado con cuenta verificada (NVIDIA Developer Program).",
     models: [{ apiModel: "nvidia/nemotron-3-ultra-550b-a55b", name: "Nemotron 3 Ultra 550B A55B" }, { apiModel: "moonshotai/kimi-k3.1-pro", name: "moonshotai/kimi-k3.1-pro" }, { apiModel: "z-ai/glm-5.3-flash", name: "GLM-5.3-Flash" }, { apiModel: "nvidia/nemotron-3.5-super-vl-120b-a12b", name: "Nemotron 3.5 Super VL 120B A12B" }, { apiModel: "nvidia/nemotron-3.5-lightning-30b-a3b", name: "Nemotron 3.5 Lightning 30B A3B" }, { apiModel: "nvidia/nemotron-3.5-bolt-e4b", name: "nvidia/nemotron-3.5-bolt-e4b" }, { apiModel: "deepseek-ai/deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash" }, { apiModel: "minimaxai/minimax-m3.1-flash", name: "MiniMax-M3.1-Flash" }],
   },
   {

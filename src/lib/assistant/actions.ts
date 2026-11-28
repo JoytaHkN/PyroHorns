@@ -9,8 +9,9 @@ export type Action =
   | { type: 'complete'; text: string }
   | { type: 'list'; what: 'tasks' | 'notes' }
   | { type: 'event'; title: string; start: number; minutes: number; guest?: string }
-  | { type: 'call'; name: string; channel: 'phone' | 'whatsapp' }
-  | { type: 'email'; name: string }
+  /** `exact`: el usuario tocó ese contacto, así que vale solo el nombre completo. */
+  | { type: 'call'; name: string; channel: 'phone' | 'whatsapp'; exact?: boolean }
+  | { type: 'email'; name: string; exact?: boolean }
   | { type: 'alarm'; hour: number; minute: number; label: string }
   | { type: 'timer'; seconds: number; label: string }
   | { type: 'openCalendar'; start: number };
@@ -195,6 +196,10 @@ function vague(text: string): boolean {
   return t.length < 2 || VAGUE.has(t);
 }
 
+/** Un nombre de una sola letra buscaría cualquier contacto que empiece así (P32-2). */
+const unclearName = (a: { name: string; exact?: boolean }) =>
+  !a.exact && (vague(a.name) || a.name.replace(/[^\p{L}\p{N}]/gu, '').length < 2);
+
 /**
  * Por qué no debe hacerse una acción tal como está, o null si puede hacerse. Se mira antes de ejecutarla, en la
  * planilla, en lo que propone el modelo y al confirmarla: el modelo puede inventar una nota o un evento (P26-C1).
@@ -215,9 +220,9 @@ export function problemOf(a: Action, now: Date): string | null {
       return null;
     }
     case 'call':
-      return vague(a.name) ? '¿A quién quieres llamar?' : null;
+      return unclearName(a) ? '¿A quién quieres llamar?' : null;
     case 'email':
-      return vague(a.name) ? '¿De quién quieres el correo?' : null;
+      return unclearName(a) ? '¿De quién quieres el correo?' : null;
     default:
       return null;
   }

@@ -15,7 +15,7 @@ Copia antes lo que quieras conservar. Los GGUF de `APK IA/` no se tocan. Quien t
 3. [✗] Dictar un nombre de tus contactos → sale bien; si se corrigió, debajo aparece «Oí: …».
     - 2026-11-28: nombres cortos mal oídos (posiblemente «papá»); no apareció «Oí: …» (P32-3).
 4. [~] «agenda dentista mañana a las 10» → «Evento guardado en «…»» y se ve en la app Calendario.
-    - 2026-11-28: guardado en «Phone», pero el título lleva coma final (y «de» si se oye mal) (P32-4). Falta confirmar que se ve en Calendario.
+    - 2026-11-28: guardado en «Phone» y visible en Calendario, pero el título llevaba coma final (P32-4, arreglado: casilla 24).
 5. [✓] «pon una alarma a las 7» → abre el Reloj con la hora para confirmar.
 6. [ ] «abre el calendario del 17 de septiembre» → abre el Calendario en esa fecha y no crea nada.
 7. [ ] En Automático, un evento propuesto por el modelo → espera tu toque.
@@ -47,6 +47,19 @@ Copia antes lo que quieras conservar. Los GGUF de `APK IA/` no se tocan. Quien t
 19. [✓] Ajustes, al final → «PyroHorns 0.1.0 (compilación 97 · c397791 · 2026-11-27) · GPL-3.0».
 20. [✓] El APK se instala y abre; tras instalarlo, volver a importar un modelo y descargar el modelo de voz funciona.
     - 2026-11-28: instalado; modelos y dictado funcionan.
+
+## Arreglos de P32 (APK posterior a la compilación 97)
+Antes de la 23, marca como favorito en Contactos a quien vayas a nombrar.
+
+21. [ ] Nemotron 3 Nano 4B: pídele un script → responde con texto, no con «Primera respuesta».
+22. [ ] «llama a» y una sola letra → pregunta a quién; un nombre a medias → ofrece contactos para tocar; nombre completo → abre el marcador.
+23. [ ] Dictar el nombre de un favorito → sale bien (compáralo con la casilla 3).
+24. [ ] Dictar «agenda dentista mañana a las 10» → el título es «Dentista», sin coma.
+25. [ ] Las acciones y opciones salen sin burbuja vacía; si genera sin texto visible, dice «Generando…».
+26. [ ] Globo con LFM3 → responde con sus palabras y cita [n], sin copiar la lista.
+27. [ ] Cerrar la app a mitad de una respuesta y volver → Diagnóstico no lo llama fallo del motor y las horas son las tuyas.
+28. [ ] Ajustes → Agente en la nube → ya no aparece la frase sobre tu cuenta.
+29. [ ] Chat nuevo con el teclado abierto → la mascota no tapa la barra superior.
 
 ## Otros fallos vistos el 2026-11-28 (compilación 97)
 - Burbuja vacía encima de las tarjetas de acción y de las opciones (P32-5).

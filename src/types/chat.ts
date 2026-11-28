@@ -20,7 +20,9 @@ export interface ToolCall {
   /** Argumentos en JSON tal como los emitió el modelo. */
   args: string;
   /** Asistente: estado de la acción. */
-  status?: 'pending' | 'done' | 'error' | 'undone' | 'dismissed';
+  status?: 'pending' | 'choose' | 'done' | 'error' | 'undone' | 'dismissed';
+  /** Asistente, con `choose`: nombres entre los que el usuario toca uno. */
+  choices?: string[];
   /** Asistente: qué pasó, para mostrarlo. */
   result?: string;
   /** Asistente: id de lo creado, para poder deshacerlo. */

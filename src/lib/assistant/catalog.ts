@@ -28,6 +28,13 @@ const ask = (text: string): Route => ({ kind: 'question', text });
 const answer = (text: string): Route => ({ kind: 'answer', text });
 const NO_TIMERS = 'No llevo el control de los temporizadores. Míralos o cancélalos en la app Reloj.';
 
+/** Quita la puntuación y las palabras de enlace que sobran al sacar la hora y el día: «Dentista, .» → «Dentista» (P32-4). */
+function tidy(text: string): string {
+  const edges = (s: string) => s.replace(/^[\s,.;:¡!¿?-]+|[\s,.;:¡!¿?-]+$/g, '');
+  const clean = edges(text.replace(/\s+([,.;:])/g, '$1').replace(/\s+/g, ' '));
+  return edges(clean.replace(/^(?:(?:la|el|una|un|a|de|del)\s+)+/i, '').replace(/(?:\s+(?:el|la|al|a|de|del|para|en))+$/i, ''));
+}
+
 /** Calendario: «reunión con Ana el viernes a las 10» → evento con invitado. */
 function calendarRoute(resto: string, now: Date): Route {
   const t = timeOf(resto);
@@ -37,10 +44,10 @@ function calendarRoute(resto: string, now: Date): Route {
   let guest: string | undefined;
   const g = rest.match(/\bcon\s+(.+)$/i);
   if (g) {
-    guest = stripHonorifics(g[1]!.trim().replace(/(\s+(el|la|al|a|de|del))+$/i, ''));
+    guest = stripHonorifics(tidy(g[1]!));
     rest = rest.slice(0, g.index).trim();
   }
-  const title = rest.replace(/^(?:la|el|una|un|a)\s+/i, '').replace(/\s+/g, ' ').trim();
+  const title = tidy(rest);
   if (!title) return ask('¿Qué quieres agendar?');
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d.offset, t.h, t.m).getTime();
   return act({ type: 'event', title, start, minutes: 60, ...(guest ? { guest } : {}) });

@@ -1,5 +1,6 @@
-import { modelById } from '@/data/models';
+import { CLOUD_MODELS, LOCAL_MODELS, modelById } from '@/data/models';
 import { extractOptions } from '@/lib/options';
+import { systemPrompt } from '@/lib/system-prompt';
 import { CloudError, createCloudProvider, type CloudFetch } from '@/providers/cloud';
 import type { StreamEvent } from '@/providers/types';
 import { check, done } from './helpers';
@@ -73,5 +74,8 @@ async function run(fetcher: CloudFetch, key: string | null = 'clave-secreta', mo
   check(extractOptions('Opciones:\n- Sí\n- No\n\n¿Te sirve alguna?').options.length === 2, 'lista y pregunta');
   check(extractOptions('Los pasos son:\n1. Instalar\n2. Abrir').options.length === 0, 'una lista sin pregunta no se convierte');
   check(extractOptions('¿Ejemplo?\n- ' + 'x'.repeat(200) + '\n- b').options.length === 0, 'opciones demasiado largas: no');
+  // P32-1: los modelos del teléfono copiaban el ejemplo; solo la nube recibe la instrucción.
+  check(LOCAL_MODELS.every((m) => !systemPrompt(m.id).includes('Primera respuesta')), 'modelos del teléfono: sin ejemplo de opciones');
+  check(systemPrompt(CLOUD_MODELS[0]!.id).includes('```opciones'), 'nube: conserva las opciones');
   done();
 })();

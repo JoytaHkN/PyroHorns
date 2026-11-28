@@ -29,6 +29,18 @@ check(ev2?.type === 'event' && ev2.guest === 'Ana' && ev2.start === new Date(202
 const ev3 = act('agendar cita pasado mañana a las 9 de la noche');
 check(ev3?.type === 'event' && ev3.start === new Date(2026, 10, 27, 21, 0).getTime(), 'pasado mañana y de la noche');
 check(parseRoute('agenda dentista', now)?.kind === 'question', 'agenda sin hora pregunta la hora');
+// P32-4: lo que dicta el micrófono trae comas y puntos que no son parte del título.
+for (const [phrase, title] of [
+  ['Agenda Dentista, mañana a la 10.', 'Dentista'],
+  ['Agenda de Antista, mañana a la 10.', 'Antista'],
+  ['agenda reunión para el viernes a las 10', 'reunión'],
+  ['agenda cita de trabajo mañana a las 9', 'cita de trabajo'],
+] as const) {
+  const e = act(phrase);
+  check(e?.type === 'event' && e.title === title, `título limpio: ${phrase} → ${title}`);
+}
+const guest = act('agenda reunión con Ana, mañana a las 10.');
+check(guest?.type === 'event' && guest.title === 'reunión' && guest.guest === 'Ana', 'invitado sin puntuación');
 
 const al = act('pon una alarma a las 21:00 que se llame despertar');
 check(al?.type === 'alarm' && al.hour === 21 && al.minute === 0 && al.label === 'despertar', 'alarma con hora y nombre');

@@ -176,8 +176,11 @@ function spokenReply(convId: string, aiId: string): string {
   return [m?.content ?? '', ask].filter(Boolean).join(' ');
 }
 
-const resultOf = (convId: string, aiId: string, callId: string): string =>
-  findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId)?.result ?? '';
+/** Lo que se lee de una acción hecha: el resultado y, si hay que elegir contacto, los nombres. */
+const resultOf = (convId: string, aiId: string, callId: string): string => {
+  const call = findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId);
+  return [call?.result ?? '', call?.choices?.join(', ') ?? ''].filter(Boolean).join(' ');
+};
 
 /** Acción pendiente de la última respuesta del asistente, si la hay. */
 function pendingCall(convId: string): { aiId: string; callId: string } | null {
@@ -369,11 +372,20 @@ export async function confirmAction(convId: string, aiId: string, callId: string
   }
   updateCall(convId, aiId, callId, { status: 'done', result: 'Haciendo…' });
   try {
-    const { result, ref } = await runAction(action);
-    updateCall(convId, aiId, callId, { status: 'done', result, ...(ref ? { ref } : {}) });
+    const { result, ref, choices } = await runAction(action);
+    updateCall(convId, aiId, callId, { status: choices ? 'choose' : 'done', result, ...(ref ? { ref } : {}), ...(choices ? { choices } : {}) });
   } catch (e) {
     updateCall(convId, aiId, callId, { status: 'error', result: e instanceof Error ? e.message : String(e) });
   }
+}
+
+/** El usuario tocó un contacto: se hace la acción con ese nombre completo. */
+export async function chooseContact(convId: string, aiId: string, callId: string, name: string): Promise<void> {
+  const call = findMessage(convId, aiId)?.toolCalls?.find((c) => c.id === callId);
+  if (!call || call.status !== 'choose') return;
+  const action = { ...(JSON.parse(call.args) as Action), name, exact: true };
+  updateCall(convId, aiId, callId, { args: JSON.stringify(action), status: 'pending', choices: undefined });
+  await confirmAction(convId, aiId, callId);
 }
 
 export function dismissAction(convId: string, aiId: string, callId: string): void {

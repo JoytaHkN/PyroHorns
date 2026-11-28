@@ -205,12 +205,17 @@ class PyroHornsLlamaModule : Module() {
   }
 
   // Si la sesión anterior no terminó en reposo («idle»/«start»), se guarda su rastro como cierre inesperado.
-  private fun rotateSessionLog(dir: File) {
+  private fun rotateSessionLog(dir: File, context: Context) {
     val current = File(dir, "session.log")
     if (current.exists()) {
       val lastLine = current.readLines().lastOrNull { it.isNotBlank() } ?: ""
       val clean = lastLine.isEmpty() || lastLine.endsWith(" idle") || lastLine.endsWith(" start") || lastLine.endsWith(" backend ok")
-      if (!clean) current.copyTo(File(dir, "crash-last.log"), overwrite = true)
+      if (!clean) {
+        val saved = File(dir, "crash-last.log")
+        current.copyTo(saved, overwrite = true)
+        // El motivo que registró Android distingue un fallo del motor de un cierre hecho por el usuario (P32-7).
+        lastExitReason(context)?.let { saved.appendText("\n# motivo-android=$it\n") }
+      }
       current.delete()
     }
   }
@@ -231,6 +236,14 @@ class PyroHornsLlamaModule : Module() {
     }
     if (run.length >= 8 && out.length <= 3000) out.append(run)
     return out.toString().take(3000)
+  }
+
+  private fun lastExitReason(context: Context): Int? {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+    return runCatching {
+      val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+      manager.getHistoricalProcessExitReasons(context.packageName, 0, 1).firstOrNull()?.reason
+    }.getOrNull()
   }
 
   private fun exitInfos(context: Context): JSONArray {
@@ -264,8 +277,8 @@ class PyroHornsLlamaModule : Module() {
 
     OnCreate {
       val dir = diagnosticsDir()
-      rotateSessionLog(dir)
       val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      rotateSessionLog(dir, context)
       native.initBackend(File(dir, "session.log").path, context.applicationInfo.nativeLibraryDir)
     }
 
@@ -335,7 +348,7 @@ class PyroHornsLlamaModule : Module() {
       }
     }
 
-    // Contactos cuyo nombre contiene el texto, con sus teléfonos y correos (JSON). Máximo cinco.
+    // Contactos cuyo nombre contiene el texto, con sus teléfonos y correos (JSON). Máximo 25: la app elige o pregunta.
     AsyncFunction("searchContacts") { name: String ->
       val context = appCtx()
       check(context.checkSelfPermission(Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
@@ -350,7 +363,7 @@ class PyroHornsLlamaModule : Module() {
         null,
         null
       )?.use { cursor ->
-        while (cursor.moveToNext() && out.length() < 5) {
+        while (cursor.moveToNext() && out.length() < 25) {
           val id = cursor.getString(0)
           val displayName = cursor.getString(1) ?: ""
           val phones = JSONArray()
@@ -419,7 +432,8 @@ class PyroHornsLlamaModule : Module() {
           arrayOf(ContactsContract.Contacts.DISPLAY_NAME_PRIMARY),
           "${ContactsContract.Contacts.HAS_PHONE_NUMBER} = 1",
           null,
-          "${ContactsContract.Contacts.TIMES_CONTACTED} DESC"
+          // Favoritos primero: desde Android 10 no se registra con qué frecuencia se usa cada contacto (P32-3).
+          "${ContactsContract.Contacts.STARRED} DESC, ${ContactsContract.Contacts.DISPLAY_NAME_PRIMARY} ASC"
         )?.use { cursor ->
           while (cursor.moveToNext() && names.size < limit) {
             val name = cursor.getString(0)?.trim().orEmpty()

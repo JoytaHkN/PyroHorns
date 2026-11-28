@@ -2,6 +2,7 @@
 import { uid, useChat } from '@/store/chat';
 import type { AgendaItem } from '@/types/chat';
 import { dayText, durationText, when, type Action } from './actions';
+import { pickContact } from './contacts';
 
 export interface PhoneContact {
   name: string;
@@ -17,8 +18,8 @@ export interface SavedEvent {
 }
 
 export interface Device {
-  /** Busca un contacto por nombre (pide el permiso si falta). */
-  contact(name: string): Promise<PhoneContact | null>;
+  /** Contactos que coinciden con el nombre (pide el permiso si falta). */
+  contacts(name: string): Promise<PhoneContact[]>;
   /** Abre el marcador con el número; el usuario pulsa llamar. */
   dial(number: string): Promise<void>;
   /** Abre el chat de WhatsApp con el número; el usuario envía. */
@@ -54,8 +55,20 @@ function addItem(item: Omit<AgendaItem, 'id' | 'createdAt'>): string {
   return id;
 }
 
-/** `ref` identifica lo creado para poder deshacerlo. */
-export async function runAction(a: Action): Promise<{ result: string; ref?: string }> {
+export interface Outcome {
+  result: string;
+  /** Identifica lo creado para poder deshacerlo. */
+  ref?: string;
+  /** Hay duda sobre el contacto: no se hizo nada y el usuario toca uno. */
+  choices?: string[];
+}
+
+const choose = (name: string, candidates: PhoneContact[]): Outcome => ({
+  result: `Elige a quién te refieres con «${name}».`,
+  choices: [...new Set(candidates.map((c) => c.name))],
+});
+
+export async function runAction(a: Action): Promise<Outcome> {
   switch (a.type) {
     case 'note':
       return { result: 'Nota guardada', ref: addItem({ kind: 'note', text: a.text }) };
@@ -76,7 +89,9 @@ export async function runAction(a: Action): Promise<{ result: string; ref?: stri
     case 'event': {
       let title = a.title;
       if (a.guest) {
-        const c = await phone().contact(a.guest);
+        // El correo del invitado solo se añade si no hay duda de quién es.
+        const pick = pickContact(a.guest, await phone().contacts(a.guest));
+        const c = pick && 'contact' in pick ? pick.contact : null;
         if (c?.emails[0]) title = `${a.title} (${c.name}: ${c.emails[0]})`;
       }
       const saved = await phone().addEvent(title, a.start, a.start + a.minutes * 60_000);
@@ -88,9 +103,12 @@ export async function runAction(a: Action): Promise<{ result: string; ref?: stri
       };
     }
     case 'call': {
-      const c = await phone().contact(a.name);
-      const number = c?.phones[0];
-      if (!c || !number) throw new Error(`No encontré a ${a.name} con número en tus contactos.`);
+      const withPhone = (await phone().contacts(a.name)).filter((c) => c.phones.length > 0);
+      const pick = pickContact(a.name, withPhone, a.exact);
+      if (!pick) throw new Error(`No encontré a ${a.name} con número en tus contactos.`);
+      if ('candidates' in pick) return choose(a.name, pick.candidates);
+      const c = pick.contact;
+      const number = c.phones[0]!;
       if (a.channel === 'whatsapp') {
         await phone().whatsapp(number);
         return { result: `WhatsApp abierto con ${c.name}: envía tú el mensaje.` };
@@ -99,8 +117,12 @@ export async function runAction(a: Action): Promise<{ result: string; ref?: stri
       return { result: `Marcador abierto con ${c.name} (${number}): pulsa llamar.` };
     }
     case 'email': {
-      const c = await phone().contact(a.name);
-      if (!c) throw new Error(`No encontré a ${a.name} en tus contactos.`);
+      const found = await phone().contacts(a.name);
+      const withMail = found.filter((c) => c.emails.length > 0);
+      const pick = pickContact(a.name, withMail.length ? withMail : found, a.exact);
+      if (!pick) throw new Error(`No encontré a ${a.name} en tus contactos.`);
+      if ('candidates' in pick) return choose(a.name, pick.candidates);
+      const c = pick.contact;
       if (!c.emails.length) return { result: `${c.name} no tiene correo guardado.` };
       return { result: `${c.name}: ${c.emails.join(', ')}` };
     }

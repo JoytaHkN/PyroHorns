@@ -22,10 +22,9 @@ export function registerDevice() {
       // El módulo devuelve JSON: el id, el calendario y si está visible (P26-C3).
       return JSON.parse(await addEvent(title, start, end)) as SavedEvent;
     },
-    async contact(name) {
+    async contacts(name) {
       if (!(await requestContactsPermission())) throw new Error('Sin permiso de contactos no puedo buscar a esa persona.');
-      const list = JSON.parse(await searchContacts(name)) as PhoneContact[];
-      return list.find((c) => c.phones.length > 0) ?? list[0] ?? null;
+      return JSON.parse(await searchContacts(name)) as PhoneContact[];
     },
     dial: dialNumber,
     whatsapp: openWhatsApp,

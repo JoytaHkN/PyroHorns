@@ -2,7 +2,7 @@ import { assistContext, describeAction, extractActions, problemOf, wantsAction }
 import { setDevice } from '@/lib/assistant/run';
 import { migrate } from '@/db/schema';
 import { SqlChatRepo } from '@/db/sql-repo';
-import { completeLocal, confirmAction, regenerate, revertAction, send, setProvider } from '@/lib/engine';
+import { chooseContact, completeLocal, confirmAction, regenerate, revertAction, send, setProvider } from '@/lib/engine';
 import { MockProvider } from '@/providers/mock';
 import { attachRepo, flushWrites, useChat } from '@/store/chat';
 import { useSettings } from '@/store/settings';
@@ -56,9 +56,15 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   attachRepo(new SqlChatRepo(db, fts));
   const events: string[] = [];
   const opened: number[] = [];
+  const dialed: string[] = [];
+  const book = [
+    { name: 'Rosa Barrios', phones: ['111'], emails: [] },
+    { name: 'Bar La Esquina', phones: ['222'], emails: [] },
+    { name: 'Barbara', phones: ['333'], emails: [] },
+  ];
   setDevice({
-    contact: async () => null,
-    dial: async () => {},
+    contacts: async (name) => book.filter((c) => c.name.toLowerCase().includes(name.toLowerCase())),
+    dial: async (number) => void dialed.push(number),
     whatsapp: async () => {},
     addEvent: async (title) => {
       events.push(title);
@@ -160,5 +166,16 @@ const block = (body: string) => '```accion\n' + body + '\n```';
   check(calls(d).length === 0, 'apagado: nada');
 
   setProvider(MockProvider);
+  // Llamadas (P32-2): con duda no se marca; se ofrecen contactos para tocar. Con una sola letra se pregunta.
+  useSettings.getState().setAssistant('auto');
+  const one = await send('llama a A');
+  check(lastText(one) === '¿A quién quieres llamar?' && calls(one).length === 0 && dialed.length === 0, 'una sola letra: pregunta a quién');
+  const partial = await send('marca Barb');
+  check(calls(partial)[0]?.status === 'choose' && calls(partial)[0]?.choices?.join() === 'Barbara' && dialed.length === 0, 'comienzo de palabra: pregunta antes de marcar');
+  await chooseContact(partial, msgId(partial), calls(partial)[0]!.id, 'Barbara');
+  check(calls(partial)[0]?.status === 'done' && dialed.join() === '333' && calls(partial)[0]?.choices === undefined, 'al tocar el contacto, abre el marcador con su número');
+  const whole = await send('marca Bar');
+  check(calls(whole)[0]?.status === 'done' && dialed.at(-1) === '222', 'un único contacto con la palabra completa: directo');
+
   done();
 })();

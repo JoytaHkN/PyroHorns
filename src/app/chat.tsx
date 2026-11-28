@@ -1,6 +1,6 @@
 import { Button, Dialog, useToast } from 'heroui-native';
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { AgentPicker } from '@/components/agent-picker';
 import { Composer } from '@/components/composer';
@@ -152,7 +152,11 @@ export default function ChatScreen() {
 
         <View style={{ flex: 1 }} onTouchEnd={onTouchEnd}>
         {messages.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 }}>
+          // Desplazable: con el teclado abierto no se monta sobre la barra superior (P32-9).
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 }}
+          >
             <Mascot size={88} />
             <T weight="bold" size={22}>
               ¿En qué trabajamos hoy?
@@ -188,7 +192,7 @@ export default function ChatScreen() {
                 </Pressable>
               ))}
             </View>
-          </View>
+          </ScrollView>
         ) : (
           <FlatList
             ref={listRef}

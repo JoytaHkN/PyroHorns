@@ -33,7 +33,7 @@ COMPANIES = [
          free='Modelos «-free» con cuenta de OpenCode; sin cuenta responde 429.', only_free=True),
     dict(id='nvidia', name='NVIDIA', keyless=False, reg='nvidia',
          chat='https://integrate.api.nvidia.com/v1/chat/completions', page='https://build.nvidia.com',
-         free='Prototipado con cuenta verificada (NVIDIA Developer Program). Tu cuenta aún no tiene acceso.'),
+         free='Prototipado con cuenta verificada (NVIDIA Developer Program).'),
     dict(id='openrouter', name='OpenRouter', keyless=False, reg='openrouter',
          chat='https://openrouter.ai/api/v1/chat/completions', page='https://openrouter.ai/keys',
          free='Modelos «:free» con cuenta gratis y sin tarjeta: 50 al día (1000 si compraste 10 USD de créditos).'),

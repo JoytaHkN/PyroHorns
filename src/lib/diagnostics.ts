@@ -63,20 +63,32 @@ export function parseDiagnostics(json: string | null): Diagnostics | null {
   }
 }
 
-/** ¿Hay algo que mostrar como «cierre inesperado»? */
-export function hasCrash(d: Diagnostics | null): boolean {
-  return !!d && (d.crashLog.trim().length > 0 || d.exits.some((e) => isAbnormalExit(e.reason)));
+/** Línea que añade el módulo nativo al rastro guardado con el motivo de Android. */
+const REASON_LINE = /^# motivo-android=(\d+)\s*$/gm;
+
+/** El rastro es de una respuesta que se cortó porque el usuario cerró o detuvo la app (motivos 10 y 11). */
+export function closedByUser(crashLog: string): boolean {
+  return [...crashLog.matchAll(REASON_LINE)].some((m) => m[1] === '10' || m[1] === '11');
 }
 
+/** ¿Hay algo que mostrar como «cierre inesperado»? */
+export function hasCrash(d: Diagnostics | null): boolean {
+  return !!d && ((d.crashLog.trim().length > 0 && !closedByUser(d.crashLog)) || d.exits.some((e) => isAbnormalExit(e.reason)));
+}
+
+/** Fecha y hora del teléfono (no UTC). */
 function when(ts: number): string {
-  return ts > 0 ? new Date(ts).toISOString().replace('T', ' ').slice(0, 19) : 'sin fecha';
+  if (!(ts > 0)) return 'sin fecha';
+  const d = new Date(ts);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 /** Texto plano para leer en pantalla o pegar en un chat. */
 export function formatReport(d: Diagnostics, app?: string): string {
   const lines: string[] = [...(app ? [app] : []), `Dispositivo: ${d.device || 'desconocido'} · Android SDK ${d.sdk}`, ''];
-  lines.push('— Último rastro de un cierre del motor —');
-  lines.push(d.crashLog.trim() || '(ninguno)', '');
+  lines.push(closedByUser(d.crashLog) ? '— Respuesta cortada al cerrar tú la app (no fue un fallo del motor) —' : '— Último rastro de un cierre del motor —');
+  lines.push(d.crashLog.replace(REASON_LINE, '').trim() || '(ninguno)', '');
   lines.push('— Rastro de esta sesión —');
   lines.push(d.sessionLog.trim() || '(vacío)', '');
   lines.push('— Cierres que registró Android —');

@@ -483,7 +483,7 @@ Pulido del chat real (F1.5, 2026-11-24):
   - **M9-b** ESTADO ≤ 120 líneas; historial y medidas aparte. **M10-b** Dependabot al día; sin versiones mayores de TypeScript y Babel.
   - **Excepción a M10:** `gradle/actions` se queda en v5; la v6 usa una caché propietaria bajo los términos de Gradle.
 
-- **P32. Fallos de la primera prueba con la compilación 97 (2026-11-28)** — **pendiente de decisión**.
+- **P32. Fallos de la primera prueba con la compilación 97 (2026-11-28)** — **aprobada el 2026-11-28 (alcance A; 1a, 2b, 3b) e implementada**; pendiente de probar en el móvil.
   1. **Respuesta copiada del ejemplo** («Primera respuesta / Segunda respuesta», Nemotron 3 Nano 4B). Causa: `system-prompt.ts` pone
      ese ejemplo literal. Opciones: **(a) quitar la instrucción de opciones en los modelos del teléfono** (la detección «pregunta +
      lista» de `options.ts` sigue); (b) redactar el ejemplo de otra forma; (c) descartar un bloque que sea igual al ejemplo.
@@ -501,7 +501,11 @@ Pulido del chat real (F1.5, 2026-11-24):
      de Android y mostrar hora local.
   8. **Texto fijo sobre el acceso de la cuenta** en la pantalla de la nube (`cloud-catalog.ts`, `build-cloud-catalog.py`). Arreglo: quitar la frase.
   9. **Inicio con teclado:** el contenido centrado no se desplaza (`chat.tsx`). Arreglo: hacerlo desplazable.
-  - **Alcance:** **(A) los nueve en un bloque, antes de M7**; (B) solo 1, 2, 4, 5 y 8 ahora; (C) seguir con M7 y dejarlos anotados.
+  - **Alcance:** **(A) los nueve en un bloque, antes de M7** (elegido); (B) solo 1, 2, 4, 5 y 8 ahora; (C) seguir con M7 y dejarlos anotados.
+  - **Caso abierto (el usuario: «parecía colgada»).** Con Nemotron 3 Nano 4B, la respuesta a la opción tocada pasó de 128 tokens sin texto
+    visible. Causa **sin confirmar** (no se guarda el texto en los registros, S9). Hecho en 5: mientras genera sin texto que mostrar se ve
+    «Generando… N palabras». Diferencia comprobada en los metadatos del GGUF: su plantilla cierra el razonamiento con `<think></think>` y
+    `llama-jni.cpp` añade `<think>\n\n</think>\n\n` (Profundo apagado). Se resuelve en M6 (plantillas Jinja), no con otro parche.
 
 ## 8. Riesgos
 

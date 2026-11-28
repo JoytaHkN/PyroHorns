@@ -5,7 +5,7 @@ import { Pressable, Share, View } from 'react-native';
 import { modelById } from '@/data/models';
 import { describeAction, extractActions, type Action as AssistantAction } from '@/lib/assistant/actions';
 import { canUndo } from '@/lib/assistant/run';
-import { confirmAction, dismissAction, regenerate, revertAction, send } from '@/lib/engine';
+import { chooseContact, confirmAction, dismissAction, regenerate, revertAction, send } from '@/lib/engine';
 import { extractOptions } from '@/lib/options';
 import { usageLine } from '@/lib/stats';
 import { useChat, type Message } from '@/store/chat';
@@ -267,10 +267,18 @@ function AssistantActions({ m, convId }: { m: Message; convId: string }) {
                 {c.result}
               </T>
             ) : null}
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {c.status === 'pending' ? (
                 <>
                   <CardButton label="Hacer" onPress={() => void confirmAction(convId, m.id, c.id)} />
+                  <CardButton label="Descartar" onPress={() => dismissAction(convId, m.id, c.id)} />
+                </>
+              ) : null}
+              {c.status === 'choose' ? (
+                <>
+                  {(c.choices ?? []).map((name) => (
+                    <CardButton key={name} label={name} onPress={() => void chooseContact(convId, m.id, c.id, name)} />
+                  ))}
                   <CardButton label="Descartar" onPress={() => dismissAction(convId, m.id, c.id)} />
                 </>
               ) : null}
@@ -297,6 +305,9 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
   // Solo la última respuesta se contesta tocando; en las anteriores las opciones quedan como lista.
   const tappable = isLast && m.status === 'done' && options.length > 0;
   const shown = !tappable && text !== visible ? `${text}\n\n${options.map((o) => `- ${o}`).join('\n')}` : text;
+  // Sin texto que mostrar (una acción, solo opciones o un bloque oculto) no se dibuja una burbuja vacía (P32-5).
+  const hasText = !!shown.trim();
+  const hidden = live && showBody && !hasText ? m.content.split(/\s+/).filter(Boolean).length : 0;
   const footer = [
     m.modelId ? modelById(m.modelId).name : null,
     m.status === 'done' && m.usage ? usageLine(m.usage) : null,
@@ -305,7 +316,12 @@ function AiBubble({ m, convId, isLast }: { m: Message; convId: string; isLast: b
   return (
     <View style={{ gap: 8, alignSelf: 'stretch' }}>
       <Thinking m={m} />
-      {showBody && (
+      {live && showBody && !hasText ? (
+        <T size={13} tone="muted">
+          Generando… {hidden > 0 ? `${hidden} palabras todavía sin texto que mostrar` : ''}
+        </T>
+      ) : null}
+      {showBody && hasText && (
         <PlasmaGradient style={{ borderRadius: 20, borderTopLeftRadius: 6, padding: 1.5 }}>
           <View
             style={{
