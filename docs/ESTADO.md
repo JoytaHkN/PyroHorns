@@ -32,6 +32,7 @@
 dependencias, P32 y P33): no se empieza otro bloque que cambie el APK sin probar en el móvil. Las casillas sin probar se hacen antes de empezar v0.3.
 
 ## Pendiente de decisión del usuario
+- **P34, modo de voz** (`PLAN.md` §7): ocho decisiones. No se programa hasta el visto bueno y probar el APK actual.
 - **PR #6 (uniwind 1.14):** CI en verde; afecta a los estilos. Recomendación: después de los arreglos de P32.
 - **gradle/actions v6:** su caché es propietaria y exige aceptar los términos de Gradle. Se usa la v5.
 - **Criterios de aceptación de v0.2** (propuestos en `PLAN.md` §5).

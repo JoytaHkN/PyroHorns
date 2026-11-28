@@ -516,6 +516,25 @@ Pulido del chat real (F1.5, 2026-11-24):
      pantalla mientras transcribía. Hecho: orden de parar síncrona, «Transcribiendo…» en el acto, el aviso y el botón del micrófono
      también cortan. El botón del micrófono estaba sin conectar («Llega en la fase F4»): ahora empieza y termina el dictado.
 
+- **P34. Modo de voz** (pedido el 2026-11-28, «el mismo método que ChatGPT») — **pendiente de decisión; sin código.**
+  - **Pedido:** micrófono abajo a la derecha para enviar un mensaje; el botón de enviar con doble función (enviar, o abrir el modo
+    asistente); en ese modo, un círculo con movimiento a pantalla completa que escucha; tocarlo lo desactiva; hace todas las funciones.
+  - **Fijado por el pedido:** botón de enviar con el cuadro vacío → modo de voz; con texto → enviar. Estilo propio (Plasma).
+  - **Decisiones** (recomendada en negrita):
+    1. Micrófono: **(a) lo dictado queda en el cuadro para revisarlo y enviarlo**; (b) se envía solo, como ahora.
+    2. Conversación: **(a) tras responder en voz alta vuelve a escuchar hasta que cierres**; (b) un turno y se cierra.
+    3. Interrumpir mientras habla: (a) no; **(b) tocar fuera del círculo calla y vuelve a escuchar** (el círculo cierra).
+    4. En pantalla: (a) solo el círculo y el estado; **(b) además lo que oyó, la respuesta en letra pequeña y los botones de
+       confirmar o elegir contacto** (y poder decir el nombre).
+    5. Movimiento: (a) según el estado; **(b) además según el volumen de tu voz** (nuevo evento nativo).
+    6. Rapidez: (a) leer al terminar la respuesta; **(b) leer frase a frase mientras genera, y cortar la escucha a 1,5 s de silencio
+       en este modo** (en el chat siguen los 2,5 s).
+    7. Internet: (a) sin internet en este modo; **(b) solo si dices «busca en internet…»**.
+    8. Cuándo: **(a) bloque siguiente, tras probar el APK actual y antes de M7**; (b) tras M7; (c) tras M6.
+  - **Límites:** todo ocurre en el teléfono, así que habrá pausas (silencio de cierre, transcripción —sin medir— y generación:
+    ≈ 16 tok/s con LFM3, ≈ 5 con Nemotron 3 Nano). No oye mientras habla (sin cancelación de eco). Usa la voz del sistema.
+    La pantalla se mantiene encendida en este modo.
+
 ## 8. Riesgos
 
 | Riesgo | Fase | Respuesta |

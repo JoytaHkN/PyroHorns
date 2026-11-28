@@ -115,3 +115,4 @@
 - **2026-11-26** · Evaluación del plan registrada como P31 y aprobada («todo lo recomendado», M8 aparte). F1.5 cerrada con acta; ESTADO dividido en estado, historial, mediciones y pruebas.
 - **2026-11-27** · P31 bloque 1 (`908ba60`, `d7f0607`, `1ff2631`, `fd7b996`): documentación dividida, versión visible, `check-apk.py`, firma de prelanzamiento en la CI (M8-b), acciones al día y ccache (96 % de aciertos; 327–491 s frente a 560 s sin él). Parches #11 y #12 fusionados (`c2bc8c6`, `c397791`). APK `v0.2-p31` comprobado. Pendiente: móvil.
 - **2026-11-28** · Primera prueba en el móvil de la compilación 97; nueve fallos registrados como P32 (pendiente de decisión). Fusionados #15–#17 (`0add510`).
+- **2026-11-28** · P32 (`005dcd5`) y P33 (`d166043`) implementadas tras la primera prueba en el móvil. P34 (modo de voz) registrada, pendiente de decisión.
